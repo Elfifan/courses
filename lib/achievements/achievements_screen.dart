@@ -18,7 +18,7 @@ class _AchievementsScreenState extends State<AchievementsScreen> {
   List<Map<String, dynamic>> _achievements = [
     {
       'id': 1,
-      'title': 'Первый студент',
+      'title': '1212121',
       'description': 'Зарегистрирован первый студент на платформе',
       'image': null,
       'date': '15 марта 2024',
