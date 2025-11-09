@@ -26,7 +26,7 @@ class _AchievementsScreenState extends State<AchievementsScreen> {
     },
     {
       'id': 2,
-      'title': '100 студентов',
+      'title': 'jkkkklkklkl',
       'description': 'Достигнуто 100 зарегистрированных студентов',
       'image': null,
       'date': '25 мая 2024',
