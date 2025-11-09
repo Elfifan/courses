@@ -1,0 +1,279 @@
+// lib/models/database_models.dart
+
+// Модель пользователя (таблица users)
+class User {
+  final int id;
+  final String name;
+  final String email;
+  final String password;
+  final DateTime dateRegistration;
+  final List<int>? avatar; // BYTEA в Dart это List<int>
+  final bool status;
+  final DateTime? lastEntry;
+
+  User({
+    required this.id,
+    required this.name,
+    required this.email,
+    required this.password,
+    required this.dateRegistration,
+    this.avatar,
+    required this.status,
+    this.lastEntry,
+  });
+
+  // Конвертация из JSON (данные из Supabase)
+  factory User.fromJson(Map<String, dynamic> json) {
+    return User(
+      id: json['id'] as int,
+      name: json['name'] as String? ?? '',
+      email: json['email'] as String? ?? '',
+      password: json['password'] as String? ?? '',
+      dateRegistration: DateTime.parse(json['date_registration'] as String),
+      avatar: json['avatar'] as List<int>?,
+      status: json['status'] as bool? ?? false,
+      lastEntry: json['last_entry'] != null 
+          ? DateTime.parse(json['last_entry'] as String)
+          : null,
+    );
+  }
+
+  // Конвертация в JSON (для отправки в Supabase)
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'name': name,
+      'email': email,
+      'password': password,
+      'date_registration': dateRegistration.toIso8601String(),
+      'avatar': avatar,
+      'status': status,
+      'last_entry': lastEntry?.toIso8601String(),
+    };
+  }
+}
+
+// Модель курса (таблица courses)
+class Course {
+  final int id;
+  final int idEmployee;
+  final String name;
+  final String description;
+  final DateTime dateCreate;
+  final double price;
+  final int complexity;
+  final bool status;
+  final int? icon;
+
+  Course({
+    required this.id,
+    required this.idEmployee,
+    required this.name,
+    required this.description,
+    required this.dateCreate,
+    required this.price,
+    required this.complexity,
+    required this.status,
+    this.icon,
+  });
+
+  factory Course.fromJson(Map<String, dynamic> json) {
+    return Course(
+      id: json['id'] as int,
+      idEmployee: json['id_employee'] as int,
+      name: json['name'] as String? ?? '',
+      description: json['description'] as String? ?? '',
+      dateCreate: DateTime.parse(json['date_create'] as String),
+      price: (json['price'] as num?)?.toDouble() ?? 0.0,
+      complexity: json['complexity'] as int? ?? 0,
+      status: json['status'] as bool? ?? false,
+      icon: json['icon'] as int?,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'id_employee': idEmployee,
+      'name': name,
+      'description': description,
+      'date_create': dateCreate.toIso8601String(),
+      'price': price,
+      'complexity': complexity,
+      'status': status,
+      'icon': icon,
+    };
+  }
+}
+
+// Модель модуля (таблица module)
+class Module {
+  final int id;
+  final int idCourses;
+  final String name;
+  final String description;
+  final int orderModule;
+  final bool status;
+
+  Module({
+    required this.id,
+    required this.idCourses,
+    required this.name,
+    required this.description,
+    required this.orderModule,
+    required this.status,
+  });
+
+  factory Module.fromJson(Map<String, dynamic> json) {
+    return Module(
+      id: json['id'] as int,
+      idCourses: json['id_courses'] as int,
+      name: json['name'] as String? ?? '',
+      description: json['description'] as String? ?? '',
+      orderModule: json['order_module'] as int? ?? 0,
+      status: json['status'] as bool? ?? false,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'id_courses': idCourses,
+      'name': name,
+      'description': description,
+      'order_module': orderModule,
+      'status': status,
+    };
+  }
+}
+
+// Модель подмодуля (таблица submodule)
+class Submodule {
+  final int id;
+  final int idModule;
+  final String name;
+  final String description;
+  final String content;
+  final int leadTime;
+  final bool status;
+
+  Submodule({
+    required this.id,
+    required this.idModule,
+    required this.name,
+    required this.description,
+    required this.content,
+    required this.leadTime,
+    required this.status,
+  });
+
+  factory Submodule.fromJson(Map<String, dynamic> json) {
+    return Submodule(
+      id: json['id'] as int,
+      idModule: json['id_module'] as int,
+      name: json['name'] as String? ?? '',
+      description: json['description'] as String? ?? '',
+      content: json['content'] as String? ?? '',
+      leadTime: json['lead_time'] as int? ?? 0,
+      status: json['status'] as bool? ?? false,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'id_module': idModule,
+      'name': name,
+      'description': description,
+      'content': content,
+      'lead_time': leadTime,
+      'status': status,
+    };
+  }
+}
+
+// Модель теста (таблица test)
+class Test {
+  final int id;
+  final String name;
+  final String question;
+  final String rightAnswer;
+  final String wrongAnswer1;
+  final String wrongAnswer2;
+  final String wrongAnswer3;
+  final bool status;
+
+  Test({
+    required this.id,
+    required this.name,
+    required this.question,
+    required this.rightAnswer,
+    required this.wrongAnswer1,
+    required this.wrongAnswer2,
+    required this.wrongAnswer3,
+    required this.status,
+  });
+
+  factory Test.fromJson(Map<String, dynamic> json) {
+    return Test(
+      id: json['id'] as int,
+      name: json['name'] as String? ?? '',
+      question: json['question'] as String? ?? '',
+      rightAnswer: json['right_answer'] as String? ?? '',
+      wrongAnswer1: json['wrong_answer1'] as String? ?? '',
+      wrongAnswer2: json['wrong_answer2'] as String? ?? '',
+      wrongAnswer3: json['wrong_answer3'] as String? ?? '',
+      status: json['status'] as bool? ?? false,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'name': name,
+      'question': question,
+      'right_answer': rightAnswer,
+      'wrong_answer1': wrongAnswer1,
+      'wrong_answer2': wrongAnswer2,
+      'wrong_answer3': wrongAnswer3,
+      'status': status,
+    };
+  }
+}
+
+// Модель обратной связи (таблица feedback)
+class Feedback {
+  final int id;
+  final int idUser;
+  final int idCourses;
+  final double estimation;
+  final String description;
+
+  Feedback({
+    required this.id,
+    required this.idUser,
+    required this.idCourses,
+    required this.estimation,
+    required this.description,
+  });
+
+  factory Feedback.fromJson(Map<String, dynamic> json) {
+    return Feedback(
+      id: json['id'] as int,
+      idUser: json['id_user'] as int,
+      idCourses: json['id_courses'] as int,
+      estimation: (json['estimation'] as num?)?.toDouble() ?? 0.0,
+      description: json['description'] as String? ?? '',
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'id_user': idUser,
+      'id_courses': idCourses,
+      'estimation': estimation,
+      'description': description,
+    };
+  }
+}

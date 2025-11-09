@@ -1,0 +1,207 @@
+import 'package:supabase_flutter/supabase_flutter.dart';
+import '../models/database_models.dart';
+
+class SupabaseService {
+  static final SupabaseClient _supabase = Supabase.instance.client;
+
+  // ============ USERS ============
+  
+  // Получить всех пользователей
+  static Future<List<User>> getUsers() async {
+    try {
+      final response = await _supabase
+          .from('users')
+          .select()
+          .execute();
+
+      final data = response.data as List;
+      return data.map((item) => User.fromJson(item)).toList();
+    } catch (e) {
+      throw Exception('Ошибка при получении пользователей: $e');
+    }
+  }
+
+  // Получить пользователя по ID
+  static Future<User?> getUserById(int id) async {
+    try {
+      final response = await _supabase
+          .from('users')
+          .select()
+          .eq('id', id)
+          .maybeSingle()
+          .execute();
+
+      if (response.data == null) return null;
+      return User.fromJson(response.data);
+    } catch (e) {
+      throw Exception('Ошибка при получении пользователя: $e');
+    }
+  }
+
+  // Создать нового пользователя
+  static Future<User> createUser(User user) async {
+    try {
+      final response = await _supabase
+          .from('users')
+          .insert(user.toJson())
+          .select()
+          .single()
+          .execute();
+
+      return User.fromJson(response.data);
+    } catch (e) {
+      throw Exception('Ошибка при создании пользователя: $e');
+    }
+  }
+
+  // Обновить пользователя
+  static Future<User> updateUser(int id, User user) async {
+    try {
+      final response = await _supabase
+          .from('users')
+          .update(user.toJson())
+          .eq('id', id)
+          .select()
+          .single()
+          .execute();
+
+      return User.fromJson(response.data);
+    } catch (e) {
+      throw Exception('Ошибка при обновлении пользователя: $e');
+    }
+  }
+
+  // Удалить пользователя
+  static Future<void> deleteUser(int id) async {
+    try {
+      await _supabase
+          .from('users')
+          .delete()
+          .eq('id', id)
+          .execute();
+    } catch (e) {
+      throw Exception('Ошибка при удалении пользователя: $e');
+    }
+  }
+
+  // ============ COURSES ============
+
+  // Получить все курсы
+  static Future<List<Course>> getCourses() async {
+    try {
+      final response = await _supabase
+          .from('courses')
+          .select()
+          .execute();
+
+      final data = response.data as List;
+      return data.map((item) => Course.fromJson(item)).toList();
+    } catch (e) {
+      throw Exception('Ошибка при получении курсов: $e');
+    }
+  }
+
+  // Получить курс по ID
+  static Future<Course?> getCourseById(int id) async {
+    try {
+      final response = await _supabase
+          .from('courses')
+          .select()
+          .eq('id', id)
+          .maybeSingle()
+          .execute();
+
+      if (response.data == null) return null;
+      return Course.fromJson(response.data);
+    } catch (e) {
+      throw Exception('Ошибка при получении курса: $e');
+    }
+  }
+
+  // Создать новый курс
+  static Future<Course> createCourse(Course course) async {
+    try {
+      final response = await _supabase
+          .from('courses')
+          .insert(course.toJson())
+          .select()
+          .single()
+          .execute();
+
+      return Course.fromJson(response.data);
+    } catch (e) {
+      throw Exception('Ошибка при создании курса: $e');
+    }
+  }
+
+  // ============ MODULES ============
+
+  // Получить все модули курса
+  static Future<List<Module>> getModulesByCourse(int courseId) async {
+    try {
+      final response = await _supabase
+          .from('module')
+          .select()
+          .eq('id_courses', courseId)
+          .order('order_module', ascending: true)
+          .execute();
+
+      final data = response.data as List;
+      return data.map((item) => Module.fromJson(item)).toList();
+    } catch (e) {
+      throw Exception('Ошибка при получении модулей: $e');
+    }
+  }
+
+  // ============ SUBMODULES ============
+
+  // Получить все подмодули
+  static Future<List<Submodule>> getSubmodulesByModule(int moduleId) async {
+    try {
+      final response = await _supabase
+          .from('submodule')
+          .select()
+          .eq('id_module', moduleId)
+          .execute();
+
+      final data = response.data as List;
+      return data.map((item) => Submodule.fromJson(item)).toList();
+    } catch (e) {
+      throw Exception('Ошибка при получении подмодулей: $e');
+    }
+  }
+
+  // ============ FEEDBACK ============
+
+  // Добавить отзыв
+  static Future<Feedback> addFeedback(Feedback feedback) async {
+    try {
+      final response = await _supabase
+          .from('feedback')
+          .insert(feedback.toJson())
+          .select()
+          .single()
+          .execute();
+
+      return Feedback.fromJson(response.data);
+    } catch (e) {
+      throw Exception('Ошибка при добавлении отзыва: $e');
+    }
+  }
+
+  // Получить отзывы курса
+  static Future<List<Feedback>> getFeedbackByCourse(int courseId) async {
+    try {
+      final response = await _supabase
+          .from('feedback')
+          .select()
+          .eq('id_courses', courseId)
+          .execute();
+
+      final data = response.data as List;
+      return data.map((item) => Feedback.fromJson(item)).toList();
+    } catch (e) {
+      throw Exception('Ошибка при получении отзывов: $e');
+    }
+  }
+}
