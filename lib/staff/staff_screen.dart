@@ -5,13 +5,9 @@ import 'package:intl/intl.dart';
 class StaffScreen extends StatefulWidget {
   final bool isDarkMode;
 
-
-
-
   const StaffScreen({
     Key? key,
     required this.isDarkMode,
-
   }) : super(key: key);
 
   @override
@@ -614,5 +610,33 @@ class StaffScreenState extends State<StaffScreen> {
         ],
       ),
     );
+  }
+
+  Future<void> _terminateStaff(int id, Map<String,dynamic> staff) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Уволить сотрудника?'),
+        content: Text('Сотрудник будет помечен как неактивный. Это действие можно отменить через административную панель.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: Text('Отмена')),
+          TextButton(onPressed: () => Navigator.pop(context, true), child: Text('Уволить', style: TextStyle(color: Colors.red))),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
+    try {
+      await supabase.from('employee').update({
+        'status': false,
+        'fired_at': DateTime.now().toIso8601String(), // опционально поле для даты увольнения
+      }).eq('id', id);
+
+      await _loadStaffFromDatabase();
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Сотрудник помечен как неактивный')));
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Ошибка: $e')));
+    }
   }
 }
