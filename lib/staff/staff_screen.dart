@@ -1,11 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:intl/intl.dart';
 
 class StaffScreen extends StatefulWidget {
   final bool isDarkMode;
 
+
+
+
   const StaffScreen({
     Key? key,
     required this.isDarkMode,
+
   }) : super(key: key);
 
   @override
@@ -15,12 +21,38 @@ class StaffScreen extends StatefulWidget {
 class StaffScreenState extends State<StaffScreen> {
   int? _hoveredIndex;
   final Map<int, bool> _passwordVisibility = {};
-  List<Map<String, String>> _staffList = [];
+  List<Map<String, dynamic>> _staffList = [];
+  bool _isLoading = true;
+  final supabase = Supabase.instance.client;
 
   @override
   void initState() {
     super.initState();
-    _staffList = _getInitialStaffList();
+    _loadStaffFromDatabase();
+  }
+
+  // Загрузка данных сотрудников из БД
+  Future<void> _loadStaffFromDatabase() async {
+    setState(() => _isLoading = true);
+
+    try {
+      final response = await supabase
+          .from('employee')
+          .select()
+          .order('id', ascending: true);
+
+      setState(() {
+        _staffList = List<Map<String, dynamic>>.from(response);
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() => _isLoading = false);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Ошибка загрузки данных: $e')),
+        );
+      }
+    }
   }
 
   @override
@@ -40,246 +72,176 @@ class StaffScreenState extends State<StaffScreen> {
             ),
           ],
         ),
-
         SizedBox(height: 24),
-
         // Список сотрудников
         Expanded(
-          child: Container(
-            decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.surface,
-              borderRadius: BorderRadius.circular(16),
-              border: widget.isDarkMode
-                ? Border.all(color: Color(0xFF30363D))
-                : null,
-            ),
-            child: Column(
-              children: [
-                // Заголовки таблицы
-                Container(
-                  padding: EdgeInsets.all(14), // Уменьшено с 20 до 14
+          child: _isLoading
+              ? Center(child: CircularProgressIndicator())
+              : Container(
                   decoration: BoxDecoration(
-                    color: widget.isDarkMode ? Color(0xFF161B22) : Color(0xFFF8F9FA),
-                    borderRadius: BorderRadius.only(
-                      topLeft: Radius.circular(16),
-                      topRight: Radius.circular(16),
-                    ),
-                    border: Border(bottom: BorderSide(
-                      color: widget.isDarkMode ? Color(0xFF30363D) : Color(0xFFE2E8F0),
-                    )),
+                    color: Theme.of(context).colorScheme.surface,
+                    borderRadius: BorderRadius.circular(16),
+                    border: widget.isDarkMode
+                        ? Border.all(color: Color(0xFF30363D))
+                        : null,
                   ),
-                  child: Row(
+                  child: Column(
                     children: [
-                      Expanded(
-                        flex: 2,
-                        child: Text(
-                          'ФИО',
-                          style: TextStyle(
-                            fontWeight: FontWeight.w600,
-                            color: Theme.of(context).colorScheme.onSurface,
-                            fontSize: 14,
+                      // Заголовки таблицы
+                      Container(
+                        padding: EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          color: widget.isDarkMode ? Color(0xFF161B22) : Color(0xFFF8F9FA),
+                          borderRadius: BorderRadius.only(
+                            topLeft: Radius.circular(16),
+                            topRight: Radius.circular(16),
                           ),
+                          border: Border(bottom: BorderSide(
+                            color: widget.isDarkMode ? Color(0xFF30363D) : Color(0xFFE2E8F0),
+                          )),
+                        ),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              flex: 2,
+                              child: Text(
+                                'ФИО',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                  color: Theme.of(context).colorScheme.onSurface,
+                                  fontSize: 14,
+                                ),
+                              ),
+                            ),
+                            Expanded(
+                              flex: 2,
+                              child: Text(
+                                'Email',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                  color: Theme.of(context).colorScheme.onSurface,
+                                  fontSize: 14,
+                                ),
+                              ),
+                            ),
+                            Expanded(
+                              flex: 1,
+                              child: Text(
+                                'Пароль',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                  color: Theme.of(context).colorScheme.onSurface,
+                                  fontSize: 14,
+                                ),
+                              ),
+                            ),
+                            Expanded(
+                              flex: 1,
+                              child: Text(
+                                'Статус',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                  color: Theme.of(context).colorScheme.onSurface,
+                                  fontSize: 14,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                            ),
+                            // ДОБАВЛЕНА КОЛОНКА для device_date
+                            Expanded(
+                              flex: 1,
+                              child: Text(
+                                'Дата устройства',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                  color: Theme.of(context).colorScheme.onSurface,
+                                  fontSize: 14,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                            ),
+                            Expanded(
+                              flex: 1,
+                              child: Text(
+                                'Действия',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                  color: Theme.of(context).colorScheme.onSurface,
+                                  fontSize: 14,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
+                      // Список сотрудников
                       Expanded(
-                        flex: 2,
-                        child: Text(
-                          'Email',
-                          style: TextStyle(
-                            fontWeight: FontWeight.w600,
-                            color: Theme.of(context).colorScheme.onSurface,
-                            fontSize: 14,
-                          ),
-                        ),
-                      ),
-                      Expanded(
-                        flex: 1, // Уменьшено с 2 до 1
-                        child: Text(
-                          'Пароль',
-                          style: TextStyle(
-                            fontWeight: FontWeight.w600,
-                            color: Theme.of(context).colorScheme.onSurface,
-                            fontSize: 14,
-                          ),
-                        ),
-                      ),
-                      Expanded(
-                        flex: 2,
-                        child: Text(
-                          'Должность',
-                          style: TextStyle(
-                            fontWeight: FontWeight.w600,
-                            color: Theme.of(context).colorScheme.onSurface,
-                            fontSize: 14,
-                          ),
-                        ),
-                      ),
-                      Expanded(
-                        flex: 2 , // Увеличено с 1 до 2
-                        child: Text(
-                          'Телефон',
-                          style: TextStyle(
-                            fontWeight: FontWeight.w600,
-                            color: Theme.of(context).colorScheme.onSurface,
-                            fontSize: 14,
-                          ),
-                        ),
-                      ),
-                      Expanded(
-                        flex: 2, // Увеличено с 1 до 2
-                        child: Text(
-                          'Дата устройства',
-                          style: TextStyle(
-                            fontWeight: FontWeight.w600,
-                            color: Theme.of(context).colorScheme.onSurface,
-                            fontSize: 14,
-                          ),
-                        ),
-                      ),
-                      Expanded(
-                        flex: 1,
-                        child: Text(
-                          'Статус',
-                          style: TextStyle(
-                            fontWeight: FontWeight.w600,
-                            color: Theme.of(context).colorScheme.onSurface,
-                            fontSize: 14,
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                      ),
-                      Expanded(
-                        flex: 1,
-                        child: Text(
-                          'Действия',
-                          style: TextStyle(
-                            fontWeight: FontWeight.w600,
-                            color: Theme.of(context).colorScheme.onSurface,
-                            fontSize: 14,
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
+                        child: _staffList.isEmpty
+                            ? Center(
+                                child: Text(
+                                  'Нет данных о сотрудниках',
+                                  style: TextStyle(
+                                    color: widget.isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                                  ),
+                                ),
+                              )
+                            : ListView.builder(
+                                padding: EdgeInsets.zero,
+                                itemCount: _staffList.length,
+                                itemBuilder: (context, index) {
+                                  return _buildStaffRow(context, index);
+                                },
+                              ),
                       ),
                     ],
                   ),
                 ),
-                
-                // Список администраторов
-                Expanded(
-                  child: ListView.builder(
-                    padding: EdgeInsets.zero,
-                    itemCount: _staffList.length,
-                    itemBuilder: (context, index) {
-                      return _buildStaffRow(context, index);
-                    },
-                  ),
-                ),
-              ],
-            ),
-          ),
         ),
       ],
     );
   }
 
-  // Публичный метод для добавления сотрудника (будет вызван из TopBar)
+  // Публичный метод для добавления сотрудника
   void showAddStaffDialog() {
     _showAddStaffDialog(context);
-  }
-
-  List<Map<String, String>> _getInitialStaffList() {
-    return [
-      {
-        'name': 'Александр Иванов',
-        'email': 'a.ivanov@courseadmin.com',
-        'password': 'admin123',
-        'role': 'Администратор',
-        'phone': '+7 (905) 123-45-67',
-        'joinDate': '15 января 2022',
-        'status': 'Активен'
-      },
-      {
-        'name': 'Мария Петрова',
-        'email': 'm.petrova@courseadmin.com',
-        'password': 'pass456',
-        'role': 'Администратор',
-        'phone': '+7 (905) 234-56-78',
-        'joinDate': '22 марта 2022',
-        'status': 'Активен'
-      },
-      {
-        'name': 'Дмитрий Сидоров',
-        'email': 'd.sidorov@courseadmin.com',
-        'password': 'secure789',
-        'role': 'Администратор',
-        'phone': '+7 (905) 345-67-89',
-        'joinDate': '08 мая 2021',
-        'status': 'Активен'
-      },
-      {
-        'name': 'Анна Козлова',
-        'email': 'a.kozlova@courseadmin.com',
-        'password': 'admin321',
-        'role': 'Администратор',
-        'phone': '+7 (905) 456-78-90',
-        'joinDate': '12 сентября 2022',
-        'status': 'Уволен'
-      },
-      {
-        'name': 'Сергей Морозов',
-        'email': 's.morozov@courseadmin.com',
-        'password': 'pass654',
-        'role': 'Администратор',
-        'phone': '+7 (905) 567-89-01',
-        'joinDate': '25 ноября 2021',
-        'status': 'Активен'
-      },
-      {
-        'name': 'Елена Волкова',
-        'email': 'e.volkova@courseadmin.com',
-        'password': 'secure987',
-        'role': 'Администратор',
-        'phone': '+7 (905) 678-90-12',
-        'joinDate': '03 февраля 2023',
-        'status': 'Активен'
-      },
-      {
-        'name': 'Игорь Лебедев',
-        'email': 'i.lebedev@courseadmin.com',
-        'password': 'admin111',
-        'role': 'Администратор',
-        'phone': '+7 (905) 789-01-23',
-        'joinDate': '17 апреля 2022',
-        'status': 'Активен'
-      },
-      {
-        'name': 'Ольга Федорова',
-        'email': 'o.fedorova@courseadmin.com',
-        'password': 'pass222',
-        'role': 'Администратор',
-        'phone': '+7 (905) 890-12-34',
-        'joinDate': '30 июня 2021',
-        'status': 'Уволен'
-      },
-    ];
   }
 
   Widget _buildStaffRow(BuildContext context, int index) {
     final staff = _staffList[index];
     final bool isVisible = _passwordVisibility[index] ?? false;
     final bool isHovered = _hoveredIndex == index;
-    final bool isFired = staff['status'] == 'Уволен';
+    final bool isFired = staff['status'] == false;
+
+    String fullName = [
+      staff['surname'] ?? '',
+      staff['name'] ?? '',
+      staff['patronymic'] ?? ''
+    ].where((x) => x.isNotEmpty).join(' ');
+    if (fullName.isEmpty) fullName = 'Не указано';
+
+    // форматируем дату устройства
+    String deviceDate = '';
+    if (staff['device_date'] != null) {
+      try {
+        deviceDate = DateFormat('dd.MM.yyyy').format(DateTime.parse(staff['device_date']));
+      } catch (_) {
+        deviceDate = staff['device_date'].toString();
+      }
+    } else {
+      deviceDate = 'Нет даты';
+    }
 
     return MouseRegion(
       onEnter: (_) => setState(() => _hoveredIndex = index),
       onExit: (_) => setState(() => _hoveredIndex = null),
       cursor: SystemMouseCursors.click,
       child: Container(
-        padding: EdgeInsets.all(14), // Уменьшено с 20 до 14
+        padding: EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: isHovered 
-            ? (widget.isDarkMode ? Color(0xFF21262D) : Color(0xFFF0F4F8))
-            : Colors.transparent,
+          color: isHovered
+              ? (widget.isDarkMode ? Color(0xFF21262D) : Color(0xFFF0F4F8))
+              : Colors.transparent,
           border: Border(bottom: BorderSide(
             color: widget.isDarkMode ? Color(0xFF30363D) : Color(0xFFE2E8F0),
             width: 1,
@@ -291,131 +253,82 @@ class StaffScreenState extends State<StaffScreen> {
             Expanded(
               flex: 2,
               child: Text(
-                staff['name']!,
+                fullName,
                 style: TextStyle(
                   fontWeight: FontWeight.w600,
-                  color: isFired 
-                    ? (widget.isDarkMode ? Color(0xFF6B7280) : Color(0xFF9CA3AF))
-                    : Theme.of(context).colorScheme.onSurface,
+                  color: isFired
+                      ? (widget.isDarkMode ? Color(0xFF6B7280) : Color(0xFF9CA3AF))
+                      : Theme.of(context).colorScheme.onSurface,
                   fontSize: 14,
                 ),
               ),
             ),
-            
             // Email
             Expanded(
               flex: 2,
               child: Text(
-                staff['email']!,
+                staff['email'] ?? 'Не указан',
                 style: TextStyle(
                   color: isFired
-                    ? (widget.isDarkMode ? Color(0xFF6B7280) : Color(0xFF9CA3AF))
-                    : (widget.isDarkMode ? Color(0xFF8B949E) : Color(0xFF64748B)),
+                      ? (widget.isDarkMode ? Color(0xFF6B7280) : Color(0xFF9CA3AF))
+                      : (widget.isDarkMode ? Color(0xFF8B949E) : Color(0xFF64748B)),
                   fontSize: 13,
                 ),
               ),
             ),
-            
-            // Пароль с кнопкой (уменьшенная колонка)
+            // Пароль с кнопкой
             Expanded(
-              flex: 1, // Уменьшено с 2 до 1
+              flex: 1,
               child: Row(
                 children: [
-                  Flexible( // Изменено с Expanded на Flexible
+                  Flexible(
                     child: Text(
-                      isVisible ? staff['password']! : '••••••••',
+                      isVisible ? (staff['password'] ?? '••••••••') : '••••••••',
                       style: TextStyle(
                         color: isFired
-                          ? (widget.isDarkMode ? Color(0xFF6B7280) : Color(0xFF9CA3AF))
-                          : (widget.isDarkMode ? Color(0xFF8B949E) : Color(0xFF64748B)),
-                        fontSize: 14,
-                        fontFamily: isVisible ? null : 'monospace',
+                            ? (widget.isDarkMode ? Color(0xFF6B7280) : Color(0xFF9CA3AF))
+                            : (widget.isDarkMode ? Color(0xFF8B949E) : Color(0xFF64748B)),
+                        fontSize: 13,
+                        fontFamily: 'monospace',
                       ),
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
-                  SizedBox(width: 6), // Уменьшено с 12 до 6
-                  InkWell(
-                    onTap: () {
+                  SizedBox(width: 4),
+                  IconButton(
+                    icon: Icon(
+                      isVisible ? Icons.visibility_off_rounded : Icons.visibility_rounded,
+                      size: 16,
+                    ),
+                    padding: EdgeInsets.zero,
+                    constraints: BoxConstraints(minWidth: 28, minHeight: 28),
+                    onPressed: () {
                       setState(() {
                         _passwordVisibility[index] = !isVisible;
                       });
                     },
-                    borderRadius: BorderRadius.circular(4),
-                    child: Padding(
-                      padding: EdgeInsets.all(4),
-                      child: Icon(
-                        isVisible ? Icons.visibility_off_outlined : Icons.visibility_outlined,
-                        size: 16,
-                        color: isFired 
-                          ? (widget.isDarkMode ? Color(0xFF6B7280) : Color(0xFF9CA3AF))
-                          : Theme.of(context).primaryColor,
-                      ),
-                    ),
                   ),
                 ],
               ),
             ),
-            
-            // Должность
-            Expanded(
-              flex: 2,
-              child: Text(
-                staff['role']!,
-                style: TextStyle(
-                  color: isFired
-                    ? (widget.isDarkMode ? Color(0xFF6B7280) : Color(0xFF9CA3AF))
-                    : Theme.of(context).colorScheme.onSurface,
-                  fontSize: 14,
-                ),
-              ),
-            ),
-            
-            // Телефон (увеличенная колонка)
-            Expanded(
-              flex: 2, // Увеличено с 1 до 2
-              child: Text(
-                staff['phone']!,
-                style: TextStyle(
-                  color: isFired
-                    ? (widget.isDarkMode ? Color(0xFF6B7280) : Color(0xFF9CA3AF))
-                    : (widget.isDarkMode ? Color(0xFF8B949E) : Color(0xFF64748B)),
-                  fontSize: 14,
-                ),
-              ),
-            ),
-            
-            // Дата устройства (увеличенная колонка)
-            Expanded(
-              flex: 2, // Увеличено с 1 до 2
-              child: Text(
-                staff['joinDate']!,
-                style: TextStyle(
-                  color: isFired
-                    ? (widget.isDarkMode ? Color(0xFF6B7280) : Color(0xFF9CA3AF))
-                    : (widget.isDarkMode ? Color(0xFF8B949E) : Color(0xFF64748B)),
-                  fontSize: 14,
-                ),
-              ),
-            ),
-
             // Статус
             Expanded(
               flex: 1,
-              child: Container(
-                alignment: Alignment.center,
+              child: Center(
                 child: Container(
-                  padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
-                    color: isFired 
-                      ? Color(0xFFEF4444).withOpacity(0.1)
-                      : Color(0xFF10B981).withOpacity(0.1),
+                    color: isFired
+                        ? (widget.isDarkMode ? Color(0xFF3F1F1F) : Color(0xFFFEE2E2))
+                        : (widget.isDarkMode ? Color(0xFF1F3F2F) : Color(0xFFD1FAE5)),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
-                    staff['status']!,
+                    isFired ? 'Неактивен' : 'Активен',
                     style: TextStyle(
-                      color: isFired ? Color(0xFFEF4444) : Color(0xFF10B981),
+                      color: isFired
+                          ? (widget.isDarkMode ? Color(0xFFEF4444) : Color(0xFFDC2626))
+                          : (widget.isDarkMode ? Color(0xFF10B981) : Color(0xFF059669)),
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
                     ),
@@ -423,51 +336,34 @@ class StaffScreenState extends State<StaffScreen> {
                 ),
               ),
             ),
-
-            // Действия (кнопки редактировать и уволить/восстановить)
+            // ДАТА устройства
+            Expanded(
+              flex: 1,
+              child: Center(
+                child: Text(
+                  deviceDate,
+                  style: TextStyle(
+                    color: widget.isDarkMode ? Color(0xFF8B949E) : Color(0xFF64748B),
+                    fontSize: 13,
+                  ),
+                ),
+              ),
+            ),
+            // Действия
             Expanded(
               flex: 1,
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  // Кнопка редактирования
-                  InkWell(
-                    onTap: () {
-                      _showEditDialog(context, staff, index);
-                    },
-                    borderRadius: BorderRadius.circular(4),
-                    child: Padding(
-                      padding: EdgeInsets.all(6),
-                      child: Icon(
-                        Icons.edit_outlined,
-                        size: 18,
-                        color: isFired 
-                          ? (widget.isDarkMode ? Color(0xFF6B7280) : Color(0xFF9CA3AF))
-                          : Theme.of(context).primaryColor,
-                      ),
-                    ),
+                  IconButton(
+                    icon: Icon(Icons.edit_rounded, size: 18),
+                    onPressed: () => _editStaff(staff),
+                    tooltip: 'Редактировать',
                   ),
-                  
-                  SizedBox(width: 8),
-                  
-                  // Кнопка увольнения/восстановления
-                  InkWell(
-                    onTap: () {
-                      if (isFired) {
-                        _showRestoreDialog(context, staff['name']!, index);
-                      } else {
-                        _showFireDialog(context, staff['name']!, index);
-                      }
-                    },
-                    borderRadius: BorderRadius.circular(4),
-                    child: Padding(
-                      padding: EdgeInsets.all(6),
-                      child: Icon(
-                        isFired ? Icons.restore_rounded : Icons.person_remove_outlined,
-                        size: 18,
-                        color: isFired ? Color(0xFF10B981) : Color(0xFFEF4444),
-                      ),
-                    ),
+                  IconButton(
+                    icon: Icon(Icons.person_off_rounded, size: 18, color: Colors.red),
+                    onPressed: () => _deleteStaff(staff['id']),
+                    tooltip: 'Удалить',
                   ),
                 ],
               ),
@@ -478,272 +374,245 @@ class StaffScreenState extends State<StaffScreen> {
     );
   }
 
-  void _showAddStaffDialog(BuildContext context) {
-    final _formKey = GlobalKey<FormState>();
-    final _nameController = TextEditingController();
-    final _emailController = TextEditingController();
-    final _passwordController = TextEditingController();
-    final _roleController = TextEditingController();
-    final _phoneController = TextEditingController();
-    final _dateController = TextEditingController();
+  void _editStaff(Map<String, dynamic> staff) {
+    _showEditStaffDialog(context, staff);
+  }
+
+  void _showEditStaffDialog(BuildContext context, Map<String, dynamic> staff) {
+    final surnameController = TextEditingController(text: staff['surname'] ?? '');
+    final nameController = TextEditingController(text: staff['name'] ?? '');
+    final patronymicController = TextEditingController(text: staff['patronymic'] ?? '');
+    final emailController = TextEditingController(text: staff['email'] ?? '');
+    final passwordController = TextEditingController();
+    final deviceDateController = TextEditingController(text: staff['device_date'] ?? '');
 
     showDialog(
       context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text('Добавить нового сотрудника'),
-          content: Container(
-            width: 500,
-            child: SingleChildScrollView(
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    // ФИО
-                    TextFormField(
-                      controller: _nameController,
-                      decoration: InputDecoration(
-                        labelText: 'ФИО *',
-                        hintText: 'Введите полное имя',
-                        border: OutlineInputBorder(),
-                      ),
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Введите ФИО';
-                        }
-                        return null;
-                      },
-                    ),
-                    SizedBox(height: 16),
-                    
-                    // Email
-                    TextFormField(
-                      controller: _emailController,
-                      decoration: InputDecoration(
-                        labelText: 'Email *',
-                        hintText: 'example@courseadmin.com',
-                        border: OutlineInputBorder(),
-                      ),
-                      keyboardType: TextInputType.emailAddress,
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Введите email';
-                        }
-                        if (!value.contains('@')) {
-                          return 'Введите корректный email';
-                        }
-                        return null;
-                      },
-                    ),
-                    SizedBox(height: 16),
-                    
-                    // Пароль
-                    TextFormField(
-                      controller: _passwordController,
-                      decoration: InputDecoration(
-                        labelText: 'Пароль *',
-                        hintText: 'Минимум 6 символов',
-                        border: OutlineInputBorder(),
-                      ),
-                      obscureText: true,
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Введите пароль';
-                        }
-                        if (value.length < 6) {
-                          return 'Пароль должен быть минимум 6 символов';
-                        }
-                        return null;
-                      },
-                    ),
-                    SizedBox(height: 16),
-                    
-                    // Должность
-                    TextFormField(
-                      controller: _roleController,
-                      decoration: InputDecoration(
-                        labelText: 'Должность *',
-                        hintText: 'Например: Администратор курсов',
-                        border: OutlineInputBorder(),
-                      ),
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Введите должность';
-                        }
-                        return null;
-                      },
-                    ),
-                    SizedBox(height: 16),
-                    
-                    // Телефон
-                    TextFormField(
-                      controller: _phoneController,
-                      decoration: InputDecoration(
-                        labelText: 'Телефон *',
-                        hintText: '+7 (900) 123-45-67',
-                        border: OutlineInputBorder(),
-                      ),
-                      keyboardType: TextInputType.phone,
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Введите номер телефона';
-                        }
-                        return null;
-                      },
-                    ),
-                    SizedBox(height: 16),
-                    
-                    // Дата устройства
-                    TextFormField(
-                      controller: _dateController,
-                      decoration: InputDecoration(
-                        labelText: 'Дата устройства *',
-                        hintText: '15 января 2024',
-                        border: OutlineInputBorder(),
-                        suffixIcon: Icon(Icons.calendar_today),
-                      ),
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Введите дату устройства';
-                        }
-                        return null;
-                      },
-                    ),
-                  ],
+      builder: (context) => AlertDialog(
+        title: Text('Редактировать сотрудника'),
+        content: SizedBox(
+          width: 700,
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: surnameController,
+                  decoration: InputDecoration(labelText: 'Фамилия', contentPadding: EdgeInsets.symmetric(vertical: 14, horizontal: 12)),
                 ),
-              ),
+                SizedBox(height: 12),
+                TextField(
+                  controller: nameController,
+                  decoration: InputDecoration(labelText: 'Имя', contentPadding: EdgeInsets.symmetric(vertical: 14, horizontal: 12)),
+                ),
+                SizedBox(height: 12),
+                TextField(
+                  controller: patronymicController,
+                  decoration: InputDecoration(labelText: 'Отчество', contentPadding: EdgeInsets.symmetric(vertical: 14, horizontal: 12)),
+                ),
+                SizedBox(height: 12),
+                TextField(
+                  controller: emailController,
+                  decoration: InputDecoration(labelText: 'Email', contentPadding: EdgeInsets.symmetric(vertical: 14, horizontal: 12)),
+                  keyboardType: TextInputType.emailAddress,
+                ),
+                SizedBox(height: 12),
+                TextField(
+                  controller: passwordController,
+                  decoration: InputDecoration(
+                    labelText: 'Пароль (оставьте пустым чтобы не менять)',
+                    contentPadding: EdgeInsets.symmetric(vertical: 14, horizontal: 12),
+                  ),
+                  obscureText: true,
+                  style: TextStyle(height: 1.2),
+                ),
+                SizedBox(height: 12),
+                TextField(
+                  controller: deviceDateController,
+                  decoration: InputDecoration(
+                    labelText: 'Дата устройства (yyyy-MM-dd)',
+                    hintText: '2024-11-01',
+                    contentPadding: EdgeInsets.symmetric(vertical: 14, horizontal: 12),
+                  ),
+                ),
+              ],
             ),
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: Text('Отмена'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                if (_formKey.currentState!.validate()) {
-                  setState(() {
-                    _staffList.add({
-                      'name': _nameController.text,
-                      'email': _emailController.text,
-                      'password': _passwordController.text,
-                      'role': _roleController.text,
-                      'phone': _phoneController.text,
-                      'joinDate': _dateController.text,
-                      'status': 'Активен',
-                    });
-                  });
-                  Navigator.of(context).pop();
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('Отмена'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              // Валидация минимальная
+              if (emailController.text.isEmpty || nameController.text.isEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Заполните, пожалуйста, имя и email')),
+                );
+                return;
+              }
+
+              final updated = <String, dynamic>{
+                'surname': surnameController.text,
+                'name': nameController.text,
+                'patronymic': patronymicController.text,
+                'email': emailController.text,
+                'device_date': deviceDateController.text,
+              };
+
+              // Если введён новый пароль — обновляем поле
+              if (passwordController.text.isNotEmpty) {
+                updated['password'] = passwordController.text;
+              }
+
+              try {
+                await supabase.from('employee').update(updated).eq('id', staff['id']);
+                Navigator.pop(context);
+                await _loadStaffFromDatabase();
+                if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Сотрудник ${_nameController.text} добавлен')),
+                    SnackBar(content: Text('Сотрудник обновлён')),
                   );
                 }
-              },
-              child: Text('Добавить'),
-            ),
-          ],
-        );
-      },
+              } catch (e) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Ошибка обновления: $e')),
+                );
+              }
+            },
+            child: Text('Сохранить'),
+          ),
+        ],
+      ),
     );
   }
 
-  void _showEditDialog(BuildContext context, Map<String, String> staff, int index) {
-    showDialog(
+  Future<void> _deleteStaff(int id) async {
+    final confirm = await showDialog<bool>(
       context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text('Редактировать сотрудника'),
-          content: Text('Здесь будет форма редактирования для ${staff['name']}'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: Text('Отмена'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Данные ${staff['name']} обновлены')),
-                );
-              },
-              child: Text('Сохранить'),
-            ),
-          ],
-        );
-      },
+      builder: (context) => AlertDialog(
+        title: Text('Удалить сотрудника?'),
+        content: Text('Это действие нельзя отменить'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text('Отмена'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: Text('Удалить', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
     );
+
+    if (confirm == true) {
+      try {
+        await supabase.from('employee').delete().eq('id', id);
+        await _loadStaffFromDatabase();
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Сотрудник удален')),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Ошибка удаления: $e')),
+          );
+        }
+      }
+    }
   }
 
-  void _showFireDialog(BuildContext context, String name, int index) {
+  void _showAddStaffDialog(BuildContext context) {
+    final surnameController = TextEditingController();
+    final nameController = TextEditingController();
+    final patronymicController = TextEditingController();
+    final emailController = TextEditingController();
+    final passwordController = TextEditingController();
+    final deviceDateController = TextEditingController();
+
     showDialog(
       context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text('Уволить сотрудника'),
-          content: Text('Вы уверены, что хотите уволить $name?\n\nСотрудник будет переведен в статус "Уволен", но останется в системе.'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: Text('Отмена'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                setState(() {
-                  _staffList[index]['status'] = 'Уволен';
-                });
-                Navigator.of(context).pop();
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('$name уволен'),
-                    backgroundColor: Color(0xFFEF4444),
-                  ),
-                );
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Color(0xFFEF4444),
+      builder: (context) => AlertDialog(
+        title: Text('Добавить сотрудника'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: surnameController,
+                decoration: InputDecoration(labelText: 'Фамилия'),
               ),
-              child: Text('Уволить'),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  void _showRestoreDialog(BuildContext context, String name, int index) {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text('Восстановить сотрудника'),
-          content: Text('Вы хотите восстановить $name в должности?'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: Text('Отмена'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                setState(() {
-                  _staffList[index]['status'] = 'Активен';
-                });
-                Navigator.of(context).pop();
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('$name восстановлен'),
-                    backgroundColor: Color(0xFF10B981),
-                  ),
-                );
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Color(0xFF10B981),
+              SizedBox(height: 12),
+              TextField(
+                controller: nameController,
+                decoration: InputDecoration(labelText: 'Имя'),
               ),
-              child: Text('Восстановить'),
-            ),
-          ],
-        );
-      },
+              SizedBox(height: 12),
+              TextField(
+                controller: patronymicController,
+                decoration: InputDecoration(labelText: 'Отчество'),
+              ),
+              SizedBox(height: 12),
+              TextField(
+                controller: emailController,
+                decoration: InputDecoration(labelText: 'Email'),
+              ),
+              SizedBox(height: 12),
+              TextField(
+                controller: passwordController,
+                decoration: InputDecoration(labelText: 'Пароль'),
+                obscureText: true,
+              ),
+              SizedBox(height: 12),
+              TextField(
+                controller: deviceDateController,
+                decoration: InputDecoration(
+                  labelText: 'Дата устройства (yyyy-MM-dd)',
+                  hintText: '2024-11-01',
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('Отмена'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              try {
+                await supabase.from('employee').insert({
+                  'surname': surnameController.text,
+                  'name': nameController.text,
+                  'patronymic': patronymicController.text,
+                  'email': emailController.text,
+                  'password': passwordController.text,
+                  'device_date': deviceDateController.text,
+                  'status': true,
+                });
+                Navigator.pop(context);
+                await _loadStaffFromDatabase();
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Сотрудник добавлен')),
+                  );
+                }
+              } catch (e) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Ошибка: $e')),
+                );
+              }
+            },
+            child: Text('Добавить'),
+          ),
+        ],
+      ),
     );
   }
 }
