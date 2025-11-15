@@ -2,7 +2,7 @@
 import 'package:flutter/material.dart';
 
 class CourseEditAnalyticsStudentsTab extends StatelessWidget {
-  const CourseEditAnalyticsStudentsTab({Key? key}) : super(key: key);
+  const CourseEditAnalyticsStudentsTab({super.key});
 
   @override
   Widget build(BuildContext context) {

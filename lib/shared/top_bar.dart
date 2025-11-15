@@ -9,14 +9,14 @@ class TopBar extends StatelessWidget {
   final VoidCallback? onAddCourse;
 
   const TopBar({
-    Key? key,
+    super.key,
     required this.selectedIndex,
     required this.onThemeToggle,
     required this.isDarkMode,
     required this.menuItems,
     this.onAddStaff,
     this.onAddCourse,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

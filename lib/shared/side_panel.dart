@@ -9,13 +9,13 @@ class SidePanel extends StatelessWidget {
   final List<IconData> menuIcons;
 
   const SidePanel({
-    Key? key,
+    super.key,
     required this.selectedIndex,
     required this.onItemSelected,
     required this.isDarkMode,
     required this.menuItems,
     required this.menuIcons,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

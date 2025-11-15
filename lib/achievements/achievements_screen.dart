@@ -5,7 +5,7 @@ import 'package:image_picker/image_picker.dart';
 class AchievementsScreen extends StatefulWidget {
   final bool isDarkMode;
 
-  const AchievementsScreen({Key? key, required this.isDarkMode}) : super(key: key);
+  const AchievementsScreen({super.key, required this.isDarkMode});
 
   @override
   State<AchievementsScreen> createState() => _AchievementsScreenState();

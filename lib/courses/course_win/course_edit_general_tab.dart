@@ -17,7 +17,7 @@ class CourseEditGeneralTab extends StatelessWidget {
   final VoidCallback onDelete;
 
   const CourseEditGeneralTab({
-    Key? key,
+    super.key,
     required this.formKey,
     required this.titleController,
     required this.descriptionController,
@@ -31,7 +31,7 @@ class CourseEditGeneralTab extends StatelessWidget {
     required this.onSave,
     required this.onArchive,
     required this.onDelete,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

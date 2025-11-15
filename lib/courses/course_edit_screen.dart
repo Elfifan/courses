@@ -7,7 +7,7 @@ import 'course_win/course_edit_analytics_students_tab.dart';
 import 'course_win/course_edit_reviews_tab.dart'; // Новый файл для вкладки "Отзывы"
 
 class CourseEditScreen extends StatefulWidget {
-  const CourseEditScreen({Key? key}) : super(key: key);
+  const CourseEditScreen({super.key});
 
   @override
   _CourseEditScreenState createState() => _CourseEditScreenState();

@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 class StudentProfileScreen extends StatefulWidget {
   final bool isDarkMode;
 
-  const StudentProfileScreen({Key? key, required this.isDarkMode}) : super(key: key);
+  const StudentProfileScreen({super.key, required this.isDarkMode});
 
   @override
   State<StudentProfileScreen> createState() => _StudentProfileScreenState();

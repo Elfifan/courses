@@ -6,9 +6,9 @@ class StaffScreen extends StatefulWidget {
   final bool isDarkMode;
 
   const StaffScreen({
-    Key? key,
+    super.key,
     required this.isDarkMode,
-  }) : super(key: key);
+  });
 
   @override
   StaffScreenState createState() => StaffScreenState();
@@ -358,7 +358,7 @@ class StaffScreenState extends State<StaffScreen> {
                   ),
                   IconButton(
                     icon: Icon(Icons.person_off_rounded, size: 18, color: Colors.red),
-                    onPressed: () => _deleteStaff(staff['id']),
+                    onPressed: () => _deleteStaff(staff['id'], staff),
                     tooltip: 'Удалить',
                   ),
                 ],
@@ -485,41 +485,31 @@ class StaffScreenState extends State<StaffScreen> {
     );
   }
 
-  Future<void> _deleteStaff(int id) async {
+   Future<void> _deleteStaff(int id, Map<String,dynamic> staff) async {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('Удалить сотрудника?'),
-        content: Text('Это действие нельзя отменить'),
+        title: Text('Уволить сотрудника?'),
+        content: Text('Сотрудник будет помечен как неактивный. Это действие можно отменить через административную панель.'),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: Text('Отмена'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: Text('Удалить', style: TextStyle(color: Colors.red)),
-          ),
+          TextButton(onPressed: () => Navigator.pop(context, false), child: Text('Отмена')),
+          TextButton(onPressed: () => Navigator.pop(context, true), child: Text('Уволить', style: TextStyle(color: Colors.red))),
         ],
       ),
     );
 
-    if (confirm == true) {
-      try {
-        await supabase.from('employee').delete().eq('id', id);
-        await _loadStaffFromDatabase();
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Сотрудник удален')),
-          );
-        }
-      } catch (e) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Ошибка удаления: $e')),
-          );
-        }
-      }
+    if (confirm != true) return;
+
+    try {
+      await supabase.from('employee').update({
+        'status': false,
+        'fired_at': DateTime.now().toIso8601String(), // опционально поле для даты увольнения
+      }).eq('id', id);
+
+      await _loadStaffFromDatabase();
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Сотрудник помечен как неактивный')));
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Ошибка: $e')));
     }
   }
 
@@ -610,33 +600,5 @@ class StaffScreenState extends State<StaffScreen> {
         ],
       ),
     );
-  }
-
-  Future<void> _terminateStaff(int id, Map<String,dynamic> staff) async {
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Уволить сотрудника?'),
-        content: Text('Сотрудник будет помечен как неактивный. Это действие можно отменить через административную панель.'),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: Text('Отмена')),
-          TextButton(onPressed: () => Navigator.pop(context, true), child: Text('Уволить', style: TextStyle(color: Colors.red))),
-        ],
-      ),
-    );
-
-    if (confirm != true) return;
-
-    try {
-      await supabase.from('employee').update({
-        'status': false,
-        'fired_at': DateTime.now().toIso8601String(), // опционально поле для даты увольнения
-      }).eq('id', id);
-
-      await _loadStaffFromDatabase();
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Сотрудник помечен как неактивный')));
-    } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Ошибка: $e')));
-    }
   }
 }

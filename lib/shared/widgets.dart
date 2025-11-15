@@ -10,14 +10,14 @@ class CustomDropdown extends StatelessWidget {
   final bool isDarkMode;
 
   const CustomDropdown({
-    Key? key,
+    super.key,
     required this.value,
     required this.items,
     required this.onChanged,
     required this.isDarkMode,
     this.hint,
     this.width,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

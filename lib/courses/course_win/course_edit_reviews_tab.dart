@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 class CourseEditReviewsTab extends StatefulWidget {
   final List<Map<String, dynamic>>? reviewsFromParent;
 
-  const CourseEditReviewsTab({Key? key, this.reviewsFromParent}) : super(key: key);
+  const CourseEditReviewsTab({super.key, this.reviewsFromParent});
 
   @override
   State<CourseEditReviewsTab> createState() => _CourseEditReviewsTabState();

@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 class CourseEditModulesTab extends StatelessWidget {
   final Map<String, dynamic> module;
 
-  const CourseEditModulesTab({Key? key, required this.module}) : super(key: key);
+  const CourseEditModulesTab({super.key, required this.module});
 
   @override
   Widget build(BuildContext context) {

@@ -8,11 +8,11 @@ class CoursesScreen extends StatelessWidget {
   final bool isDarkMode;
 
   const CoursesScreen({
-    Key? key,
+    super.key,
     required this.selectedFilter,
     required this.onFilterChanged,
     required this.isDarkMode,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
