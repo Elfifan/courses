@@ -33,21 +33,29 @@ class _CoursesScreenState extends State<CoursesScreen> {
     _loadCourses();
   }
 
-  Future<void> _loadCourses() async {
-    try {
-      setState(() => isLoading = true);
-      final loadedCourses = await SupabaseService.getCourses();
+Future<void> _loadCourses() async {
+  try {
+    setState(() => isLoading = true);
+    
+    final loadedCourses = await SupabaseService.getCourses();
+    
+    if (mounted) {
       setState(() {
         courses = loadedCourses;
         isLoading = false;
       });
-    } catch (e) {
+    }
+  } catch (e) {
+    if (mounted) {
       setState(() => isLoading = false);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Ошибка загрузки: $e')),
       );
     }
   }
+}
+
+
 
   @override
   void dispose() {
