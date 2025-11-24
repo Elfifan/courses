@@ -97,6 +97,7 @@ class _CoursesScreenState extends State<CoursesScreen> {
     );
   }
 
+
   Widget _buildCourseCard(BuildContext context, int index) {
     final courses = [
       {

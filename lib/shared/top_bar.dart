@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../services/course_service.dart';
 
 class TopBar extends StatelessWidget {
   final int selectedIndex;
@@ -68,7 +69,15 @@ class TopBar extends StatelessWidget {
           // Add button
           if (showAddButton)
             ElevatedButton.icon(
-              onPressed: selectedIndex == 1 ? onAddCourse : (selectedIndex == 3 ? onAddStaff : onAddAchievement),
+              onPressed: () {
+                if (selectedIndex == 1) {
+                  CourseService.showAddCourseForm(context);
+                } else if (selectedIndex == 3) {
+                  onAddStaff?.call();
+                } else if (selectedIndex == 4) {
+                onAddAchievement?.call();
+            }
+          },
               icon: const Icon(Icons.add),
               label: Text(_getButtonText()),
               style: ElevatedButton.styleFrom(

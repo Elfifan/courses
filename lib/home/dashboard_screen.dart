@@ -5,6 +5,8 @@ import '../courses/courses_screen.dart';
 import '../students/students_screen.dart';
 import '../staff/staff_screen.dart';
 import '../achievements/achievements_screen.dart';
+import '../services/course_service.dart';
+
 
 class DashboardScreen extends StatefulWidget {
   final VoidCallback onThemeToggle;
@@ -196,131 +198,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  void _showAddStaffForm() {
-    final _formKey = GlobalKey<FormState>();
-    final _nameController = TextEditingController();
-    final _emailController = TextEditingController();
-    final _passwordController = TextEditingController();
-    final _phoneController = TextEditingController();
-    final _dateController = TextEditingController();
-
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text('Добавить нового сотрудника'),
-          content: Container(
-            width: 500,
-            child: SingleChildScrollView(
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    TextFormField(
-                      controller: _nameController,
-                      decoration: InputDecoration(
-                        labelText: 'ФИО *',
-                        hintText: 'Введите полное имя',
-                        border: OutlineInputBorder(),
-                      ),
-                      validator: (v) => v==null||v.isEmpty?'Введите ФИО':null,
-                    ),
-                    SizedBox(height: 16),
-                    TextFormField(
-                      controller: _emailController,
-                      decoration: InputDecoration(
-                        labelText: 'Email *',
-                        hintText: 'example@courseadmin.com',
-                        border: OutlineInputBorder(),
-                      ),
-                      keyboardType: TextInputType.emailAddress,
-                      validator: (v) {
-                        if (v==null||v.isEmpty) return 'Введите email';
-                        if (!v.contains('@')) return 'Введите корректный email';
-                        return null;
-                      },
-                    ),
-                    SizedBox(height: 16),
-                    TextFormField(
-                      controller: _passwordController,
-                      decoration: InputDecoration(
-                        labelText: 'Пароль *',
-                        hintText: 'Минимум 6 символов',
-                        border: OutlineInputBorder(),
-                      ),
-                      obscureText: true,
-                      validator: (v) {
-                        if (v==null||v.isEmpty) return 'Введите пароль';
-                        if (v.length<6) return 'Минимум 6 символов';
-                        return null;
-                      },
-                    ),
-                    SizedBox(height: 16),
-                    TextFormField(
-                      controller: _phoneController,
-                      decoration: InputDecoration(
-                        labelText: 'Телефон *',
-                        hintText: '+7 (900) 123-45-67',
-                        border: OutlineInputBorder(),
-                      ),
-                      keyboardType: TextInputType.phone,
-                      validator: (v)=>v==null||v.isEmpty?'Введите телефон':null,
-                    ),
-                    SizedBox(height: 16),
-                    TextFormField(
-                      controller: _dateController,
-                      decoration: InputDecoration(
-                        labelText: 'Дата устройства *',
-                        hintText: '15 января 2024',
-                        border: OutlineInputBorder(),
-                        suffixIcon: IconButton(
-                          icon: Icon(Icons.calendar_today),
-                          onPressed: () async {
-                            final date = await showDatePicker(
-                              context: context,
-                              initialDate: DateTime.now(),
-                              firstDate: DateTime(2000),
-                              lastDate: DateTime.now(),
-                            );
-                            if (date != null) {
-                              _dateController.text =
-                                  '${date.day.toString().padLeft(2,'0')} '
-                                  '${['янв','фев','мар','апр','май','июн','июл','авг','сен','окт','ноя','дек'][date.month-1]} '
-                                  '${date.year}';
-                            }
-                          },
-                        ),
-                      ),
-                      readOnly: true,
-                      validator: (v)=>v==null||v.isEmpty?'Введите дату':null,
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: Text('Отмена'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                if (_formKey.currentState!.validate()) {
-                  Navigator.of(context).pop();
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Сотрудник ${_nameController.text} добавлен')),
-                  );
-                }
-              },
-              child: Text('Добавить'),
-            ),
-          ],
-        );
-      },
-    );
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -348,7 +225,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   menuItems: _menuItems,
                   onAddStaff: () {
                     if (_selectedIndex == 3) {
-                      _showAddStaffForm();
+                      CourseService.showAddCourseForm(context);
                     }
                   },
                   onAddCourse: () {
