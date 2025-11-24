@@ -7,6 +7,7 @@ class TopBar extends StatelessWidget {
   final List<String> menuItems;
   final VoidCallback? onAddStaff;
   final VoidCallback? onAddCourse;
+  final VoidCallback? onAddAchievement;
 
   const TopBar({
     super.key,
@@ -16,12 +17,16 @@ class TopBar extends StatelessWidget {
     required this.menuItems,
     this.onAddStaff,
     this.onAddCourse,
+    this.onAddAchievement,
   });
 
   @override
   Widget build(BuildContext context) {
-    final bool showAddButton = [1,  3].contains(selectedIndex) && 
-        ((selectedIndex == 1 && onAddCourse != null) || (selectedIndex !=1 && onAddStaff != null));
+    final bool showAddButton = [1, 3, 4].contains(selectedIndex) && (
+      (selectedIndex == 1 && onAddCourse != null) ||
+      (selectedIndex == 3 && onAddStaff != null) ||
+      (selectedIndex == 4 && onAddAchievement != null)
+    );
 
     return Container(
       height: 70,
@@ -63,12 +68,12 @@ class TopBar extends StatelessWidget {
           // Add button
           if (showAddButton)
             ElevatedButton.icon(
-              onPressed: selectedIndex == 1 ? onAddCourse : onAddStaff,
+              onPressed: selectedIndex == 1 ? onAddCourse : (selectedIndex == 3 ? onAddStaff : onAddAchievement),
               icon: const Icon(Icons.add),
               label: Text(_getButtonText()),
               style: ElevatedButton.styleFrom(
                 elevation: 0,
-                minimumSize: const Size(110, 40),
+                minimumSize: const Size(140, 40),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(8),
                 ),
@@ -89,6 +94,8 @@ class TopBar extends StatelessWidget {
         return 'Студенты';
       case 3:
         return 'Сотрудники';
+      case 4:
+        return 'Достижения';
       default:
         return 'Dashboard';
     }
@@ -100,6 +107,8 @@ class TopBar extends StatelessWidget {
         return 'Добавить курс';
       case 3:
         return 'Добавить сотрудника';
+      case 4:
+        return 'Добавить достижение';
       default:
         return '';
     }

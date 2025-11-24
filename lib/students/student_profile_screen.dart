@@ -18,7 +18,7 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
     final theme = Theme.of(context);
     final cardBg = theme.colorScheme.surface;
     final textColor = theme.colorScheme.onSurface;
-    final textSecondary = theme.colorScheme.onSurface.withOpacity(0.7);
+    final textSecondary = theme.colorScheme.onSurface.withValues(alpha: 0.7);
 
     final student = {
       'avatar': 'А',
@@ -214,7 +214,7 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
     return Container(
       padding: EdgeInsets.symmetric(horizontal: 18, vertical: 6),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.18),
+        color: color.withValues(alpha: 0.18),
         borderRadius: BorderRadius.circular(30),
       ),
       child: Text(

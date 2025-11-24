@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import '../shared/widgets.dart';
+import '../shared/search_row.dart';
 import 'course_edit_screen.dart';
 
-class CoursesScreen extends StatelessWidget {
+class CoursesScreen extends StatefulWidget {
   final String selectedFilter;
   final Function(String) onFilterChanged;
   final bool isDarkMode;
@@ -15,49 +15,82 @@ class CoursesScreen extends StatelessWidget {
   });
 
   @override
+  State<CoursesScreen> createState() => _CoursesScreenState();
+}
+
+class _CoursesScreenState extends State<CoursesScreen> {
+  final TextEditingController _searchController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    _searchController.addListener(() => setState(() {}));
+  }
+
+  @override
+  void dispose() {
+    _searchController.removeListener(() {});
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Column(
       children: [
-        // Фильтры и поиск
+        // Фильтры и поиск (как в Staff)
         Row(
           children: [
             Expanded(
-              child: TextField(
-                decoration: InputDecoration(
-                  hintText: 'Поиск курсов по названию...',
-                  prefixIcon: Icon(Icons.search_rounded),
+              child: SearchRow(
+                controller: _searchController,
+                hintText: 'Поиск курсов по названию...',
+                onChanged: (_) => setState(() {}),
+                trailing: SizedBox(
+                  height: 48,
+                  child: Container(
+                    padding: EdgeInsets.symmetric(horizontal: 12),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.surface,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: widget.isDarkMode ? const Color(0xFF30363D) : const Color(0xFFE2E8F0),
+                      ),
+                    ),
+                    child: DropdownButton<String>(
+                      value: widget.selectedFilter,
+                      underline: SizedBox(),
+                      items: ['Все', 'Бесплатные', 'Платные', 'Активные', 'В разработке', 'Завершенные']
+                          .map((s) => DropdownMenuItem(value: s, child: Text(s)))
+                          .toList(),
+                      onChanged: (v) {
+                        if (v != null) widget.onFilterChanged(v);
+                      },
+                    ),
+                  ),
                 ),
               ),
             ),
-            SizedBox(width: 16),
-            CustomDropdown(
-              value: selectedFilter,
-              items: ['Все', 'Бесплатные', 'Платные', 'Активные', 'В разработке', 'Завершенные'],
-              onChanged: (String? newValue) {
-                if (newValue != null) {
-                  onFilterChanged(newValue);
-                }
-              },
-              isDarkMode: isDarkMode,
-            ),
           ],
         ),
-
         SizedBox(height: 24),
 
         // Сетка курсов - 4 колонки
         Expanded(
-          child: GridView.builder(
-            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 4,
-              crossAxisSpacing: 20,
-              mainAxisSpacing: 20,
-              childAspectRatio: 1.02,
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: GridView.builder(
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 4,
+                crossAxisSpacing: 20,
+                mainAxisSpacing: 20,
+                childAspectRatio: 1.02,
+              ),
+              itemCount: 8,
+              itemBuilder: (context, index) {
+                return _buildCourseCard(context, index);
+              },
             ),
-            itemCount: 8,
-            itemBuilder: (context, index) {
-              return _buildCourseCard(context, index);
-            },
           ),
         ),
       ],
@@ -170,7 +203,7 @@ class CoursesScreen extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         border: isPaid
           ? Border.all(color: Color(0xFFF59E0B).withOpacity(0.3), width: 2)
-          : (isDarkMode
+          : (widget.isDarkMode
               ? Border.all(color: Color(0xFF30363D))
               : null),
       ),
@@ -251,7 +284,7 @@ class CoursesScreen extends StatelessWidget {
               course['description'] as String,
               style: TextStyle(
                 fontSize: 13,
-                color: isDarkMode ? Color(0xFF8B949E) : Color(0xFF64748B),
+                color: widget.isDarkMode ? Color(0xFF8B949E) : Color(0xFF64748B),
                 height: 1.3,
               ),
               maxLines: 3,
@@ -284,7 +317,7 @@ class CoursesScreen extends StatelessWidget {
                 child: Text(
                   '${course['students']}',
                   style: TextStyle(
-                    color: isDarkMode ? Color(0xFF8B949E) : Color(0xFF64748B), 
+                    color: widget.isDarkMode ? Color(0xFF8B949E) : Color(0xFF64748B), 
                     fontSize: 12,
                     fontWeight: FontWeight.w500,
                   ),

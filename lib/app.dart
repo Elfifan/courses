@@ -16,7 +16,6 @@ final ThemeData lightTheme = ThemeData(
     onPrimary: Colors.white,
     onSecondary: Colors.white,
     onSurface: Color(0xFF1E293B),
-    onBackground: Color(0xFF334155),
     onError: Colors.white,
     brightness: Brightness.light,
   ),
@@ -78,7 +77,6 @@ final ThemeData darkTheme = ThemeData(
     onPrimary: Colors.white,
     onSecondary: Colors.black,
     onSurface: Colors.white,
-    onBackground: Colors.white,
     onError: Colors.white,
   ),
   appBarTheme: AppBarTheme(

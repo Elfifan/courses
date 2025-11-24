@@ -32,7 +32,7 @@ class SidePanel extends StatelessWidget {
                 Container(
                   padding: EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: Theme.of(context).primaryColor.withOpacity(0.1),
+                    color: Theme.of(context).primaryColor.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Icon(Icons.code_rounded, color: Theme.of(context).primaryColor, size: 28),
@@ -70,12 +70,12 @@ class SidePanel extends StatelessWidget {
                     margin: EdgeInsets.symmetric(horizontal: 12, vertical: 3),
                     decoration: BoxDecoration(
                       color: isSelected
-                          ? Theme.of(context).primaryColor.withOpacity(isDarkMode ? 0.2 : 0.1)
+                          ? Theme.of(context).primaryColor.withValues(alpha: isDarkMode ? 0.2 : 0.1)
                           : Colors.transparent,
                       borderRadius: BorderRadius.circular(12),
                       border: isSelected && isDarkMode
                           ? Border.all(
-                              color: Theme.of(context).primaryColor.withOpacity(0.3),
+                              color: Theme.of(context).primaryColor.withValues(alpha: 0.3),
                               width: 1,
                             )
                           : null,

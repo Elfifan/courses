@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import '../shared/side_panel.dart';
 import '../shared/top_bar.dart';
-import '../shared/widgets.dart';
 import '../courses/courses_screen.dart';
 import '../students/students_screen.dart';
 import '../staff/staff_screen.dart';
@@ -25,6 +24,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
   int _selectedIndex = 0;
   String _selectedCourseFilter = 'Все';
   String _selectedStudentFilter = 'Все пользователи';
+
+  final GlobalKey _achievementsKey = GlobalKey();
 
   final List<String> _menuItems = [
     'Dashboard',
@@ -89,7 +90,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               child: Container(
                                 padding: const EdgeInsets.all(8),
                                 decoration: BoxDecoration(
-                                  color: isSelected ? Colors.blueAccent.withOpacity(0.3) : null,
+                                  color: isSelected ? Colors.blueAccent.withValues(alpha: 0.3) : null,
                                   border: isSelected ? Border.all(color: Colors.blue, width: 2) : null,
                                   borderRadius: BorderRadius.circular(8),
                                 ),
@@ -355,6 +356,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       _showAddCourseForm();
                     }
                   },
+                  onAddAchievement: () {
+                    if (_selectedIndex == 4) {
+                      final s = _achievementsKey.currentState;
+                      if (s != null) {
+                        (s as dynamic).openAddDialog();
+                      }
+                    }
+                  },
                 ),
                 Expanded(
                   child: Container(
@@ -401,10 +410,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
         return StaffScreen(
           isDarkMode: widget.isDarkMode,
         );
-        case 4:
-  return AchievementsScreen(
-    isDarkMode: widget.isDarkMode,
-  );
+      case 4:
+        return AchievementsScreen(
+          key: _achievementsKey,
+          isDarkMode: widget.isDarkMode,
+        );
       default:
         return Center(
           child: Column(
@@ -413,14 +423,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
               Icon(
                 _menuIcons[_selectedIndex],
                 size: 64,
-                color: Theme.of(context).colorScheme.onBackground.withOpacity(0.3),
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3),
               ),
               SizedBox(height: 16),
               Text(
                 'Раздел "${_menuItems[_selectedIndex]}" в разработке',
                 style: TextStyle(
                   fontSize: 18,
-                  color: Theme.of(context).colorScheme.onBackground.withOpacity(0.7),
+                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                 ),
               ),
             ],
@@ -653,7 +663,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             child: Container(
               padding: EdgeInsets.symmetric(horizontal: 12, vertical: 4),
               decoration: BoxDecoration(
-                color: statusColor.withOpacity(0.1),
+                color: statusColor.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(16),
               ),
               child: Text(

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:cyrs/models.dart' as db_models;
 import 'package:intl/intl.dart';
+import '../shared/search_row.dart';
 import '../students/student_profile_screen.dart';
 
 class StudentsScreen extends StatefulWidget {
@@ -25,12 +26,20 @@ class _StudentsScreenState extends State<StudentsScreen> {
   int? _hoveredIndex;
   List<db_models.User> _students = [];
   bool _isLoading = true;
-  String _search = '';
+  final TextEditingController _searchController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
     _loadStudentsFromDatabase();
+    _searchController.addListener(() => setState(() {}));
+  }
+
+  @override
+  void dispose() {
+    _searchController.removeListener(() {});
+    _searchController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadStudentsFromDatabase() async {
@@ -61,10 +70,10 @@ class _StudentsScreenState extends State<StudentsScreen> {
     final onSurface = Theme.of(context).colorScheme.onSurface;
     final textSecondary = widget.isDarkMode ? Color(0xFF8B949E) : Color(0xFF64748B);
   // Compute filtered list according to search and selected filter
-  List<db_models.User> filtered = _students.where((s) {
+    final q = _searchController.text.trim().toLowerCase();
+    List<db_models.User> filtered = _students.where((s) {
       final name = (s.name ?? '').toLowerCase();
       final email = (s.email ?? '').toLowerCase();
-      final q = _search.trim().toLowerCase();
 
       // filter by search (nickname or email)
       final matchesSearch = q.isEmpty || name.contains(q) || email.contains(q);
@@ -96,46 +105,36 @@ class _StudentsScreenState extends State<StudentsScreen> {
 
     return Column(
       children: [
-        // Поиск и фильтр
+        // Поиск и фильтр (без отступов, как в Courses)
         Row(
           children: [
             Expanded(
-              child: TextField(
-                decoration: InputDecoration(
-                  hintText: 'Поиск студентов по имени или email...',
-                  prefixIcon: Icon(Icons.search_rounded),
-                  filled: true,
-                  fillColor: bg,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: borderColor),
+              child: SearchRow(
+                controller: _searchController,
+                hintText: 'Поиск студентов по имени или email...',
+                onChanged: (_) => setState(() {}),
+                trailing: Container(
+                  padding: EdgeInsets.symmetric(horizontal: 12),
+                  decoration: BoxDecoration(
+                    color: bg,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: borderColor),
+                  ),
+                  child: DropdownButton<String>(
+                    value: widget.selectedFilter,
+                    underline: SizedBox(),
+                    items: ['Все пользователи', 'Активные', 'Неактивные', 'Новые']
+                        .map((s) => DropdownMenuItem(value: s, child: Text(s)))
+                        .toList(),
+                    onChanged: (v) {
+                      if (v != null) widget.onFilterChanged(v);
+                    },
                   ),
                 ),
-                onChanged: (v) => setState(() => _search = v),
-              ),
-            ),
-            SizedBox(width: 16),
-            Container(
-              padding: EdgeInsets.symmetric(horizontal: 12),
-              decoration: BoxDecoration(
-                color: bg,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: borderColor),
-              ),
-              child: DropdownButton<String>(
-                value: widget.selectedFilter,
-                underline: SizedBox(),
-                items: ['Все пользователи', 'Активные', 'Неактивные', 'Новые']
-                    .map((s) => DropdownMenuItem(value: s, child: Text(s)))
-                    .toList(),
-                onChanged: (v) {
-                  if (v != null) widget.onFilterChanged(v);
-                },
               ),
             ),
           ],
         ),
-
         SizedBox(height: 24),
 
         // Таблица студентов
@@ -221,10 +220,10 @@ class _StudentsScreenState extends State<StudentsScreen> {
                                           child: Container(
                                             padding: EdgeInsets.symmetric(horizontal: 8, vertical: 6),
                                             decoration: BoxDecoration(
-                                              color: (s.status == true) ? Colors.green.withOpacity(0.12) : Colors.red.withOpacity(0.12),
+                                              color: (s.status == true) ? Colors.green.withValues(alpha: 0.12) : Colors.red.withValues(alpha: 0.12),
                                               borderRadius: BorderRadius.circular(12),
                                               border: Border.all(
-                                                color: (s.status == true) ? Colors.green.withOpacity(0.4) : Colors.red.withOpacity(0.4),
+                                                color: (s.status == true) ? Colors.green.withValues(alpha: 0.4) : Colors.red.withValues(alpha: 0.4),
                                               ),
                                             ),
                                             child: Text(
