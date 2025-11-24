@@ -130,7 +130,7 @@ class Course {
   final double? price;
   final int? complexity;
   final bool? status;
-  final int? icon;
+  final String? icon;
 
   Course({
     required this.id,
@@ -156,7 +156,7 @@ class Course {
       price: (json['price'] as num?)?.toDouble(),
       complexity: json['complexity'] as int?,
       status: json['status'] as bool?,
-      icon: json['icon'] as int?,
+      icon: json['icon'] as String?,
     );
   }
 

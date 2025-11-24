@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import '../shared/search_row.dart';
+import '../models/database_models.dart';
 import 'course_edit_screen.dart';
+import '../services/supabase_service.dart';
+
 
 class CoursesScreen extends StatefulWidget {
   final String selectedFilter;
@@ -20,11 +23,30 @@ class CoursesScreen extends StatefulWidget {
 
 class _CoursesScreenState extends State<CoursesScreen> {
   final TextEditingController _searchController = TextEditingController();
+  List<Course> courses = [];
+  bool isLoading = true;
 
   @override
   void initState() {
     super.initState();
     _searchController.addListener(() => setState(() {}));
+    _loadCourses();
+  }
+
+  Future<void> _loadCourses() async {
+    try {
+      setState(() => isLoading = true);
+      final loadedCourses = await SupabaseService.getCourses();
+      setState(() {
+        courses = loadedCourses;
+        isLoading = false;
+      });
+    } catch (e) {
+      setState(() => isLoading = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Ошибка загрузки: $e')),
+      );
+    }
   }
 
   @override
@@ -34,11 +56,39 @@ class _CoursesScreenState extends State<CoursesScreen> {
     super.dispose();
   }
 
+  List<Course> _getFilteredCourses() {
+    List<Course> filtered = courses;
+
+    // Фильтр по поиску
+    if (_searchController.text.isNotEmpty) {
+      filtered = filtered
+          .where((c) => c.name!.toLowerCase().contains(_searchController.text.toLowerCase()))
+          .toList();
+    }
+
+    // Фильтр по статусу/типу
+    switch (widget.selectedFilter) {
+      case 'Бесплатные':
+        filtered = filtered.where((c) => (c.price ?? 0) == 0).toList();
+        break;
+      case 'Платные':
+        filtered = filtered.where((c) => (c.price ?? 0) > 0).toList();
+        break;
+      case 'Активные':
+        filtered = filtered.where((c) => c.status == true).toList();
+        break;
+      default:
+        break;
+    }
+
+    return filtered;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Column(
       children: [
-        // Фильтры и поиск (как в Staff)
+        // Фильтры и поиск
         Row(
           children: [
             Expanded(
@@ -75,126 +125,44 @@ class _CoursesScreenState extends State<CoursesScreen> {
         ),
         SizedBox(height: 24),
 
-        // Сетка курсов - 4 колонки
+        // Сетка курсов
         Expanded(
-          child: Padding(
-            padding: const EdgeInsets.all(20),
-            child: GridView.builder(
-              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 4,
-                crossAxisSpacing: 20,
-                mainAxisSpacing: 20,
-                childAspectRatio: 1.02,
-              ),
-              itemCount: 8,
-              itemBuilder: (context, index) {
-                return _buildCourseCard(context, index);
-              },
-            ),
-          ),
+          child: isLoading
+              ? Center(child: CircularProgressIndicator())
+              : _getFilteredCourses().isEmpty
+                  ? Center(child: Text('Курсы не найдены'))
+                  : Padding(
+                      padding: const EdgeInsets.all(20),
+                      child: GridView.builder(
+                        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 4,
+                          crossAxisSpacing: 20,
+                          mainAxisSpacing: 20,
+                          childAspectRatio: 1.02,
+                        ),
+                        itemCount: _getFilteredCourses().length,
+                        itemBuilder: (context, index) {
+                          return _buildCourseCard(context, _getFilteredCourses()[index]);
+                        },
+                      ),
+                    ),
         ),
       ],
     );
   }
 
-
-  Widget _buildCourseCard(BuildContext context, int index) {
-    final courses = [
-      {
-        'name': 'Python для начинающих', 
-        'students': 234, 
-        'status': 'active', 
-        'image': '🐍', 
-        'price': 'Бесплатно',
-        'rating': 4.8,
-        'description': 'Изучите основы Python: переменные, циклы, функции'
-      },
-      {
-        'name': 'JavaScript Advanced', 
-        'students': 0, 
-        'status': 'draft', 
-        'image': '⚡', 
-        'price': 'Бесплатно',
-        'rating': 4.5,
-        'description': 'Углубленное изучение JS: асинхронность, замыкания, прототипы'
-      },
-      {
-        'name': 'React.js Fundamentals', 
-        'students': 189, 
-        'status': 'active', 
-        'image': '⚛️', 
-        'price': 'Бесплатно',
-        'rating': 4.6,
-        'description': 'Создавайте интерактивные веб-приложения с компонентами'
-      },
-      {
-        'name': 'Flutter Mobile Dev', 
-        'students': 145, 
-        'status': 'completed', 
-        'image': '📱', 
-        'price': 'Бесплатно',
-        'rating': 4.7,
-        'description': 'Разработка кроссплатформенных мобильных приложений'
-      },
-      {
-        'name': 'Node.js Backend', 
-        'students': 87, 
-        'status': 'active', 
-        'image': '🟢', 
-        'price': 'Бесплатно',
-        'rating': 4.4,
-        'description': 'Создание серверных приложений, API'
-      },
-      {
-        'name': 'Advanced Python', 
-        'students': 89, 
-        'status': 'active', 
-        'image': '🐍', 
-        'price': '₽12,990',
-        'rating': 4.9,
-        'description': 'Профессиональный Python: декораторы, метаклассы'
-      },
-      {
-        'name': 'React Pro', 
-        'students': 67, 
-        'status': 'active', 
-        'image': '⚛️', 
-        'price': '₽15,990',
-        'rating': 4.8,
-        'description': 'Продвинутый React: Context API, Redux, тестирование'
-      },
-      {
-        'name': 'Flutter Master', 
-        'students': 34, 
-        'status': 'active', 
-        'image': '📱', 
-        'price': '₽18,990',
-        'rating': 4.7,
-        'description': 'Мастерство Flutter: анимации, кастомные виджеты'
-      },
-    ];
-
-    final course = courses[index];
+  Widget _buildCourseCard(BuildContext context, Course course) {
     Color statusColor;
     String statusText;
-    bool isPaid = course['price'] != 'Бесплатно';
+    bool isPaid = (course.price ?? 0) > 0;
 
-    switch (course['status']) {
-      case 'active':
-        statusColor = Color(0xFF10B981);
-        statusText = 'Активный';
-        break;
-      case 'draft':
-        statusColor = Color(0xFFF59E0B);
-        statusText = 'Черновик';
-        break;
-      case 'completed':
-        statusColor = Color(0xFF6B7280);
-        statusText = 'Завершен';
-        break;
-      default:
-        statusColor = Color(0xFF6B7280);
-        statusText = 'Неизвестно';
+    // Определяем статус
+    if (course.status == true) {
+      statusColor = Color(0xFF10B981);
+      statusText = 'Активный';
+    } else {
+      statusColor = Color(0xFF6B7280);
+      statusText = 'Неактивный';
     }
 
     return Container(
@@ -203,10 +171,10 @@ class _CoursesScreenState extends State<CoursesScreen> {
         color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(16),
         border: isPaid
-          ? Border.all(color: Color(0xFFF59E0B).withOpacity(0.3), width: 2)
-          : (widget.isDarkMode
-              ? Border.all(color: Color(0xFF30363D))
-              : null),
+            ? Border.all(color: Color(0xFFF59E0B).withOpacity(0.3), width: 2)
+            : (widget.isDarkMode
+                ? Border.all(color: Color(0xFF30363D))
+                : null),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -214,7 +182,7 @@ class _CoursesScreenState extends State<CoursesScreen> {
           Row(
             children: [
               Text(
-                course['image'] as String,
+                course.icon?.toString() ?? '📚',
                 style: TextStyle(fontSize: 25),
               ),
               Spacer(),
@@ -267,7 +235,7 @@ class _CoursesScreenState extends State<CoursesScreen> {
           
           // Название курса
           Text(
-            course['name'] as String,
+            course.name ?? 'Без названия',
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.bold,
@@ -282,7 +250,7 @@ class _CoursesScreenState extends State<CoursesScreen> {
           // Описание курса
           Expanded(
             child: Text(
-              course['description'] as String,
+              course.description ?? 'Описание отсутствует',
               style: TextStyle(
                 fontSize: 13,
                 color: widget.isDarkMode ? Color(0xFF8B949E) : Color(0xFF64748B),
@@ -295,37 +263,22 @@ class _CoursesScreenState extends State<CoursesScreen> {
           
           SizedBox(height: 12),
           
-          // Рейтинг курса
+          // Сложность курса
           Row(
             children: [
-              Icon(Icons.star_rounded, size: 16, color: Color(0xFFFFD700)),
+              Icon(Icons.trending_up_rounded, size: 16, color: Color(0xFF38BDF8)),
               SizedBox(width: 4),
               Text(
-                '${course['rating']}',
+                'Уровень ${course.complexity ?? 1}',
                 style: TextStyle(
                   color: Theme.of(context).colorScheme.onSurface,
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
                 ),
               ),
-              SizedBox(width: 8),
-              Icon(Icons.people_rounded, 
-                size: 16, 
-                color: Theme.of(context).colorScheme.onBackground.withOpacity(0.7)
-              ),
-              SizedBox(width: 4),
-              Expanded(
-                child: Text(
-                  '${course['students']}',
-                  style: TextStyle(
-                    color: widget.isDarkMode ? Color(0xFF8B949E) : Color(0xFF64748B), 
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ),
+              Spacer(),
               Text(
-                course['price'] as String,
+                course.price == 0 ? 'Бесплатно' : '₽ ${course.price?.toStringAsFixed(0)}',
                 style: TextStyle(
                   color: isPaid ? Color(0xFFF59E0B) : Color(0xFF10B981),
                   fontSize: 13,
@@ -342,13 +295,13 @@ class _CoursesScreenState extends State<CoursesScreen> {
             width: double.infinity,
             child: OutlinedButton(
               onPressed: () {
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => CourseEditScreen(), // передаём текущий курс
-        ),
-      );
-    },
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => CourseEditScreen(),
+                  ),
+                );
+              },
               style: OutlinedButton.styleFrom(
                 padding: EdgeInsets.symmetric(vertical: 10),
                 textStyle: TextStyle(fontSize: 12),
