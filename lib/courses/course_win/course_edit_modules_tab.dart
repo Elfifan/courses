@@ -86,7 +86,7 @@ class CourseEditModulesTab extends StatelessWidget {
                       context,
                       MaterialPageRoute(
                         builder: (context) => LessonViewerScreen(
-                          courseId: courseId,
+                          submoduleId: courseId,
                           courseName: courseName,
                           courseIcon: courseIcon,
                         ),
