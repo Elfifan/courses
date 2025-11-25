@@ -80,30 +80,33 @@ class SupabaseService {
 
   // ============ MODULES ============
 
-  static Future<List<Module>> getModulesByCourse(int courseId) async {
-    try {
-      final data = await _supabase
-          .from('module')
-          .select()
-          .eq('id_courses', courseId)
-          .order('order_module', ascending: true);
-      return data.map((item) => Module.fromJson(item)).toList();
-    } catch (e) {
-      throw Exception('Ошибка при получении модулей: $e');
-    }
+static Future<List<Module>> getModulesByCourse(int courseId) async {
+  try {
+    final data = await _supabase
+        .from('module')
+        .select()
+        .eq('id_courses', courseId)
+        .order('order_module', ascending: true);
+    return data.map((item) => Module.fromJson(item)).toList();
+  } catch (e) {
+    throw Exception('Ошибка при получении модулей: $e');
   }
+}
 
-  // ============ SUBMODULES ============
-
-  static Future<List<Submodule>> getSubmodulesByModule(int moduleId) async {
-    try {
-      final data = await _supabase
-          .from('submodule')
-          .select()
-          .eq('id_module', moduleId);
-      return data.map((item) => Submodule.fromJson(item)).toList();
-    } catch (e) {
-      throw Exception('Ошибка при получении подмодулей: $e');
-    }
+static Future<List<Submodule>> getSubmodulesByModule(int moduleId) async {
+  try {
+    final data = await _supabase
+        .from('submodule')
+        .select()
+        .eq('id_module', moduleId)
+        .order('id', ascending: true);
+    return data.map((item) => Submodule.fromJson(item)).toList();
+  } catch (e) {
+    throw Exception('Ошибка при получении подмодулей: $e');
   }
+}
+
+
+  
+
 }

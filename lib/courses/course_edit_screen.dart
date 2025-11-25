@@ -100,7 +100,7 @@ class _CourseEditScreenState extends State<CourseEditScreen>
                   onArchive: _archiveCourse,
                   onDelete: _deleteCourse,
                 ),
-                CourseEditModulesTab(module: _modules[0]),
+                CourseEditModulesTab(module: _modules[0],courseId: 1,courseName: "ss",courseIcon: "ds",),
                 const CourseEditAnalyticsStudentsTab(),
                 const CourseEditReviewsTab(),  // Новая вкладка с отзывами
               ],

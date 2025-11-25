@@ -7,10 +7,14 @@ environment:
   sdk: ^3.8.0-231.0.dev
 
 dependencies:
+  archive: ^4.0.7
   flutter:
     sdk: flutter
+  flutter_html: ^3.0.0
+  http: ^1.6.0
   image_picker: ^1.0.4
   intl: ^0.20.2
+  pdfx: ^2.9.2
   supabase_flutter: ^2.10.3
 
 

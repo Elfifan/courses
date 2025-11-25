@@ -1,10 +1,17 @@
 // course_edit_modules_tab.dart
 import 'package:flutter/material.dart';
+import '../lessons/lesson_viewer_screen.dart';
 
 class CourseEditModulesTab extends StatelessWidget {
   final Map<String, dynamic> module;
+  final int courseId; // Добавь параметр
+  final String courseName; // Добавь параметр
+  final String courseIcon; // Добавь параметр
 
-  const CourseEditModulesTab({super.key, required this.module});
+  const CourseEditModulesTab({super.key, required this.module,
+    required this.courseId, 
+    required this.courseName, 
+    required this.courseIcon, });
 
   @override
   Widget build(BuildContext context) {
@@ -67,93 +74,108 @@ class CourseEditModulesTab extends StatelessWidget {
           
           const SizedBox(height: 16),
           
-          Expanded(
+                    Expanded(
             child: ListView.builder(
               itemCount: submodules.length,
               itemBuilder: (context, index) {
                 final sub = submodules[index];
-                return Container(
-                  margin: const EdgeInsets.only(bottom: 12),
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.surface,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.grey.withOpacity(0.2)),
-                  ),
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 32,
-                        height: 32,
-                        decoration: BoxDecoration(
-                          color: sub['completed'] == true ? Colors.green : Colors.grey,
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Center(
-                          child: Text(
-                            '1.${index + 1}',
-                            style: const TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 12),
-                          ),
+                return GestureDetector(
+                  onTap: () {
+                    // При клике открываем окно просмотра урока
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => LessonViewerScreen(
+                          courseId: courseId,
+                          courseName: courseName,
+                          courseIcon: courseIcon,
                         ),
                       ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(sub['title'], style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16)),
-                            const SizedBox(height: 4),
-                            Text(sub['duration'], style: TextStyle(color: Colors.grey[600], fontSize: 14)),
+                    );
+                  },
+                  child: Container(
+                    margin: const EdgeInsets.only(bottom: 12),
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.surface,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.grey.withOpacity(0.2)),
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 32,
+                          height: 32,
+                          decoration: BoxDecoration(
+                            color: sub['completed'] == true ? Colors.green : Colors.grey,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Center(
+                            child: Text(
+                              '1.${index + 1}',
+                              style: const TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 12),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(sub['title'], style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16)),
+                              const SizedBox(height: 4),
+                              Text(sub['duration'], style: TextStyle(color: Colors.grey[600], fontSize: 14)),
+                            ],
+                          ),
+                        ),
+                        // Кнопки действий для подмодуля
+                        PopupMenuButton<String>(
+                          icon: const Icon(Icons.more_vert),
+                          onSelected: (value) => _handleSubmoduleAction(context, value, sub, index),
+                          itemBuilder: (context) => [
+                            const PopupMenuItem(
+                              value: 'edit',
+                              child: Row(
+                                children: [
+                                  Icon(Icons.edit, size: 18),
+                                  SizedBox(width: 8),
+                                  Text('Редактировать'),
+                                ],
+                              ),
+                            ),
+                            const PopupMenuItem(
+                              value: 'duplicate',
+                              child: Row(
+                                children: [
+                                  Icon(Icons.copy, size: 18),
+                                  SizedBox(width: 8),
+                                  Text('Дублировать'),
+                                ],
+                              ),
+                            ),
+                            const PopupMenuItem(
+                              value: 'delete',
+                              child: Row(
+                                children: [
+                                  Icon(Icons.delete, size: 18, color: Colors.red),
+                                  SizedBox(width: 8),
+                                  Text('Удалить', style: TextStyle(color: Colors.red)),
+                                ],
+                              ),
+                            ),
                           ],
                         ),
-                      ),
-                      // Кнопки действий для подмодуля
-                      PopupMenuButton<String>(
-                        icon: const Icon(Icons.more_vert),
-                        onSelected: (value) => _handleSubmoduleAction(context, value, sub, index),
-                        itemBuilder: (context) => [
-                          const PopupMenuItem(
-                            value: 'edit',
-                            child: Row(
-                              children: [
-                                Icon(Icons.edit, size: 18),
-                                SizedBox(width: 8),
-                                Text('Редактировать'),
-                              ],
-                            ),
-                          ),
-                          const PopupMenuItem(
-                            value: 'duplicate',
-                            child: Row(
-                              children: [
-                                Icon(Icons.copy, size: 18),
-                                SizedBox(width: 8),
-                                Text('Дублировать'),
-                              ],
-                            ),
-                          ),
-                          const PopupMenuItem(
-                            value: 'delete',
-                            child: Row(
-                              children: [
-                                Icon(Icons.delete, size: 18, color: Colors.red),
-                                SizedBox(width: 8),
-                                Text('Удалить', style: TextStyle(color: Colors.red)),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(width: 8),
-                      Icon(
-                        sub['completed'] == true ? Icons.check_circle : Icons.play_circle_outline,
-                        color: sub['completed'] == true ? Colors.green : Colors.grey,
-                        size: 24,
-                      ),
-                    ],
+                        const SizedBox(width: 8),
+                        Icon(
+                          sub['completed'] == true ? Icons.check_circle : Icons.play_circle_outline,
+                          color: sub['completed'] == true ? Colors.green : Colors.grey,
+                          size: 24,
+                        ),
+                      ],
+                    ),
                   ),
                 );
               },
