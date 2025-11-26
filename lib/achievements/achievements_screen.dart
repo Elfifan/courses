@@ -31,18 +31,21 @@ class _AchievementsScreenState extends State<AchievementsScreen> {
   }
 
   Future<void> _loadAchievements() async {
+    if (!mounted) return;
     setState(() => _isLoading = true);
     try {
       final achievements = await AchievementRepository.getAllAchievements();
       final archived = await AchievementRepository.getArchivedAchievements();
-      setState(() {
-        _achievements = achievements;
-        _archivedAchievements = archived;
-        _isLoading = false;
-      });
-    } catch (e) {
-      setState(() => _isLoading = false);
       if (mounted) {
+        setState(() {
+          _achievements = achievements;
+          _archivedAchievements = archived;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoading = false);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Ошибка загрузки: $e')),
         );
@@ -193,26 +196,34 @@ class _AchievementsScreenState extends State<AchievementsScreen> {
                               description: _descController.text.trim(),
                               imageData: uploadedImageData,
                             );
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Достижение обновлено')),
-                            );
+                            if (mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('Достижение обновлено')),
+                              );
+                            }
                           } else {
                             await AchievementRepository.createAchievement(
                               name: title,
                               description: _descController.text.trim(),
                               imageData: uploadedImageData,
                             );
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Достижение добавлено')),
-                            );
+                            if (mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('Достижение добавлено')),
+                              );
+                            }
                           }
 
-                          _loadAchievements();
-                          Navigator.of(context).pop();
+                          if (mounted) {
+                            _loadAchievements();
+                            Navigator.of(context).pop();
+                          }
                         } catch (e) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('Ошибка: $e')),
-                          );
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text('Ошибка: $e')),
+                            );
+                          }
                         } finally {
                           setState(() => _isSaving = false);
                         }
@@ -243,16 +254,22 @@ class _AchievementsScreenState extends State<AchievementsScreen> {
             onPressed: () async {
               try {
                 await AchievementRepository.archiveAchievement(achievement.id);
-                _loadAchievements();
-                Navigator.of(context).pop();
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Достижение архивировано')),
-                );
+                if (mounted) {
+                  _loadAchievements();
+                  Navigator.of(context).pop();
+                }
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Достижение архивировано')),
+                  );
+                }
               } catch (e) {
-                Navigator.of(context).pop();
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Ошибка: $e')),
-                );
+                if (mounted) {
+                  Navigator.of(context).pop();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Ошибка: $e')),
+                  );
+                }
               }
             },
             style: ElevatedButton.styleFrom(backgroundColor: Colors.orange),
@@ -278,16 +295,22 @@ class _AchievementsScreenState extends State<AchievementsScreen> {
             onPressed: () async {
               try {
                 await AchievementRepository.restoreAchievement(achievement.id);
-                _loadAchievements();
-                Navigator.of(context).pop();
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Достижение восстановлено')),
-                );
+                if (mounted) {
+                  _loadAchievements();
+                  Navigator.of(context).pop();
+                }
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Достижение восстановлено')),
+                  );
+                }
               } catch (e) {
-                Navigator.of(context).pop();
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Ошибка: $e')),
-                );
+                if (mounted) {
+                  Navigator.of(context).pop();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Ошибка: $e')),
+                  );
+                }
               }
             },
             style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
@@ -383,10 +406,10 @@ class _AchievementsScreenState extends State<AchievementsScreen> {
     );
   }
 
-Widget _buildTab(String label, int index, ThemeData theme) {
+  Widget _buildTab(String label, int index, ThemeData theme) {
     final isActive = _selectedTabIndex == index;
-    return MouseRegion(  // ← Добавьте это
-      cursor: SystemMouseCursors.click,  // ← Курсор в виде руки
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
       child: GestureDetector(
         onTap: () => setState(() => _selectedTabIndex = index),
         child: Container(
@@ -483,7 +506,7 @@ Widget _buildTab(String label, int index, ThemeData theme) {
                     ),
                   ),
                   const SizedBox(width: 8),
-                  MouseRegion(  // ← Курсор для кнопки архива
+                  MouseRegion(
                     cursor: SystemMouseCursors.click,
                     child: IconButton(
                       tooltip: 'Архивировать',
