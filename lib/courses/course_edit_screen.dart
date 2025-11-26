@@ -118,7 +118,7 @@ class _CourseEditScreenState extends State<CourseEditScreen>
                   courseIcon: _course!.icon ?? '',
                 ),
                 const CourseEditAnalyticsStudentsTab(),
-                const CourseEditReviewsTab(),
+                CourseEditReviewsTab(courseId: _course!.id),
               ],
             ),
           ),

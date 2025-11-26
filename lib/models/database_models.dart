@@ -431,28 +431,32 @@ class Passing {
 }
 
 // Модель обратной связи (таблица feedback)
-class FeedbackModel {
+// Модель обратной связи (таблица feedback)
+class Feedback {
   final int id;
   final int? idUser;
   final int? idCourses;
   final double? estimation;
   final String? description;
+  final bool? status;
 
-  FeedbackModel({
+  Feedback({
     required this.id,
     this.idUser,
     this.idCourses,
     this.estimation,
     this.description,
+    this.status,
   });
 
-  factory FeedbackModel.fromJson(Map<String, dynamic> json) {
-    return FeedbackModel(
+  factory Feedback.fromJson(Map<String, dynamic> json) {
+    return Feedback(
       id: json['id'] as int,
       idUser: json['id_user'] as int?,
       idCourses: json['id_courses'] as int?,
       estimation: (json['estimation'] as num?)?.toDouble(),
       description: json['description'] as String?,
+      status: json['status'] as bool?,
     );
   }
 
@@ -463,9 +467,50 @@ class FeedbackModel {
       'id_courses': idCourses,
       'estimation': estimation,
       'description': description,
+      'status': status,
     };
   }
 }
+
+// Модель ответа на обратную связь (таблица response_feedback)
+class ResponseFeedback {
+  final int id;
+  final DateTime createdAt;
+  final int? idEmployee;
+  final int? idFeedback;
+  final String? answer;
+
+  ResponseFeedback({
+    required this.id,
+    required this.createdAt,
+    this.idEmployee,
+    this.idFeedback,
+    this.answer,
+  });
+
+  factory ResponseFeedback.fromJson(Map<String, dynamic> json) {
+    return ResponseFeedback(
+      id: json['id'] as int,
+      createdAt: json['created_at'] != null
+          ? DateTime.parse(json['created_at'] as String)
+          : DateTime.now(),
+      idEmployee: json['id_employee'] as int?,
+      idFeedback: json['id_feedback'] as int?,
+      answer: json['answer'] as String?,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'created_at': createdAt.toIso8601String(),
+      'id_employee': idEmployee,
+      'id_feedback': idFeedback,
+      'answer': answer,
+    };
+  }
+}
+
 
 class Achievement {
   final int id;
@@ -527,6 +572,9 @@ class Achievement {
     };
   }
 }
+
+
+
 class UserAchievement {
   final int id;
   final int idUser;
