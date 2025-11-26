@@ -183,7 +183,6 @@ class Module {
   final int id;
   final int? idCourses;
   final String? name;
-  final String? description;
   final int? orderModule;
   final bool? status;
 
@@ -191,7 +190,6 @@ class Module {
     required this.id,
     this.idCourses,
     this.name,
-    this.description,
     this.orderModule,
     this.status,
   });
@@ -201,7 +199,6 @@ class Module {
       id: json['id'] as int,
       idCourses: json['id_courses'] as int?,
       name: json['name'] as String?,
-      description: json['description'] as String?,
       orderModule: json['order_module'] as int?,
       status: json['status'] as bool?,
     );
@@ -212,7 +209,6 @@ class Module {
       'id': id,
       'id_courses': idCourses,
       'name': name,
-      'description': description,
       'order_module': orderModule,
       'status': status,
     };
@@ -228,6 +224,7 @@ class Submodule {
   final String? content;
   final int? leadTime;
   final bool? status;
+  final int? orderSubmodule;
 
   Submodule({
     required this.id,
@@ -237,6 +234,7 @@ class Submodule {
     this.content,
     this.leadTime,
     this.status,
+    this.orderSubmodule,
   });
 
   factory Submodule.fromJson(Map<String, dynamic> json) {
@@ -248,6 +246,7 @@ class Submodule {
       content: json['content'] as String?,
       leadTime: json['lead_time'] as int?,
       status: json['status'] as bool?,
+      orderSubmodule: json['order_submodule'] as int?,
     );
   }
 
@@ -260,6 +259,7 @@ class Submodule {
       'content': content,
       'lead_time': leadTime,
       'status': status,
+      'order_submodule': orderSubmodule
     };
   }
 }
@@ -430,7 +430,6 @@ class Passing {
   }
 }
 
-// Модель обратной связи (таблица feedback)
 // Модель обратной связи (таблица feedback)
 class Feedback {
   final int id;

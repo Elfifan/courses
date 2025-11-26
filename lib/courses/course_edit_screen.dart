@@ -112,7 +112,6 @@ class _CourseEditScreenState extends State<CourseEditScreen>
                   onCourseUpdated: _updateCourseData,  // ← ПЕРЕДАЁМ ЭТО
                 ),
                 CourseEditModulesTab(
-                  module: {},
                   courseId: _course!.id,
                   courseName: _course!.name ?? '',
                   courseIcon: _course!.icon ?? '',

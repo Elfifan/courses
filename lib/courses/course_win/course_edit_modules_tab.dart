@@ -1,318 +1,336 @@
-// course_edit_modules_tab.dart
 import 'package:flutter/material.dart';
+import 'package:file_picker/file_picker.dart';
+import 'dart:io';
+import '../../models/database_models.dart' as db_models;
+import '../../services/supabase_service.dart';
 import '../lessons/lesson_viewer_screen.dart';
 
-class CourseEditModulesTab extends StatelessWidget {
-  final Map<String, dynamic> module;
-  final int courseId; // Добавь параметр
-  final String courseName; // Добавь параметр
-  final String courseIcon; // Добавь параметр
+class CourseEditModulesTab extends StatefulWidget {
+  final int courseId;
+  final String courseName;
+  final String courseIcon;
 
-  const CourseEditModulesTab({super.key, required this.module,
-    required this.courseId, 
-    required this.courseName, 
-    required this.courseIcon, });
+  const CourseEditModulesTab({
+    super.key,
+    required this.courseId,
+    required this.courseName,
+    required this.courseIcon,
+  });
+
+  @override
+  State<CourseEditModulesTab> createState() => _CourseEditModulesTabState();
+}
+
+class _CourseEditModulesTabState extends State<CourseEditModulesTab> {
+  List<db_models.Module> _modules = [];
+  Map<int, List<db_models.Submodule>> _submodules = {};
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadModules();
+  }
+
+  Future<void> _loadModules() async {
+    if (!mounted) return;
+    setState(() => _isLoading = true);
+    try {
+      final modulesData = await SupabaseService.client
+          .from('module')
+          .select()
+          .eq('id_courses', widget.courseId)
+          .order('order_module', ascending: true);
+
+      Map<int, List<db_models.Submodule>> submodulesMap = {};
+
+      for (var moduleData in modulesData) {
+        final moduleId = moduleData['id'];
+        final submodulesData = await SupabaseService.client
+            .from('submodule')
+            .select()
+            .eq('id_module', moduleId)
+            .order('order_submodule', ascending: true);
+
+        submodulesMap[moduleId] = (submodulesData as List)
+            .map((item) => db_models.Submodule.fromJson(item))
+            .toList();
+      }
+
+      if (mounted) {
+        setState(() {
+          _modules = (modulesData as List)
+              .map((item) => db_models.Module.fromJson(item))
+              .toList();
+          _submodules = submodulesMap;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Ошибка загрузки модулей: $e')),
+        );
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    final List submodules = module['submodules'] ?? [];
-
     return Padding(
       padding: const EdgeInsets.all(20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Заголовок с кнопками действий
           Row(
             children: [
               Expanded(
-                child: Text('1. ${module['title']}', 
-                    style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+                child: Text(
+                  'Модули курса',
+                  style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                ),
               ),
               const SizedBox(width: 16),
               ElevatedButton.icon(
-                onPressed: () => _showAddModuleDialog(context),
+                onPressed: () => _showAddModuleDialog(),
                 icon: const Icon(Icons.add),
                 label: const Text('Добавить модуль'),
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                ),
               ),
             ],
           ),
-          
-          const SizedBox(height: 8),
-          if (module['duration'] != null)
-            Text('Продолжительность: ${module['duration']}'),
-            
           const SizedBox(height: 16),
-          
-          // Кнопки для добавления контента
-          Row(
-            children: [
-              const Text('Подмодули:', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-              const Spacer(),
-              OutlinedButton.icon(
-                onPressed: () => _showAddTheoryDialog(context),
-                icon: const Icon(Icons.menu_book, size: 18),
-                label: const Text('Добавить теорию'),
-                style: OutlinedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                ),
-              ),
-              const SizedBox(width: 8),
-              OutlinedButton.icon(
-                onPressed: () => _showAddTaskDialog(context),
-                icon: const Icon(Icons.assignment, size: 18),
-                label: const Text('Добавить задание'),
-                style: OutlinedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                ),
-              ),
-            ],
-          ),
-          
-          const SizedBox(height: 16),
-          
-                    Expanded(
-            child: ListView.builder(
-              itemCount: submodules.length,
-              itemBuilder: (context, index) {
-                final sub = submodules[index];
-                return GestureDetector(
-                  onTap: () {
-                    // При клике открываем окно просмотра урока
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => LessonViewerScreen(
-                          submoduleId: courseId,
-                          courseName: courseName,
-                          courseIcon: courseIcon,
-                        ),
+          Expanded(
+            child: _isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : _modules.isEmpty
+                    ? const Center(child: Text('Модулей нет'))
+                    : ListView.builder(
+                        itemCount: _modules.length,
+                        itemBuilder: (context, index) {
+                          final module = _modules[index];
+                          final submodules = _submodules[module.id] ?? [];
+                          return _buildModuleCard(module, submodules, index);
+                        },
                       ),
-                    );
-                  },
-                  child: Container(
-                    margin: const EdgeInsets.only(bottom: 12),
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.surface,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.grey.withOpacity(0.2)),
-                    ),
-                    child: Row(
-                      children: [
-                        Container(
-                          width: 32,
-                          height: 32,
-                          decoration: BoxDecoration(
-                            color: sub['completed'] == true ? Colors.green : Colors.grey,
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Center(
-                            child: Text(
-                              '1.${index + 1}',
-                              style: const TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 12),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(sub['title'], style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16)),
-                              const SizedBox(height: 4),
-                              Text(sub['duration'], style: TextStyle(color: Colors.grey[600], fontSize: 14)),
-                            ],
-                          ),
-                        ),
-                        // Кнопки действий для подмодуля
-                        PopupMenuButton<String>(
-                          icon: const Icon(Icons.more_vert),
-                          onSelected: (value) => _handleSubmoduleAction(context, value, sub, index),
-                          itemBuilder: (context) => [
-                            const PopupMenuItem(
-                              value: 'edit',
-                              child: Row(
-                                children: [
-                                  Icon(Icons.edit, size: 18),
-                                  SizedBox(width: 8),
-                                  Text('Редактировать'),
-                                ],
-                              ),
-                            ),
-                            const PopupMenuItem(
-                              value: 'duplicate',
-                              child: Row(
-                                children: [
-                                  Icon(Icons.copy, size: 18),
-                                  SizedBox(width: 8),
-                                  Text('Дублировать'),
-                                ],
-                              ),
-                            ),
-                            const PopupMenuItem(
-                              value: 'delete',
-                              child: Row(
-                                children: [
-                                  Icon(Icons.delete, size: 18, color: Colors.red),
-                                  SizedBox(width: 8),
-                                  Text('Удалить', style: TextStyle(color: Colors.red)),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(width: 8),
-                        Icon(
-                          sub['completed'] == true ? Icons.check_circle : Icons.play_circle_outline,
-                          color: sub['completed'] == true ? Colors.green : Colors.grey,
-                          size: 24,
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-              },
-            ),
           ),
         ],
       ),
     );
   }
 
-  void _showAddModuleDialog(BuildContext context) {
-    final titleController = TextEditingController();
-    final durationController = TextEditingController();
+  Widget _buildModuleCard(
+    db_models.Module module,
+    List<db_models.Submodule> submodules,
+    int moduleIndex,
+  ) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 16),
+      elevation: 0,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    '${module.orderModule}. ${module.name ?? 'Без названия'}',
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                PopupMenuButton<String>(
+                  onSelected: (value) {
+                    if (value == 'delete') {
+                      _deleteModule(module.id);
+                    }
+                  },
+                  itemBuilder: (ctx) => [
+                    const PopupMenuItem(
+                      value: 'delete',
+                      child: Row(
+                        children: [
+                          Icon(Icons.delete, color: Colors.red, size: 18),
+                          SizedBox(width: 8),
+                          Text('Удалить', style: TextStyle(color: Colors.red)),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                OutlinedButton.icon(
+                  onPressed: () => _showAddTheoryDialog(module.id),
+                  icon: const Icon(Icons.menu_book, size: 18),
+                  label: const Text('Добавить теорию'),
+                ),
+                const SizedBox(width: 8),
+                OutlinedButton.icon(
+                  onPressed: () => _showAddTaskDialog(module.id),
+                  icon: const Icon(Icons.assignment, size: 18),
+                  label: const Text('Добавить задание'),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            if (submodules.isEmpty)
+              Text(
+                'Нет подмодулей',
+                style: TextStyle(
+                  color: Colors.grey[600],
+                  fontSize: 14,
+                ),
+              )
+            else
+              ListView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: submodules.length,
+                itemBuilder: (context, index) {
+                  final submodule = submodules[index];
+                  return _buildSubmoduleItem(submodule, module.id);
+                },
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSubmoduleItem(
+    db_models.Submodule submodule,
+    int moduleId,
+  ) {
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => LessonViewerScreen(
+              submoduleId: submodule.id,
+              courseName: widget.courseName,
+              courseIcon: widget.courseIcon,
+            ),
+          ),
+        );
+      },
+      child: Container(
+        margin: const EdgeInsets.symmetric(vertical: 8),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.background,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: Colors.grey.withOpacity(0.2)),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 32,
+              height: 32,
+              decoration: BoxDecoration(
+                color: Theme.of(context).primaryColor.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Center(
+                child: Icon(
+                  Icons.play_circle_outline,
+                  color: Theme.of(context).primaryColor,
+                  size: 18,
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    submodule.name ?? 'Без названия',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 14,
+                    ),
+                  ),
+                  if (submodule.leadTime != null)
+                    Text(
+                      '${submodule.leadTime} мин',
+                      style: TextStyle(
+                        color: Colors.grey[600],
+                        fontSize: 12,
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            PopupMenuButton<String>(
+              icon: const Icon(Icons.more_vert, size: 20),
+              onSelected: (value) {
+                if (value == 'delete') {
+                  _deleteSubmodule(submodule.id, moduleId);
+                }
+              },
+              itemBuilder: (ctx) => [
+                const PopupMenuItem(
+                  value: 'delete',
+                  child: Row(
+                    children: [
+                      Icon(Icons.delete, color: Colors.red, size: 18),
+                      SizedBox(width: 8),
+                      Text('Удалить', style: TextStyle(color: Colors.red)),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showAddModuleDialog() {
+    final nameController = TextEditingController();
     final formKey = GlobalKey<FormState>();
 
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Добавить новый модуль'),
+        title: const Text('Добавить модуль'),
         content: SizedBox(
           width: 400,
           child: Form(
             key: formKey,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextFormField(
-                  controller: titleController,
-                  decoration: const InputDecoration(
-                    labelText: 'Название модуля',
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.book),
-                  ),
-                  validator: (value) => value?.isEmpty == true ? 'Введите название' : null,
-                ),
-                const SizedBox(height: 16),
-                TextFormField(
-                  controller: durationController,
-                  decoration: const InputDecoration(
-                    labelText: 'Продолжительность',
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.access_time),
-                    hintText: 'Например: 2 часа 30 мин',
-                  ),
-                  validator: (value) => value?.isEmpty == true ? 'Введите продолжительность' : null,
-                ),
-              ],
-            ),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Отмена'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              if (formKey.currentState?.validate() == true) {
-                Navigator.of(context).pop();
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Модуль "${titleController.text}" добавлен')),
-                );
-              }
-            },
-            child: const Text('Добавить'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showAddTheoryDialog(BuildContext context) {
-    final titleController = TextEditingController();
-    final contentController = TextEditingController();
-    final durationController = TextEditingController();
-    final formKey = GlobalKey<FormState>();
-
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Добавить теоретический материал'),
-        content: SizedBox(
-          width: 500,
-          child: Form(
-            key: formKey,
-            child: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  TextFormField(
-                    controller: titleController,
-                    decoration: const InputDecoration(
-                      labelText: 'Название урока',
-                      border: OutlineInputBorder(),
-                      prefixIcon: Icon(Icons.title),
-                    ),
-                    validator: (value) => value?.isEmpty == true ? 'Введите название' : null,
-                  ),
-                  const SizedBox(height: 16),
-                  TextFormField(
-                    controller: contentController,
-                    maxLines: 5,
-                    decoration: const InputDecoration(
-                      labelText: 'Содержание урока',
-                      border: OutlineInputBorder(),
-                      prefixIcon: Icon(Icons.description),
-                      hintText: 'Опишите теоретический материал...',
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  TextFormField(
-                    controller: durationController,
-                    decoration: const InputDecoration(
-                      labelText: 'Время изучения',
-                      border: OutlineInputBorder(),
-                      prefixIcon: Icon(Icons.schedule),
-                      hintText: 'Например: 15 мин',
-                    ),
-                    validator: (value) => value?.isEmpty == true ? 'Введите время' : null,
-                  ),
-                ],
+            child: TextFormField(
+              controller: nameController,
+              decoration: const InputDecoration(
+                labelText: 'Название модуля',
+                border: OutlineInputBorder(),
+                prefixIcon: Icon(Icons.book),
               ),
+              validator: (value) =>
+                  value?.isEmpty == true ? 'Введите название' : null,
             ),
           ),
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.of(context).pop(),
+            onPressed: () => Navigator.pop(context),
             child: const Text('Отмена'),
           ),
           ElevatedButton(
-            onPressed: () {
-              if (formKey.currentState?.validate() == true) {
-                Navigator.of(context).pop();
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Теория "${titleController.text}" добавлена')),
-                );
+            onPressed: () async {
+              if (formKey.currentState!.validate()) {
+                await _addModule(nameController.text);
+                if (mounted) Navigator.pop(context);
               }
             },
             child: const Text('Добавить'),
@@ -322,18 +340,18 @@ class CourseEditModulesTab extends StatelessWidget {
     );
   }
 
-  void _showAddTaskDialog(BuildContext context) {
-    final titleController = TextEditingController();
-    final descriptionController = TextEditingController();
-    final durationController = TextEditingController();
-    String taskType = 'quiz';
+  void _showAddTheoryDialog(int moduleId) {
+    String? selectedFilePath;
+    final nameController = TextEditingController();
+    final leadTimeController = TextEditingController();
     final formKey = GlobalKey<FormState>();
+    bool _isUploading = false;
 
     showDialog(
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setState) => AlertDialog(
-          title: const Text('Добавить практическое задание'),
+          title: const Text('Добавить теоретический материал'),
           content: SizedBox(
             width: 500,
             child: Form(
@@ -342,52 +360,104 @@ class CourseEditModulesTab extends StatelessWidget {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    TextFormField(
-                      controller: titleController,
-                      decoration: const InputDecoration(
-                        labelText: 'Название задания',
-                        border: OutlineInputBorder(),
-                        prefixIcon: Icon(Icons.assignment),
+                    // Выбор markdown файла
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        border: Border.all(
+                          color: Colors.grey.withOpacity(0.3),
+                        ),
+                        borderRadius: BorderRadius.circular(8),
                       ),
-                      validator: (value) => value?.isEmpty == true ? 'Введите название' : null,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Markdown документ',
+                            style: TextStyle(
+                              fontWeight: FontWeight.w600,
+                              fontSize: 14,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          if (selectedFilePath != null)
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(8),
+                                  decoration: BoxDecoration(
+                                    color: Colors.green.withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      const Icon(Icons.check_circle,
+                                          color: Colors.green, size: 18),
+                                      const SizedBox(width: 8),
+                                      Expanded(
+                                        child: Text(
+                                          selectedFilePath!
+                                              .split('/')
+                                              .last,
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: const TextStyle(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                              ],
+                            ),
+                          ElevatedButton.icon(
+                            onPressed: () async {
+                              final result =
+                                  await FilePicker.platform.pickFiles(
+                                type: FileType.custom,
+                                allowedExtensions: ['md', 'markdown', 'txt'],
+                              );
+
+                              if (result != null) {
+                                setState(() {
+                                  selectedFilePath =
+                                      result.files.single.path;
+                                });
+                              }
+                            },
+                            icon: const Icon(Icons.upload_file, size: 18),
+                            label: const Text('Выбрать файл'),
+                          ),
+                        ],
+                      ),
                     ),
                     const SizedBox(height: 16),
-                    DropdownButtonFormField<String>(
-                      value: taskType,
+                    TextFormField(
+                      controller: nameController,
                       decoration: const InputDecoration(
-                        labelText: 'Тип задания',
+                        labelText: 'Название урока',
                         border: OutlineInputBorder(),
-                        prefixIcon: Icon(Icons.category),
+                        prefixIcon: Icon(Icons.title),
                       ),
-                      items: const [
-                        DropdownMenuItem(value: 'quiz', child: Text('Тест')),
-                        DropdownMenuItem(value: 'practice', child: Text('Практика')),
-                        DropdownMenuItem(value: 'project', child: Text('Проект')),
-                        DropdownMenuItem(value: 'essay', child: Text('Эссе')),
-                      ],
-                      onChanged: (value) => setState(() => taskType = value!),
+                      validator: (value) =>
+                          value?.isEmpty == true ? 'Введите название' : null,
                     ),
                     const SizedBox(height: 16),
                     TextFormField(
-                      controller: descriptionController,
-                      maxLines: 4,
+                      controller: leadTimeController,
+                      keyboardType: TextInputType.number,
                       decoration: const InputDecoration(
-                        labelText: 'Описание задания',
+                        labelText: 'Время изучения (мин)',
                         border: OutlineInputBorder(),
-                        prefixIcon: Icon(Icons.description),
-                        hintText: 'Опишите что нужно сделать...',
+                        prefixIcon: Icon(Icons.schedule),
+                        hintText: 'Например: 15',
                       ),
-                    ),
-                    const SizedBox(height: 16),
-                    TextFormField(
-                      controller: durationController,
-                      decoration: const InputDecoration(
-                        labelText: 'Время выполнения',
-                        border: OutlineInputBorder(),
-                        prefixIcon: Icon(Icons.timer),
-                        hintText: 'Например: 30 мин',
-                      ),
-                      validator: (value) => value?.isEmpty == true ? 'Введите время' : null,
+                      validator: (value) =>
+                          value?.isEmpty == true ? 'Введите время' : null,
                     ),
                   ],
                 ),
@@ -396,19 +466,38 @@ class CourseEditModulesTab extends StatelessWidget {
           ),
           actions: [
             TextButton(
-              onPressed: () => Navigator.of(context).pop(),
+              onPressed: _isUploading ? null : () => Navigator.pop(context),
               child: const Text('Отмена'),
             ),
             ElevatedButton(
-              onPressed: () {
-                if (formKey.currentState?.validate() == true) {
-                  Navigator.of(context).pop();
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Задание "${titleController.text}" добавлено')),
-                  );
-                }
-              },
-              child: const Text('Добавить'),
+              onPressed: _isUploading
+                  ? null
+                  : () async {
+                      if (formKey.currentState!.validate() &&
+                          selectedFilePath != null) {
+                        setState(() => _isUploading = true);
+                        await _addSubmodule(
+                          moduleId,
+                          nameController.text,
+                          int.parse(leadTimeController.text),
+                          selectedFilePath!,
+                        );
+                        if (mounted) {
+                          Navigator.pop(context);
+                        }
+                      } else if (selectedFilePath == null) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Выберите markdown файл')),
+                        );
+                      }
+                    },
+              child: _isUploading
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Text('Добавить'),
             ),
           ],
         ),
@@ -416,47 +505,312 @@ class CourseEditModulesTab extends StatelessWidget {
     );
   }
 
-  void _handleSubmoduleAction(BuildContext context, String action, Map<String, dynamic> submodule, int index) {
-    switch (action) {
-      case 'edit':
+  void _showAddTaskDialog(int moduleId) {
+    String? selectedFilePath;
+    final nameController = TextEditingController();
+    final leadTimeController = TextEditingController();
+    final formKey = GlobalKey<FormState>();
+    bool _isUploading = false;
+
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          title: const Text('Добавить задание'),
+          content: SizedBox(
+            width: 500,
+            child: Form(
+              key: formKey,
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        border: Border.all(
+                          color: Colors.grey.withOpacity(0.3),
+                        ),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Markdown документ',
+                            style: TextStyle(
+                              fontWeight: FontWeight.w600,
+                              fontSize: 14,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          if (selectedFilePath != null)
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(8),
+                                  decoration: BoxDecoration(
+                                    color: Colors.green.withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      const Icon(Icons.check_circle,
+                                          color: Colors.green, size: 18),
+                                      const SizedBox(width: 8),
+                                      Expanded(
+                                        child: Text(
+                                          selectedFilePath!
+                                              .split('/')
+                                              .last,
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: const TextStyle(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                              ],
+                            ),
+                          ElevatedButton.icon(
+                            onPressed: () async {
+                              final result =
+                                  await FilePicker.platform.pickFiles(
+                                type: FileType.custom,
+                                allowedExtensions: ['md', 'markdown', 'txt'],
+                              );
+
+                              if (result != null) {
+                                setState(() {
+                                  selectedFilePath =
+                                      result.files.single.path;
+                                });
+                              }
+                            },
+                            icon: const Icon(Icons.upload_file, size: 18),
+                            label: const Text('Выбрать файл'),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    TextFormField(
+                      controller: nameController,
+                      decoration: const InputDecoration(
+                        labelText: 'Название задания',
+                        border: OutlineInputBorder(),
+                        prefixIcon: Icon(Icons.assignment),
+                      ),
+                      validator: (value) =>
+                          value?.isEmpty == true ? 'Введите название' : null,
+                    ),
+                    const SizedBox(height: 16),
+                    TextFormField(
+                      controller: leadTimeController,
+                      keyboardType: TextInputType.number,
+                      decoration: const InputDecoration(
+                        labelText: 'Время выполнения (мин)',
+                        border: OutlineInputBorder(),
+                        prefixIcon: Icon(Icons.timer),
+                        hintText: 'Например: 30',
+                      ),
+                      validator: (value) =>
+                          value?.isEmpty == true ? 'Введите время' : null,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: _isUploading ? null : () => Navigator.pop(context),
+              child: const Text('Отмена'),
+            ),
+            ElevatedButton(
+              onPressed: _isUploading
+                  ? null
+                  : () async {
+                      if (formKey.currentState!.validate() &&
+                          selectedFilePath != null) {
+                        setState(() => _isUploading = true);
+                        await _addSubmodule(
+                          moduleId,
+                          nameController.text,
+                          int.parse(leadTimeController.text),
+                          selectedFilePath!,
+                        );
+                        if (mounted) {
+                          Navigator.pop(context);
+                        }
+                      } else if (selectedFilePath == null) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Выберите markdown файл')),
+                        );
+                      }
+                    },
+              child: _isUploading
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Text('Добавить'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _addModule(String name) async {
+    try {
+      final nextOrder = _modules.isEmpty
+          ? 1
+          : (_modules.map((m) => m.orderModule ?? 0).reduce((a, b) => a > b ? a : b)) + 1;
+
+      await SupabaseService.client.from('module').insert({
+        'id_courses': widget.courseId,
+        'name': name,
+        'order_module': nextOrder,
+        'status': true,
+      });
+
+      if (mounted) {
+        _loadModules();
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Редактирование "${submodule['title']}"')),
+          SnackBar(content: Text('Модуль "$name" добавлен')),
         );
-        break;
-      case 'duplicate':
+      }
+    } catch (e) {
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Подмодуль "${submodule['title']}" дублирован')),
+          SnackBar(content: Text('Ошибка: $e')),
         );
-        break;
-      case 'delete':
-        _showDeleteConfirmation(context, submodule['title']);
-        break;
+      }
     }
   }
 
-  void _showDeleteConfirmation(BuildContext context, String title) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Удалить подмодуль?'),
-        content: Text('Вы уверены, что хотите удалить "$title"? Это действие нельзя отменить.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Отмена'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.of(context).pop();
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('Подмодуль "$title" удален')),
-              );
-            },
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text('Удалить'),
-          ),
-        ],
-      ),
-    );
+Future<void> _addSubmodule(
+  int moduleId,
+  String name,
+  int leadTime,
+  String filePath,
+) async {
+  try {
+    // Сначала получаем order_module текущего модуля
+    final moduleData = await SupabaseService.client
+        .from('module')
+        .select('order_module')
+        .eq('id', moduleId)
+        .single();
+    
+    final orderModule = moduleData['order_module'] as int? ?? 1;
+
+    final file = File(filePath);
+    final fileExtension = file.path.split('.').last;
+    final fileBytes = await file.readAsBytes();
+
+    // ✅ Генерируем безопасное имя файла
+    final safeFileName = 'submodule_${DateTime.now().millisecondsSinceEpoch}.$fileExtension';
+    
+    // ✅ Вложенные папки: c1/module2/submodule_123.md
+    final storagePath = 'c${widget.courseId}/module$orderModule/$safeFileName';
+    
+    print('📤 Загружаем файл: $storagePath');
+
+    // ✅ Загружаем файл в Storage
+    await SupabaseService.client.storage
+        .from('course-files')
+        .uploadBinary(storagePath, fileBytes);
+
+    // ✅ Создаём подписанный URL, который будет работать вечно
+    // Срок: 100 лет (525600 часов * 100 = 52560000 часов)
+    final signedUrl = await SupabaseService.client.storage
+        .from('course-files')
+        .createSignedUrl(storagePath, 5256000);
+
+    print('✅ URL готов: $signedUrl');
+
+    // Определяем order_submodule
+    final submodules = _submodules[moduleId] ?? [];
+    final nextOrder = submodules.isEmpty
+        ? 1
+        : (submodules.map((s) => s.orderSubmodule ?? 0).reduce((a, b) => a > b ? a : b)) + 1;
+
+    // ✅ Сохраняем в БД с подписанным URL
+    await SupabaseService.client.from('submodule').insert({
+      'id_module': moduleId,
+      'name': name,
+      'lead_time': leadTime,
+      'content': signedUrl, 
+      'order_submodule': nextOrder,
+      'status': true,
+    });
+
+    if (mounted) {
+      _loadModules();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Подмодуль "$name" добавлен')),
+      );
+    }
+  } catch (e) {
+    print('❌ Ошибка: $e');
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Ошибка: $e')),
+      );
+    }
+  }
+}
+
+  Future<void> _deleteModule(int moduleId) async {
+    try {
+      await SupabaseService.client
+          .from('module')
+          .delete()
+          .eq('id', moduleId);
+
+      if (mounted) {
+        _loadModules();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Модуль удален')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Ошибка: $e')),
+        );
+      }
+    }
+  }
+
+  Future<void> _deleteSubmodule(int submoduleId, int moduleId) async {
+    try {
+      await SupabaseService.client
+          .from('submodule')
+          .delete()
+          .eq('id', submoduleId);
+
+      if (mounted) {
+        _loadModules();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Подмодуль удален')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Ошибка: $e')),
+        );
+      }
+    }
   }
 }

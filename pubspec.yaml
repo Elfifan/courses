@@ -8,6 +8,7 @@ environment:
 
 dependencies:
   archive: ^4.0.7
+  file_picker: ^10.3.7
   flutter:
     sdk: flutter
   flutter_html: ^3.0.0
