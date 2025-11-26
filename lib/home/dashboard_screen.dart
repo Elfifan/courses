@@ -7,7 +7,6 @@ import '../staff/staff_screen.dart';
 import '../achievements/achievements_screen.dart';
 import '../services/course_service.dart';
 
-
 class DashboardScreen extends StatefulWidget {
   final VoidCallback onThemeToggle;
   final bool isDarkMode;
@@ -198,7 +197,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -235,10 +233,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   },
                   onAddAchievement: () {
                     if (_selectedIndex == 4) {
-                      final s = _achievementsKey.currentState;
-                      if (s != null) {
-                        (s as dynamic).openAddDialog();
-                      }
+    final state = _achievementsKey.currentState as dynamic;
+    state.showForm();
                     }
                   },
                 ),
@@ -339,7 +335,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           children: [
             _buildInfoCard('Средняя оценка курсов', '4.7', Icons.star_rounded, Color(0xFFEAB308)),
             SizedBox(width: 20),
-            _buildInfoCard('Курсов в разработке', '2', Icons.autorenew , Color.fromARGB(255, 197, 113, 16)),
+            _buildInfoCard('Курсов в разработке', '2', Icons.autorenew, Color.fromARGB(255, 197, 113, 16)),
             SizedBox(width: 20),
             _buildInfoCard('Новых студентов за месяц', '+156', Icons.trending_up_rounded, Color(0xFF38BDF8)),
             SizedBox(width: 20),
@@ -378,9 +374,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         decoration: BoxDecoration(
           color: Theme.of(context).colorScheme.surface,
           borderRadius: BorderRadius.circular(16),
-          border: widget.isDarkMode
-            ? Border.all(color: Color(0xFF30363D))
-            : null,
+          border: widget.isDarkMode ? Border.all(color: Color(0xFF30363D)) : null,
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -431,9 +425,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         decoration: BoxDecoration(
           color: Theme.of(context).colorScheme.surface,
           borderRadius: BorderRadius.circular(14),
-          border: widget.isDarkMode
-            ? Border.all(color: Color(0xFF30363D))
-            : null,
+          border: widget.isDarkMode ? Border.all(color: Color(0xFF30363D)) : null,
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -480,9 +472,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(16),
-        border: widget.isDarkMode
-          ? Border.all(color: Color(0xFF30363D))
-          : null,
+        border: widget.isDarkMode ? Border.all(color: Color(0xFF30363D)) : null,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -576,9 +566,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(16),
-        border: widget.isDarkMode
-          ? Border.all(color: Color(0xFF30363D))
-          : null,
+        border: widget.isDarkMode ? Border.all(color: Color(0xFF30363D)) : null,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

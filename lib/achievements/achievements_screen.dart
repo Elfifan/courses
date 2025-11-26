@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'dart:io';
+import 'dart:typed_data';
 import 'package:image_picker/image_picker.dart';
 import '../shared/search_row.dart';
+import '../models/database_models.dart';
+import '../repositories/achievement_repository.dart';
 
 class AchievementsScreen extends StatefulWidget {
   final bool isDarkMode;
@@ -16,61 +19,59 @@ class _AchievementsScreenState extends State<AchievementsScreen> {
   final TextEditingController _searchController = TextEditingController();
   final ImagePicker _picker = ImagePicker();
 
-  List<Map<String, dynamic>> _achievements = [
-    {
-      'id': 1,
-      'title': 'Первое достижение',
-      'description': 'Зарегистрирован первый студент на платформе',
-      'image': null,
-      'date': '15 мар 2024',
-      'isArchived': false,
-    },
-    {
-      'id': 2,
-      'title': '100 студентов',
-      'description': 'Достигнуто 100 зарегистрированных студентов',
-      'image': null,
-      'date': '25 мая 2024',
-      'isArchived': false,
-    },
-  ];
+  List<Achievement> _achievements = [];
+  List<Achievement> _archivedAchievements = [];
+  bool _isLoading = true;
+  int _selectedTabIndex = 0;  // 0 = активные, 1 = архив
 
-  List<Map<String, dynamic>> get _filteredAchievements {
-    final q = _searchController.text.trim().toLowerCase();
-    if (q.isEmpty) return _achievements.where((a) => a['isArchived'] == false).toList();
-    return _achievements.where((a) {
-      final title = (a['title'] ?? '').toString().toLowerCase();
-      final desc = (a['description'] ?? '').toString().toLowerCase();
-      return (title.contains(q) || desc.contains(q)) && a['isArchived'] == false;
-    }).toList();
+  @override
+  void initState() {
+    super.initState();
+    _loadAchievements();
   }
 
-  String _getTodayDate() {
-    final now = DateTime.now();
-    const months = ['янв', 'фев', 'мар', 'апр', 'май', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек'];
-    return '${now.day.toString().padLeft(2, '0')} ${months[now.month - 1]} ${now.year}';
-  }
-
-  Future<void> _pickImage(Function(File?) onPicked) async {
+  Future<void> _loadAchievements() async {
+    setState(() => _isLoading = true);
     try {
-      final XFile? file = await _picker.pickImage(source: ImageSource.gallery);
-      if (file != null) {
-        onPicked(File(file.path));
-      } else {
-        onPicked(null);
+      final achievements = await AchievementRepository.getAllAchievements();
+      final archived = await AchievementRepository.getArchivedAchievements();
+      setState(() {
+        _achievements = achievements;
+        _archivedAchievements = archived;
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() => _isLoading = false);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Ошибка загрузки: $e')),
+        );
       }
-    } catch (_) {
-      onPicked(null);
     }
   }
 
-  void openAddDialog() => _showForm();
+  List<Achievement> get _filteredAchievements {
+    final q = _searchController.text.trim().toLowerCase();
+    final list = _selectedTabIndex == 0 ? _achievements : _archivedAchievements;
+    if (q.isEmpty) return list;
+    return list.where((a) {
+      final name = a.name.toLowerCase();
+      final desc = (a.description ?? '').toLowerCase();
+      return name.contains(q) || desc.contains(q);
+    }).toList();
+  }
 
-  void _showForm({Map<String, dynamic>? achievement}) {
+  void showForm({Achievement? achievement}) {
+    _showForm(achievement: achievement);
+  }
+
+  void _showForm({Achievement? achievement}) {
     final isEdit = achievement != null;
-    final _titleController = TextEditingController(text: achievement?['title'] ?? '');
-    final _descController = TextEditingController(text: achievement?['description'] ?? '');
-    File? pickedImage = achievement != null ? achievement['image'] as File? : null;
+    final _titleController = TextEditingController(text: achievement?.name ?? '');
+    final _descController = TextEditingController(text: achievement?.description ?? '');
+    List<int>? imageData = achievement?.imageData;
+    File? pickedFile;
+    bool _isSaving = false;
 
     showDialog(
       context: context,
@@ -79,83 +80,146 @@ class _AchievementsScreenState extends State<AchievementsScreen> {
           return AlertDialog(
             title: Text(isEdit ? 'Редактировать достижение' : 'Добавить достижение'),
             content: SizedBox(
-              width: 560,
+              width: 360,
               child: SingleChildScrollView(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
+                    GestureDetector(
+                      onTap: () async {
+                        final XFile? file = await _picker.pickImage(source: ImageSource.gallery);
+                        if (file != null) {
+                          setState(() {
+                            pickedFile = File(file.path);
+                          });
+                        }
+                      },
+                      child: AspectRatio(
+                        aspectRatio: 1,
+                        child: Container(
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: Theme.of(context).dividerColor, width: 2),
+                          ),
+                          child: pickedFile != null
+                              ? ClipRRect(
+                                  borderRadius: BorderRadius.circular(8),
+                                  child: Image.file(pickedFile!, fit: BoxFit.cover),
+                                )
+                              : (imageData != null
+                                  ? ClipRRect(
+                                      borderRadius: BorderRadius.circular(8),
+                                      child: Image.memory(
+                                        Uint8List.fromList(imageData),
+                                        fit: BoxFit.cover,
+                                        errorBuilder: (context, error, stackTrace) {
+                                          return Center(
+                                            child: Column(
+                                              mainAxisAlignment: MainAxisAlignment.center,
+                                              children: [
+                                                Icon(Icons.broken_image, size: 48, color: Colors.red),
+                                                const SizedBox(height: 8),
+                                                Text('Ошибка загрузки'),
+                                              ],
+                                            ),
+                                          );
+                                        },
+                                      ),
+                                    )
+                                  : Center(
+                                      child: Column(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          Icon(Icons.image, size: 48, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4)),
+                                          const SizedBox(height: 8),
+                                          Text('Нажмите для выбора'),
+                                        ],
+                                      ),
+                                    )),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
                     TextFormField(
                       controller: _titleController,
-                      decoration: const InputDecoration(labelText: 'Название *', border: OutlineInputBorder()),
+                      decoration: const InputDecoration(
+                        labelText: 'Название *',
+                        border: OutlineInputBorder(),
+                      ),
                     ),
                     const SizedBox(height: 12),
                     TextFormField(
                       controller: _descController,
-                      decoration: const InputDecoration(labelText: 'Описание', border: OutlineInputBorder()),
+                      decoration: const InputDecoration(
+                        labelText: 'Описание',
+                        border: OutlineInputBorder(),
+                      ),
                       maxLines: 4,
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: pickedImage != null
-                              ? ClipRRect(
-                                  borderRadius: BorderRadius.circular(8),
-                                  child: Image.file(pickedImage as File, height: 90, fit: BoxFit.cover),
-                                )
-                              : Container(
-                                  height: 90,
-                                  decoration: BoxDecoration(
-                                    borderRadius: BorderRadius.circular(8),
-                                    border: Border.all(color: Theme.of(context).dividerColor),
-                                  ),
-                                  alignment: Alignment.center,
-                                  child: Text('Изображение не выбрано'),
-                                ),
-                        ),
-                        const SizedBox(width: 12),
-                        ElevatedButton.icon(
-                          onPressed: () async {
-                            await _pickImage((file) => setState(() => pickedImage = file));
-                          },
-                          icon: const Icon(Icons.image),
-                          label: const Text('Выбрать'),
-                        ),
-                      ],
                     ),
                   ],
                 ),
               ),
             ),
             actions: [
-              TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Отмена')),
+              TextButton(
+                onPressed: _isSaving ? null : () => Navigator.of(context).pop(),
+                child: const Text('Отмена'),
+              ),
               ElevatedButton(
-                onPressed: () {
-                  final title = _titleController.text.trim();
-                  if (title.isEmpty) return;
-                  setState(() {
-                    if (isEdit) {
-                      final idx = _achievements.indexWhere((e) => e['id'] == achievement['id']);
-                      if (idx != -1) {
-                        _achievements[idx]['title'] = title;
-                        _achievements[idx]['description'] = _descController.text.trim();
-                        _achievements[idx]['image'] = pickedImage;
-                      }
-                    } else {
-                      final id = (_achievements.isEmpty ? 1 : (_achievements.map((e) => e['id'] as int).reduce((a, b) => a > b ? a : b) + 1));
-                      _achievements.insert(0, {
-                        'id': id,
-                        'title': title,
-                        'description': _descController.text.trim(),
-                        'image': pickedImage,
-                        'date': _getTodayDate(),
-                        'isArchived': false,
-                      });
-                    }
-                  });
-                  Navigator.of(context).pop();
-                },
-                child: Text(isEdit ? 'Сохранить' : 'Добавить'),
+                onPressed: _isSaving
+                    ? null
+                    : () async {
+                        final title = _titleController.text.trim();
+                        if (title.isEmpty) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Введите название')),
+                          );
+                          return;
+                        }
+
+                        setState(() => _isSaving = true);
+
+                        try {
+                          List<int>? uploadedImageData = imageData;
+
+                          if (pickedFile != null) {
+                            uploadedImageData = await AchievementRepository.fileToBytes(pickedFile!);
+                          }
+
+                          if (isEdit && achievement != null) {
+                            await AchievementRepository.updateAchievement(
+                              achievement.id,
+                              name: title,
+                              description: _descController.text.trim(),
+                              imageData: uploadedImageData,
+                            );
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Достижение обновлено')),
+                            );
+                          } else {
+                            await AchievementRepository.createAchievement(
+                              name: title,
+                              description: _descController.text.trim(),
+                              imageData: uploadedImageData,
+                            );
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Достижение добавлено')),
+                            );
+                          }
+
+                          _loadAchievements();
+                          Navigator.of(context).pop();
+                        } catch (e) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Ошибка: $e')),
+                          );
+                        } finally {
+                          setState(() => _isSaving = false);
+                        }
+                      },
+                child: _isSaving
+                    ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                    : Text(isEdit ? 'Сохранить' : 'Добавить'),
               ),
             ],
           );
@@ -164,23 +228,70 @@ class _AchievementsScreenState extends State<AchievementsScreen> {
     );
   }
 
-  void _archiveAchievement(int id) {
+  void _archiveAchievement(Achievement achievement) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Архивировать достижение?'),
-        content: const Text('Вы уверены, что хотите отправить это достижение в архив?'),
+        content: const Text('Достижение будет перемещено в архив.'),
         actions: [
-          TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Отмена')),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Отмена'),
+          ),
           ElevatedButton(
-            onPressed: () {
-              setState(() {
-                final idx = _achievements.indexWhere((e) => e['id'] == id);
-                if (idx != -1) _achievements[idx]['isArchived'] = true;
-              });
-              Navigator.of(context).pop();
+            onPressed: () async {
+              try {
+                await AchievementRepository.archiveAchievement(achievement.id);
+                _loadAchievements();
+                Navigator.of(context).pop();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Достижение архивировано')),
+                );
+              } catch (e) {
+                Navigator.of(context).pop();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Ошибка: $e')),
+                );
+              }
             },
-            child: const Text('Архивировать'),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.orange),
+            child: const Text('Архивировать', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _restoreAchievement(Achievement achievement) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Вернуть достижение?'),
+        content: const Text('Достижение будет восстановлено из архива.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Отмена'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              try {
+                await AchievementRepository.restoreAchievement(achievement.id);
+                _loadAchievements();
+                Navigator.of(context).pop();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Достижение восстановлено')),
+                );
+              } catch (e) {
+                Navigator.of(context).pop();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Ошибка: $e')),
+                );
+              }
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
+            child: const Text('Вернуть', style: TextStyle(color: Colors.white)),
           ),
         ],
       ),
@@ -198,11 +309,9 @@ class _AchievementsScreenState extends State<AchievementsScreen> {
     final theme = Theme.of(context);
     final filtered = _filteredAchievements;
 
-    
-
     return Column(
       children: [
-        // Поиск (без отступов, как в Courses)
+        // Табы: Активные / Архив
         Row(
           children: [
             Expanded(
@@ -212,92 +321,180 @@ class _AchievementsScreenState extends State<AchievementsScreen> {
                 onChanged: (_) => setState(() {}),
               ),
             ),
+            const SizedBox(width: 16),
+            // Табы
+            Container(
+              decoration: BoxDecoration(
+                color: theme.colorScheme.surface,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: widget.isDarkMode ? Color(0xFF30363D) : Color(0xFFE2E8F0),
+                ),
+              ),
+              child: Row(
+                children: [
+                  _buildTab('Активные', 0, theme),
+                  _buildTab('Архив', 1, theme),
+                ],
+              ),
+            ),
           ],
         ),
-        SizedBox(height: 24),
+        const SizedBox(height: 24),
+        // Сетка достижений
         Expanded(
-          child: filtered.isEmpty
-              ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.emoji_events_rounded, size: 64, color: theme.colorScheme.onSurface.withValues(alpha: 0.3)),
-                      const SizedBox(height: 16),
-                      Text(
-                        'Достижения не найдены',
-                        style: TextStyle(
-                          fontSize: 18,
-                          color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
-                        ),
+          child: _isLoading
+              ? const Center(child: CircularProgressIndicator())
+              : filtered.isEmpty
+                  ? Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.emoji_events_rounded, size: 64, color: theme.colorScheme.onSurface.withValues(alpha: 0.3)),
+                          const SizedBox(height: 16),
+                          Text(
+                            _selectedTabIndex == 0 ? 'Активные достижения не найдены' : 'Архив пуст',
+                            style: TextStyle(
+                              fontSize: 18,
+                              color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                            ),
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
-                )
-              : Padding(
-                  padding: const EdgeInsets.all(20),
-                  child: GridView.builder(
-                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 6,
-                      crossAxisSpacing: 12,
-                      mainAxisSpacing: 12,
-                      childAspectRatio: 0.75,
+                    )
+                  : Padding(
+                      padding: const EdgeInsets.all(20),
+                      child: GridView.builder(
+                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 6,
+                          crossAxisSpacing: 12,
+                          mainAxisSpacing: 12,
+                          childAspectRatio: 0.75,
+                        ),
+                        itemCount: filtered.length,
+                        itemBuilder: (context, index) {
+                          final achievement = filtered[index];
+                          return _buildAchievementCard(achievement, theme);
+                        },
+                      ),
                     ),
-                    itemCount: filtered.length,
-                    itemBuilder: (context, index) {
-                      final achievement = filtered[index];
-                      return _buildAchievementCard(achievement, theme);
-                    },
-                  ),
-                ),
         ),
       ],
     );
   }
 
-  Widget _buildAchievementCard(Map<String, dynamic> a, ThemeData theme) {
-    return GestureDetector(
-      onTap: () => _showForm(achievement: a),
-      child: Card(
-        elevation: 0,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        color: theme.colorScheme.surface,
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: a['image'] != null
-                    ? ClipRRect(borderRadius: BorderRadius.circular(8), child: Image.file(a['image'] as File, width: double.infinity, fit: BoxFit.cover))
-                    : Container(
+Widget _buildTab(String label, int index, ThemeData theme) {
+    final isActive = _selectedTabIndex == index;
+    return MouseRegion(  // ← Добавьте это
+      cursor: SystemMouseCursors.click,  // ← Курсор в виде руки
+      child: GestureDetector(
+        onTap: () => setState(() => _selectedTabIndex = index),
+        child: Container(
+          padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          decoration: BoxDecoration(
+            color: isActive ? theme.primaryColor : Colors.transparent,
+            borderRadius: index == 0
+                ? BorderRadius.only(topLeft: Radius.circular(8), bottomLeft: Radius.circular(8))
+                : BorderRadius.only(topRight: Radius.circular(8), bottomRight: Radius.circular(8)),
+          ),
+          child: Text(
+            label,
+            style: TextStyle(
+              color: isActive ? Colors.white : theme.colorScheme.onSurface,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAchievementCard(Achievement a, ThemeData theme) {
+    final isArchived = !a.status;
+
+    return Card(
+      elevation: 0,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      color: theme.colorScheme.surface,
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: a.imageData != null && a.imageData!.isNotEmpty
+                  ? ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: Image.memory(
+                        Uint8List.fromList(a.imageData!),
                         width: double.infinity,
-                        decoration: BoxDecoration(borderRadius: BorderRadius.circular(8), color: theme.dividerColor.withValues(alpha: 0.04)),
-                        child: const Icon(Icons.emoji_events_rounded, size: 48),
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) {
+                          return Container(
+                            width: double.infinity,
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(8),
+                              color: theme.dividerColor.withValues(alpha: 0.04),
+                            ),
+                            child: Icon(Icons.broken_image, size: 48, color: Colors.red.withValues(alpha: 0.5)),
+                          );
+                        },
                       ),
-              ),
-              const SizedBox(height: 12),
-              Text(a['title'] ?? '', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: theme.colorScheme.onSurface)),
-              const SizedBox(height: 6),
-              Text(
-                a['description'] ?? '',
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(color: theme.colorScheme.onSurface.withValues(alpha: 0.75)),
-              ),
-              const SizedBox(height: 8),
+                    )
+                  : Container(
+                      width: double.infinity,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(8),
+                        color: theme.dividerColor.withValues(alpha: 0.04),
+                      ),
+                      child: const Icon(Icons.emoji_events_rounded, size: 48),
+                    ),
+            ),
+            const SizedBox(height: 12),
+            Text(a.name, style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: theme.colorScheme.onSurface)),
+            const SizedBox(height: 6),
+            Text(
+              a.description ?? '',
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(color: theme.colorScheme.onSurface.withValues(alpha: 0.75)),
+            ),
+            const SizedBox(height: 8),
+            if (isArchived)
+              // Для архивированных достижений
+              ElevatedButton.icon(
+                onPressed: () => _restoreAchievement(a),
+                icon: const Icon(Icons.unarchive, size: 16),
+                label: const Text('Вернуть'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.green,
+                  minimumSize: Size(double.infinity, 36),
+                ),
+              )
+            else
+              // Для активных достижений
               Row(
                 children: [
-                  Text(a['date'] ?? '', style: TextStyle(fontSize: 12, color: theme.colorScheme.onSurface.withValues(alpha: 0.6))),
-                  const Spacer(),
-                  IconButton(
-                    tooltip: 'В архив',
-                    onPressed: () => _archiveAchievement(a['id'] as int),
-                    icon: const Icon(Icons.archive_outlined),
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: () => _showForm(achievement: a),
+                      icon: const Icon(Icons.edit, size: 16),
+                      label: const Text('Редактировать'),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  MouseRegion(  // ← Курсор для кнопки архива
+                    cursor: SystemMouseCursors.click,
+                    child: IconButton(
+                      tooltip: 'Архивировать',
+                      onPressed: () => _archiveAchievement(a),
+                      icon: const Icon(Icons.archive_outlined),
+                      color: Colors.orange,
+                    ),
                   ),
                 ],
               ),
-            ],
-          ),
+          ],
         ),
       ),
     );

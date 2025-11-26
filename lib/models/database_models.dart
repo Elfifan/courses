@@ -1,3 +1,6 @@
+import 'dart:convert';
+
+
 class Employee {
   final int id;
   final String? surname;
@@ -460,6 +463,94 @@ class FeedbackModel {
       'id_courses': idCourses,
       'estimation': estimation,
       'description': description,
+    };
+  }
+}
+
+class Achievement {
+  final int id;
+  final DateTime createdAt;
+  final String name;
+  final String? description;
+  final bool status;
+  final List<int>? imageData;
+
+  Achievement({
+    required this.id,
+    required this.createdAt,
+    required this.name,
+    this.description,
+    required this.status,
+    this.imageData,
+  });
+
+  factory Achievement.fromJson(Map<String, dynamic> json) {
+    List<int>? imageData;
+    
+    if (json['image'] != null) {
+      try {
+        final imageValue = json['image'];
+        
+        if (imageValue is String) {
+          // Декодируем base64 строку
+          imageData = base64Decode(imageValue);
+        } else if (imageValue is List) {
+          // Если это List, приводим к List<int>
+          imageData = List<int>.from(imageValue);
+        }
+      } catch (e) {
+        print('Error decoding image: $e');
+        imageData = null;
+      }
+    }
+    
+    return Achievement(
+      id: json['id'] as int,
+      createdAt: json['created_at'] != null 
+        ? DateTime.parse(json['created_at'] as String)
+        : DateTime.now(),
+      name: json['name'] as String? ?? 'Без названия',
+      description: json['description'] as String?,
+      status: json['status'] as bool? ?? true,
+      imageData: imageData,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'created_at': createdAt.toIso8601String(),
+      'name': name,
+      'description': description,
+      'status': status,
+      'image': imageData != null ? base64Encode(imageData!) : null,
+    };
+  }
+}
+class UserAchievement {
+  final int id;
+  final int idUser;
+  final int idAchievement;
+
+  UserAchievement({
+    required this.id,
+    required this.idUser,
+    required this.idAchievement,
+  });
+
+  factory UserAchievement.fromMap(Map<String, dynamic> map) {
+    return UserAchievement(
+      id: map['id'],
+      idUser: map['id_user'],
+      idAchievement: map['id_achievement'],
+    );
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'id_user': idUser,
+      'id_achievement': idAchievement,
     };
   }
 }

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:cyrs/models.dart' as db_models;
+import '../models/database_models.dart' as db_models;
 import 'package:intl/intl.dart';
 import '../shared/search_row.dart';
 import '../students/student_profile_screen.dart';
