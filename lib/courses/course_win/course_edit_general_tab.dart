@@ -1,181 +1,196 @@
-// course_edit_general_tab.dart
 import 'package:flutter/material.dart';
+import '../../models/database_models.dart';
+import '../../services/supabase_service.dart';
 
-class CourseEditGeneralTab extends StatelessWidget {
+class CourseEditGeneralTab extends StatefulWidget {
   final GlobalKey<FormState> formKey;
-  final TextEditingController titleController;
-  final TextEditingController descriptionController;
-  final TextEditingController priceController;
-  final String selectedStatus;
-  final String selectedCategory;
-  final bool isPublished;
-  final ValueChanged<String?> onStatusChanged;
-  final ValueChanged<String?> onCategoryChanged;
-  final ValueChanged<bool> onPublishedChanged;
-  final VoidCallback onSave;
-  final VoidCallback onArchive;
-  final VoidCallback onDelete;
+  final Course course;
+  final Function(String, String, double, int) onCourseUpdated;  // ← ИЗМЕНЕНО
 
   const CourseEditGeneralTab({
     super.key,
     required this.formKey,
-    required this.titleController,
-    required this.descriptionController,
-    required this.priceController,
-    required this.selectedStatus,
-    required this.selectedCategory,
-    required this.isPublished,
-    required this.onStatusChanged,
-    required this.onCategoryChanged,
-    required this.onPublishedChanged,
-    required this.onSave,
-    required this.onArchive,
-    required this.onDelete,
+    required this.course,
+    required this.onCourseUpdated,
   });
 
   @override
+  _CourseEditGeneralTabState createState() => _CourseEditGeneralTabState();
+}
+
+class _CourseEditGeneralTabState extends State<CourseEditGeneralTab> {
+  late TextEditingController _titleController;
+  late TextEditingController _descriptionController;
+  late TextEditingController _priceController;
+  
+  int? _selectedComplexity;
+  bool _isSaving = false;
+
+  final Map<int, String> _complexityLevels = {
+    1: 'Начальный уровень',
+    2: 'Средний уровень',
+    3: 'Продвинутый уровень',
+  };
+
+  @override
+  void initState() {
+    super.initState();
+    _titleController = TextEditingController(text: widget.course.name ?? '');
+    _descriptionController = TextEditingController(text: widget.course.description ?? '');
+    _priceController = TextEditingController(text: widget.course.price?.toString() ?? '');
+    _selectedComplexity = widget.course.complexity ?? 1;
+  }
+
+  @override
+  void dispose() {
+    _titleController.dispose();
+    _descriptionController.dispose();
+    _priceController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _saveCourse() async {
+    if (!mounted) return;
+    
+    if (_titleController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Введите название курса')),
+      );
+      return;
+    }
+
+    setState(() => _isSaving = true);
+
+    try {
+      final price = double.tryParse(_priceController.text) ?? 0;
+
+      await SupabaseService.client
+          .from('courses')
+          .update({
+            'name': _titleController.text,
+            'description': _descriptionController.text,
+            'price': price,
+            'complexity': _selectedComplexity,
+          })
+          .eq('id', widget.course.id);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Курс сохранен успешно')),
+        );
+        // ← ВЫЗЫВАЕМ CALLBACK с новыми данными
+        widget.onCourseUpdated(
+          _titleController.text,
+          _descriptionController.text,
+          price,
+          _selectedComplexity!,
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Ошибка сохранения: $e')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isSaving = false);
+      }
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
+    return Padding(
       padding: const EdgeInsets.all(20),
-      child: Form(
-        key: formKey,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text('Основная информация', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                Expanded(
-                  child: TextFormField(
-                    controller: titleController,
-                    decoration: const InputDecoration(
-                      labelText: 'Название курса',
-                      border: OutlineInputBorder(),
-                      prefixIcon: Icon(Icons.title),
-                    ),
-                    validator: (value) => value?.isEmpty == true ? 'Введите название' : null,
-                  ),
+      child: SingleChildScrollView(
+        child: Form(
+          key: widget.formKey,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Название
+              Text('Название курса', style: Theme.of(context).textTheme.titleMedium),
+              const SizedBox(height: 8),
+              TextFormField(
+                controller: _titleController,
+                decoration: InputDecoration(
+                  hintText: 'Введите название курса',
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                  prefixIcon: const Icon(Icons.book),
                 ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: TextFormField(
-                    controller: priceController,
-                    decoration: const InputDecoration(
-                      labelText: 'Цена (₽)',
-                      border: OutlineInputBorder(),
-                      prefixIcon: Icon(Icons.attach_money),
-                    ),
-                    keyboardType: TextInputType.number,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            TextFormField(
-              controller: descriptionController,
-              maxLines: 4,
-              decoration: const InputDecoration(
-                labelText: 'Описание',
-                border: OutlineInputBorder(),
-                prefixIcon: Icon(Icons.description),
+                validator: (val) => val?.isEmpty == true ? 'Поле обязательно' : null,
               ),
-            ),
-            const SizedBox(height: 16),
-            DropdownButtonFormField<String>(
-              value: selectedCategory,
-              decoration: const InputDecoration(
-                labelText: 'Категория',
-                border: OutlineInputBorder(),
-                prefixIcon: Icon(Icons.category),
-              ),
-              items: const [
-                DropdownMenuItem(value: 'programming', child: Text('Программирование')),
-                DropdownMenuItem(value: 'design', child: Text('Дизайн')),
-                DropdownMenuItem(value: 'business', child: Text('Бизнес')),
-              ],
-              onChanged: onCategoryChanged,
-            ),
-            const SizedBox(height: 24),
-            const Text('Настройки курса', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 16),
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.surface,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.grey.withOpacity(0.2)),
-              ),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: DropdownButtonFormField<String>(
-                      value: selectedStatus,
-                      decoration: const InputDecoration(
-                        labelText: 'Статус курса',
-                        border: OutlineInputBorder(),
-                      ),
-                      items: const [
-                        DropdownMenuItem(value: 'active', child: Text('Активный')),
-                        DropdownMenuItem(value: 'draft', child: Text('Черновик')),
-                        DropdownMenuItem(value: 'archived', child: Text('Архивирован')),
-                      ],
-                      onChanged: onStatusChanged,
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: SwitchListTile(
-                      title: const Text('Опубликован'),
-                      subtitle: const Text('Видим студентам'),
-                      value: isPublished,
-                      onChanged: onPublishedChanged,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 32),
-            const Text('Действия', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                Expanded(
-                  child: ElevatedButton.icon(
-                    onPressed: onSave,
-                    icon: const Icon(Icons.save),
-                    label: const Text('Сохранить изменения'),
-                    style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                    ),
-                  ),
+              const SizedBox(height: 20),
+
+              // Описание
+              Text('Описание', style: Theme.of(context).textTheme.titleMedium),
+              const SizedBox(height: 8),
+              TextFormField(
+                controller: _descriptionController,
+                maxLines: 5,
+                decoration: InputDecoration(
+                  hintText: 'Введите описание курса',
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                  prefixIcon: const Icon(Icons.description),
                 ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: onArchive,
-                    icon: const Icon(Icons.archive),
-                    label: const Text('Архивировать'),
-                    style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                    ),
-                  ),
+              ),
+              const SizedBox(height: 20),
+
+              // Цена
+              Text('Цена', style: Theme.of(context).textTheme.titleMedium),
+              const SizedBox(height: 8),
+              TextFormField(
+                controller: _priceController,
+                keyboardType: TextInputType.number,
+                decoration: InputDecoration(
+                  hintText: 'Введите цену',
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                  prefixIcon: const Icon(Icons.attach_money),
                 ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: onDelete,
-                    icon: const Icon(Icons.delete, color: Colors.red),
-                    label: const Text('Удалить', style: TextStyle(color: Colors.red)),
-                    style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      side: const BorderSide(color: Colors.red),
-                    ),
-                  ),
+              ),
+              const SizedBox(height: 20),
+
+              // Сложность
+              Text('Уровень сложности', style: Theme.of(context).textTheme.titleMedium),
+              const SizedBox(height: 8),
+              DropdownButtonFormField<int>(
+                value: _selectedComplexity,
+                decoration: InputDecoration(
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                  prefixIcon: const Icon(Icons.trending_up),
                 ),
-              ],
-            ),
-          ],
+                items: _complexityLevels.entries.map((entry) {
+                  return DropdownMenuItem<int>(
+                    value: entry.key,
+                    child: Text(entry.value),
+                  );
+                }).toList(),
+                onChanged: (value) {
+                  if (value != null) {
+                    setState(() => _selectedComplexity = value);
+                  }
+                },
+              ),
+              const SizedBox(height: 30),
+
+              // Кнопка сохранения
+              SizedBox(
+                width: double.infinity,
+                height: 48,
+                child: ElevatedButton(
+                  onPressed: _isSaving ? null : _saveCourse,
+                  child: _isSaving
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Text('Сохранить'),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

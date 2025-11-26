@@ -5,7 +5,7 @@ import '../courses/courses_screen.dart';
 import '../students/students_screen.dart';
 import '../staff/staff_screen.dart';
 import '../achievements/achievements_screen.dart';
-import '../services/course_service.dart';
+import '../repositories/course_repository.dart';
 
 class DashboardScreen extends StatefulWidget {
   final VoidCallback onThemeToggle;
@@ -261,12 +261,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
         return _buildDashboard();
       case 1:
         return CoursesScreen(
-          selectedFilter: _selectedCourseFilter,
-          onFilterChanged: (filter) {
-            setState(() {
-              _selectedCourseFilter = filter;
-            });
-          },
           isDarkMode: widget.isDarkMode,
         );
       case 2:

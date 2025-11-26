@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
-
-// Импортируйте ваши табы (замените пути при необходимости)
+import '../models/database_models.dart';
+import '../services/supabase_service.dart';
 import 'course_win/course_edit_general_tab.dart';
 import 'course_win/course_edit_modules_tab.dart';
 import 'course_win/course_edit_analytics_students_tab.dart';
-import 'course_win/course_edit_reviews_tab.dart'; // Новый файл для вкладки "Отзывы"
+import 'course_win/course_edit_reviews_tab.dart';
 
 class CourseEditScreen extends StatefulWidget {
-  const CourseEditScreen({super.key});
+  final int courseId;
+
+  const CourseEditScreen({super.key, required this.courseId});
 
   @override
   _CourseEditScreenState createState() => _CourseEditScreenState();
@@ -16,61 +18,84 @@ class CourseEditScreen extends StatefulWidget {
 class _CourseEditScreenState extends State<CourseEditScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
-
   final _formKey = GlobalKey<FormState>();
-  final _titleController = TextEditingController(text: 'Flutter Mobile Development');
-  final _descriptionController =
-      TextEditingController(text: 'Полный курс по разработке мобильных приложений на Flutter');
-  final _priceController = TextEditingController(text: '12990');
-
-  String _selectedStatus = 'active';
-  String _selectedCategory = 'programming';
-  bool _isPublished = true;
-
-  final List<Map<String, dynamic>> _modules = [
-    {
-      'id': 1,
-      'title': 'Введение в Flutter',
-      'duration': '2 часа 30 мин',
-      'lessons': 4,
-      'status': 'published',
-      'views': 1234,
-      'completion_rate': 85,
-      'submodules': [
-        {'title': 'Что такое Flutter', 'duration': '15 мин', 'completed': false},
-        {'title': 'Установка окружения', 'duration': '25 мин', 'completed': false},
-        {'title': 'Создание первого проекта', 'duration': '30 мин', 'completed': false},
-        {'title': 'Структура проекта', 'duration': '20 мин', 'completed': false},
-      ]
-    },
-    {
-      'id': 2,
-      'title': 'Основы языка Dart',
-      'duration': '3 часа 15 мин',
-      'lessons': 5,
-      'status': 'published',
-      'views': 987,
-      'completion_rate': 72,
-    },
-  ];
+  
+  Course? _course;
+  bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 4, vsync: this); // добавили четвертую вкладку "Отзывы"
+    _tabController = TabController(length: 4, vsync: this);
+    _loadCourse();
+  }
+
+  Future<void> _loadCourse() async {
+    if (!mounted) return;
+    setState(() => _isLoading = true);
+    try {
+      final data = await SupabaseService.client
+          .from('courses')
+          .select()
+          .eq('id', widget.courseId)
+          .single();
+      
+      if (mounted) {
+        setState(() {
+          _course = Course.fromJson(data as Map<String, dynamic>);
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Ошибка загрузки курса: $e')),
+        );
+      }
+    }
+  }
+
+  // ← НОВЫЙ МЕТОД: обновляет только данные курса без перезагрузки
+  Future<void> _updateCourseData(String name, String description, double price, int complexity) async {
+    if (mounted) {
+      setState(() {
+        _course = Course(
+          id: _course!.id,
+          name: name,
+          description: description,
+          price: price,
+          complexity: complexity,
+          icon: _course!.icon,
+          status: _course!.status,
+          dateCreate: _course!.dateCreate,
+        );
+      });
+    }
   }
 
   @override
   void dispose() {
     _tabController.dispose();
-    _titleController.dispose();
-    _descriptionController.dispose();
-    _priceController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return Scaffold(
+        backgroundColor: Theme.of(context).colorScheme.background,
+        body: const Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    if (_course == null) {
+      return Scaffold(
+        backgroundColor: Theme.of(context).colorScheme.background,
+        body: Center(child: Text('Курс не найден')),
+      );
+    }
+
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.background,
       body: Column(
@@ -83,26 +108,17 @@ class _CourseEditScreenState extends State<CourseEditScreen>
               children: [
                 CourseEditGeneralTab(
                   formKey: _formKey,
-                  titleController: _titleController,
-                  descriptionController: _descriptionController,
-                  priceController: _priceController,
-                  selectedStatus: _selectedStatus,
-                  selectedCategory: _selectedCategory,
-                  isPublished: _isPublished,
-                  onStatusChanged: (val) {
-                    if (val != null) setState(() => _selectedStatus = val);
-                  },
-                  onCategoryChanged: (val) {
-                    if (val != null) setState(() => _selectedCategory = val);
-                  },
-                  onPublishedChanged: (val) => setState(() => _isPublished = val),
-                  onSave: _saveCourse,
-                  onArchive: _archiveCourse,
-                  onDelete: _deleteCourse,
+                  course: _course!,
+                  onCourseUpdated: _updateCourseData,  // ← ПЕРЕДАЁМ ЭТО
                 ),
-                CourseEditModulesTab(module: _modules[0],courseId: 1,courseName: "ss",courseIcon: "ds",),
+                CourseEditModulesTab(
+                  module: {},
+                  courseId: _course!.id,
+                  courseName: _course!.name ?? '',
+                  courseIcon: _course!.icon ?? '',
+                ),
                 const CourseEditAnalyticsStudentsTab(),
-                const CourseEditReviewsTab(),  // Новая вкладка с отзывами
+                const CourseEditReviewsTab(),
               ],
             ),
           ),
@@ -120,7 +136,10 @@ class _CourseEditScreenState extends State<CourseEditScreen>
       ),
       child: Row(
         children: [
-          IconButton(onPressed: () => Navigator.pop(context), icon: const Icon(Icons.arrow_back)),
+          IconButton(
+            onPressed: () => Navigator.pop(context, true),
+            icon: const Icon(Icons.arrow_back),
+          ),
           const SizedBox(width: 12),
           Container(
             width: 50,
@@ -129,7 +148,7 @@ class _CourseEditScreenState extends State<CourseEditScreen>
               borderRadius: BorderRadius.circular(12),
               gradient: const LinearGradient(colors: [Color(0xFF667eea), Color(0xFF764ba2)]),
             ),
-            child: const Center(child: Text('📱', style: TextStyle(fontSize: 24))),
+            child: Center(child: Text(_course?.icon ?? '📚', style: const TextStyle(fontSize: 24))),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -137,23 +156,24 @@ class _CourseEditScreenState extends State<CourseEditScreen>
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Редактирование курса',
+                  _course?.name ?? 'Редактирование курса',
                   style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: Theme.of(context).colorScheme.onSurface),
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: Theme.of(context).colorScheme.onSurface,
+                  ),
                 ),
                 Row(
                   children: [
                     Text(
-                      'ID: #CR-2024-001',
+                      'ID: #${_course!.id}',
                       style: TextStyle(color: Colors.grey[600], fontSize: 14),
                     ),
                     const SizedBox(width: 16),
                     Icon(Icons.calendar_today, size: 16, color: Colors.grey[600]),
                     const SizedBox(width: 4),
                     Text(
-                      'Создан: 15 января 2024',
+                      'Создан: ${_course!.dateCreate?.toString().split(' ')[0] ?? 'N/A'}',
                       style: TextStyle(color: Colors.grey[600], fontSize: 14),
                     ),
                   ],
@@ -168,18 +188,9 @@ class _CourseEditScreenState extends State<CourseEditScreen>
   }
 
   Widget _buildStatusChip() {
-    final statusColors = {
-      'active': Colors.green,
-      'draft': Colors.orange,
-      'archived': Colors.grey,
-    };
-    final text = {
-      'active': 'Активный',
-      'draft': 'Черновик',
-      'archived': 'Архивирован',
-    };
-    final color = statusColors[_selectedStatus] ?? Colors.grey;
-    final label = text[_selectedStatus] ?? '';
+    final isActive = _course!.status ?? true;
+    final color = isActive ? Colors.green : Colors.orange;
+    final label = isActive ? 'Активный' : 'Черновик';
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -223,52 +234,7 @@ class _CourseEditScreenState extends State<CourseEditScreen>
           Tab(text: 'Общие'),
           Tab(text: 'Модуль'),
           Tab(text: 'Аналитика и Пользователи'),
-          Tab(text: 'Отзывы'),   // новая вкладка
-        ],
-      ),
-    );
-  }
-
-  // Действия
-  void _saveCourse() {
-    if (_formKey.currentState?.validate() == true) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Курс сохранен успешно')),
-      );
-    }
-  }
-
-  void _archiveCourse() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Курс архивирован')),
-    );
-  }
-
-  void _deleteCourse() {
-    _showDeleteConfirmation('курс', _titleController.text);
-  }
-
-  void _showDeleteConfirmation(String type, String name) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Удалить $type?'),
-        content: Text('Вы уверены, что хотите удалить $type "$name"? Это действие нельзя отменить.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Отмена'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('$type "$name" удален')),
-              );
-            },
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text('Удалить'),
-          ),
+          Tab(text: 'Отзывы'),
         ],
       ),
     );

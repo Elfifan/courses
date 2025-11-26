@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../services/course_service.dart';
+import '../repositories/course_repository.dart';
 
 class TopBar extends StatelessWidget {
   final int selectedIndex;
