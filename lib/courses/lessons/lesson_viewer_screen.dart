@@ -5,10 +5,12 @@ import '../../services/theory_service.dart';
 import '../../models/database_models.dart';
 
 
+
 class LessonViewerScreen extends StatefulWidget {
   final int submoduleId;
   final String courseName;
   final String courseIcon;
+
 
 
   const LessonViewerScreen({
@@ -19,9 +21,11 @@ class LessonViewerScreen extends StatefulWidget {
   }) : super(key: key);
 
 
+
   @override
   State<LessonViewerScreen> createState() => _LessonViewerScreenState();
 }
+
 
 
 class _LessonViewerScreenState extends State<LessonViewerScreen>
@@ -32,8 +36,10 @@ class _LessonViewerScreenState extends State<LessonViewerScreen>
   String? errorMessage;
 
 
+
   @override
   bool get wantKeepAlive => true;
+
 
 
   @override
@@ -41,6 +47,7 @@ class _LessonViewerScreenState extends State<LessonViewerScreen>
     super.initState();
     _loadTheory();
   }
+
 
 
   bool _isValidUrl(String url) {
@@ -53,9 +60,11 @@ class _LessonViewerScreenState extends State<LessonViewerScreen>
   }
 
 
+
   bool _isValidHtml(String html) {
     return html.trim().isNotEmpty && html.length > 10;
   }
+
 
 
   Future<void> _launchUrl(String url) async {
@@ -85,6 +94,7 @@ class _LessonViewerScreenState extends State<LessonViewerScreen>
   }
 
 
+
   Future<void> _loadTheory() async {
     try {
       if (!mounted) return;
@@ -94,7 +104,9 @@ class _LessonViewerScreenState extends State<LessonViewerScreen>
       });
 
 
+
       print('Начинаем загрузку подмодуля ${widget.submoduleId}');
+
 
 
       final submoduleData = await TheoryService.getSubmodule(widget.submoduleId)
@@ -107,6 +119,7 @@ class _LessonViewerScreenState extends State<LessonViewerScreen>
           );
 
 
+
       if (submoduleData == null) {
         if (!mounted) return;
         setState(() {
@@ -117,7 +130,9 @@ class _LessonViewerScreenState extends State<LessonViewerScreen>
       }
 
 
+
       final loadedSubmodule = Submodule.fromJson(submoduleData);
+
 
 
       String? htmlContent;
@@ -126,6 +141,7 @@ class _LessonViewerScreenState extends State<LessonViewerScreen>
         final contentUrl = loadedSubmodule.content!;
         if (_isValidUrl(contentUrl)) {
           print('Загружаем контент с URL: $contentUrl');
+
 
 
           htmlContent = await TheoryService.loadMarkdownFromStorage(contentUrl)
@@ -138,6 +154,7 @@ class _LessonViewerScreenState extends State<LessonViewerScreen>
               );
 
 
+
           if (htmlContent != null && !_isValidHtml(htmlContent)) {
             print('Получен некорректный контент');
             htmlContent = '<p>Контент поврежден</p>';
@@ -146,7 +163,9 @@ class _LessonViewerScreenState extends State<LessonViewerScreen>
       }
 
 
+
       if (!mounted) return;
+
 
 
       setState(() {
@@ -154,6 +173,7 @@ class _LessonViewerScreenState extends State<LessonViewerScreen>
         theoryHtml = htmlContent;
         isLoading = false;
       });
+
 
 
       print('Загрузка завершена');
@@ -168,12 +188,13 @@ class _LessonViewerScreenState extends State<LessonViewerScreen>
   }
 
 
+
   @override
   Widget build(BuildContext context) {
     super.build(context);
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.courseName),
+        title: Text(submodule?.name ?? widget.courseName),
         backgroundColor: Theme.of(context).colorScheme.surface,
         elevation: 0,
       ),
@@ -204,67 +225,36 @@ class _LessonViewerScreenState extends State<LessonViewerScreen>
   }
 
 
+
   Widget _buildTheoryContent() {
     return SingleChildScrollView(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Row(
         children: [
-          Container(
-            padding: EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.surface,
-              border: Border(
-                bottom: BorderSide(
-                  color: Theme.of(context).colorScheme.outline,
-                  width: 1,
-                ),
-              ),
-            ),
+          // ✅ Левый отступ 15%
+          Expanded(flex: 15, child: SizedBox.shrink()),
+          
+          // ✅ Основной контент 70%
+          Expanded(
+            flex: 70,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  children: [
-                    Text(
-                      widget.courseIcon,
-                      style: TextStyle(fontSize: 40),
-                    ),
-                    SizedBox(width: 16),
-                    Expanded(
-                      child: Text(
-                        submodule?.name ?? 'Урок',
-                        style: TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                if (submodule?.description != null &&
-                    submodule!.description!.isNotEmpty)
-                  Padding(
-                    padding: EdgeInsets.only(top: 12),
-                    child: Text(
-                      submodule!.description!,
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.grey[600],
-                      ),
-                    ),
+                if (theoryHtml != null && theoryHtml!.isNotEmpty)
+                  Container(
+                    padding: EdgeInsets.all(16),
+                    child: _buildContentWithImages(theoryHtml!),
                   ),
               ],
             ),
           ),
-          if (theoryHtml != null && theoryHtml!.isNotEmpty)
-            Container(
-              padding: EdgeInsets.all(16),
-              child: _buildContentWithImages(theoryHtml!),
-            ),
+          
+          // ✅ Правый отступ 15%
+          Expanded(flex: 15, child: SizedBox.shrink()),
         ],
       ),
     );
   }
+
 
 
   /// ✅ Строит контент с поддержкой изображений и кликабельных ссылок
@@ -272,10 +262,12 @@ class _LessonViewerScreenState extends State<LessonViewerScreen>
     List<Widget> widgets = [];
 
 
+
     // ✅ Регулярное выражение для поиска [IMG:...]
     final imgRegex = RegExp(
       r'\[IMG:([^\|]+)\|([^\]]+)\]',
     );
+
 
 
     int lastIndex = 0;
@@ -289,15 +281,18 @@ class _LessonViewerScreenState extends State<LessonViewerScreen>
       }
 
 
+
       // Добавляем изображение
       final imageUrl = match.group(1) ?? '';
       final sizeStr = match.group(2) ?? 'medium';
+
 
 
       if (imageUrl.isNotEmpty) {
         print('✓ Отображаем изображение: $imageUrl (размер: $sizeStr)');
         
         double imageHeight = _getImageHeight(sizeStr);
+
 
 
         widgets.add(
@@ -355,8 +350,10 @@ class _LessonViewerScreenState extends State<LessonViewerScreen>
       }
 
 
+
       lastIndex = match.end;
     });
+
 
 
     // Добавляем оставшийся текст
@@ -366,9 +363,11 @@ class _LessonViewerScreenState extends State<LessonViewerScreen>
     }
 
 
+
     if (widgets.isEmpty) {
       return _buildHtmlWidget(htmlContent);
     }
+
 
 
     return Column(
@@ -376,6 +375,7 @@ class _LessonViewerScreenState extends State<LessonViewerScreen>
       children: widgets,
     );
   }
+
 
 
   /// Вспомогательный метод для построения HTML с обработкой ссылок
@@ -391,6 +391,7 @@ class _LessonViewerScreenState extends State<LessonViewerScreen>
       },
     );
   }
+
 
 
   /// Определяет высоту изображения по размеру
@@ -414,6 +415,7 @@ class _LessonViewerScreenState extends State<LessonViewerScreen>
         }
     }
   }
+
 
 
   /// Стили для HTML
@@ -478,6 +480,7 @@ class _LessonViewerScreenState extends State<LessonViewerScreen>
       ),
     };
   }
+
 
 
   @override
