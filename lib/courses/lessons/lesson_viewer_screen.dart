@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_html/flutter_html.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../services/theory_service.dart';
 import '../../models/database_models.dart';
+
 
 class LessonViewerScreen extends StatefulWidget {
   final int submoduleId;
   final String courseName;
   final String courseIcon;
+
 
   const LessonViewerScreen({
     Key? key,
@@ -15,9 +18,11 @@ class LessonViewerScreen extends StatefulWidget {
     required this.courseIcon,
   }) : super(key: key);
 
+
   @override
   State<LessonViewerScreen> createState() => _LessonViewerScreenState();
 }
+
 
 class _LessonViewerScreenState extends State<LessonViewerScreen>
     with AutomaticKeepAliveClientMixin {
@@ -26,14 +31,17 @@ class _LessonViewerScreenState extends State<LessonViewerScreen>
   bool isLoading = true;
   String? errorMessage;
 
+
   @override
   bool get wantKeepAlive => true;
+
 
   @override
   void initState() {
     super.initState();
     _loadTheory();
   }
+
 
   bool _isValidUrl(String url) {
     try {
@@ -44,9 +52,38 @@ class _LessonViewerScreenState extends State<LessonViewerScreen>
     }
   }
 
+
   bool _isValidHtml(String html) {
     return html.trim().isNotEmpty && html.length > 10;
   }
+
+
+  Future<void> _launchUrl(String url) async {
+    final Uri uri = Uri.parse(url);
+    try {
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(
+          uri,
+          mode: LaunchMode.externalApplication,
+        );
+      } else {
+        print('Невозможно открыть $url');
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Не удалось открыть ссылку')),
+          );
+        }
+      }
+    } catch (e) {
+      print('Ошибка при открытии ссылки: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Ошибка при открытии ссылки')),
+        );
+      }
+    }
+  }
+
 
   Future<void> _loadTheory() async {
     try {
@@ -56,7 +93,9 @@ class _LessonViewerScreenState extends State<LessonViewerScreen>
         errorMessage = null;
       });
 
+
       print('Начинаем загрузку подмодуля ${widget.submoduleId}');
+
 
       final submoduleData = await TheoryService.getSubmodule(widget.submoduleId)
           .timeout(
@@ -67,6 +106,7 @@ class _LessonViewerScreenState extends State<LessonViewerScreen>
             },
           );
 
+
       if (submoduleData == null) {
         if (!mounted) return;
         setState(() {
@@ -76,7 +116,9 @@ class _LessonViewerScreenState extends State<LessonViewerScreen>
         return;
       }
 
+
       final loadedSubmodule = Submodule.fromJson(submoduleData);
+
 
       String? htmlContent;
       if (loadedSubmodule.content != null &&
@@ -84,6 +126,7 @@ class _LessonViewerScreenState extends State<LessonViewerScreen>
         final contentUrl = loadedSubmodule.content!;
         if (_isValidUrl(contentUrl)) {
           print('Загружаем контент с URL: $contentUrl');
+
 
           htmlContent = await TheoryService.loadMarkdownFromStorage(contentUrl)
               .timeout(
@@ -94,6 +137,7 @@ class _LessonViewerScreenState extends State<LessonViewerScreen>
                 },
               );
 
+
           if (htmlContent != null && !_isValidHtml(htmlContent)) {
             print('Получен некорректный контент');
             htmlContent = '<p>Контент поврежден</p>';
@@ -101,13 +145,16 @@ class _LessonViewerScreenState extends State<LessonViewerScreen>
         }
       }
 
+
       if (!mounted) return;
+
 
       setState(() {
         submodule = loadedSubmodule;
         theoryHtml = htmlContent;
         isLoading = false;
       });
+
 
       print('Загрузка завершена');
     } catch (e) {
@@ -119,6 +166,7 @@ class _LessonViewerScreenState extends State<LessonViewerScreen>
       });
     }
   }
+
 
   @override
   Widget build(BuildContext context) {
@@ -154,6 +202,7 @@ class _LessonViewerScreenState extends State<LessonViewerScreen>
               : _buildTheoryContent(),
     );
   }
+
 
   Widget _buildTheoryContent() {
     return SingleChildScrollView(
@@ -217,14 +266,17 @@ class _LessonViewerScreenState extends State<LessonViewerScreen>
     );
   }
 
-  /// ✅ Строит контент с поддержкой изображений
+
+  /// ✅ Строит контент с поддержкой изображений и кликабельных ссылок
   Widget _buildContentWithImages(String htmlContent) {
     List<Widget> widgets = [];
 
-    // ✅ Регулярное выражение для поиска <img-container src="..." size="...">
+
+    // ✅ Регулярное выражение для поиска [IMG:...]
     final imgRegex = RegExp(
-      r'<img-container src="([^"]+)" size="([^"]+)"><\/img-container>',
+      r'\[IMG:([^\|]+)\|([^\]]+)\]',
     );
+
 
     int lastIndex = 0;
     imgRegex.allMatches(htmlContent).forEach((match) {
@@ -232,22 +284,21 @@ class _LessonViewerScreenState extends State<LessonViewerScreen>
       final beforeText = htmlContent.substring(lastIndex, match.start);
       if (beforeText.trim().isNotEmpty) {
         widgets.add(
-          Html(
-            data: beforeText,
-            shrinkWrap: true,
-            style: _getHtmlStyles(),
-          ),
+          _buildHtmlWidget(beforeText),
         );
       }
+
 
       // Добавляем изображение
       final imageUrl = match.group(1) ?? '';
       final sizeStr = match.group(2) ?? 'medium';
 
+
       if (imageUrl.isNotEmpty) {
         print('✓ Отображаем изображение: $imageUrl (размер: $sizeStr)');
         
         double imageHeight = _getImageHeight(sizeStr);
+
 
         widgets.add(
           Padding(
@@ -303,34 +354,44 @@ class _LessonViewerScreenState extends State<LessonViewerScreen>
         );
       }
 
+
       lastIndex = match.end;
     });
+
 
     // Добавляем оставшийся текст
     final remainingText = htmlContent.substring(lastIndex);
     if (remainingText.trim().isNotEmpty) {
-      widgets.add(
-        Html(
-          data: remainingText,
-          shrinkWrap: true,
-          style: _getHtmlStyles(),
-        ),
-      );
+      widgets.add(_buildHtmlWidget(remainingText));
     }
 
+
     if (widgets.isEmpty) {
-      return Html(
-        data: htmlContent,
-        shrinkWrap: true,
-        style: _getHtmlStyles(),
-      );
+      return _buildHtmlWidget(htmlContent);
     }
+
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: widgets,
     );
   }
+
+
+  /// Вспомогательный метод для построения HTML с обработкой ссылок
+  Widget _buildHtmlWidget(String htmlContent) {
+    return Html(
+      data: htmlContent,
+      shrinkWrap: true,
+      style: _getHtmlStyles(),
+      onLinkTap: (url, attributes, element) {
+        if (url != null && url.isNotEmpty) {
+          _launchUrl(url);
+        }
+      },
+    );
+  }
+
 
   /// Определяет высоту изображения по размеру
   double _getImageHeight(String size) {
@@ -354,53 +415,55 @@ class _LessonViewerScreenState extends State<LessonViewerScreen>
     }
   }
 
+
   /// Стили для HTML
   Map<String, Style> _getHtmlStyles() {
     return {
       'p': Style(
         fontSize: FontSize(15),
         lineHeight: LineHeight(1.5),
-        margin: Margins.symmetric(vertical: 8),
+        margin: Margins.symmetric(vertical: 12),
         color: Theme.of(context).colorScheme.onBackground,
       ),
       'h1': Style(
         fontSize: FontSize(24),
         fontWeight: FontWeight.bold,
-        margin: Margins.zero,
+        margin: Margins.only(top: 20, bottom: 12),
         padding: HtmlPaddings.zero,
         color: Theme.of(context).colorScheme.onBackground,
       ),
       'h2': Style(
         fontSize: FontSize(20),
         fontWeight: FontWeight.bold,
-        margin: Margins.zero,
+        margin: Margins.only(top: 20, bottom: 12),
         padding: HtmlPaddings.zero,
         color: Theme.of(context).colorScheme.onBackground,
       ),
       'h3': Style(
         fontSize: FontSize(18),
         fontWeight: FontWeight.bold,
-        margin: Margins.zero,
+        margin: Margins.only(top: 20, bottom: 12),
         padding: HtmlPaddings.zero,
         color: Theme.of(context).colorScheme.onBackground,
       ),
       'ul': Style(
-        margin: Margins.symmetric(vertical: 8),
+        margin: Margins.symmetric(vertical: 12),
         padding: HtmlPaddings.only(left: 20),
       ),
       'ol': Style(
-        margin: Margins.symmetric(vertical: 8),
+        margin: Margins.symmetric(vertical: 12),
         padding: HtmlPaddings.only(left: 20),
       ),
       'li': Style(
         fontSize: FontSize(15),
-        margin: Margins.symmetric(vertical: 4),
+        margin: Margins.symmetric(vertical: 6),
       ),
       'mark': Style(
         backgroundColor: Color(0xFFFFCCCC),
         padding: HtmlPaddings.symmetric(horizontal: 4, vertical: 2),
       ),
       'strong': Style(fontWeight: FontWeight.bold),
+      'b': Style(fontWeight: FontWeight.bold),
       'em': Style(fontStyle: FontStyle.italic),
       'code': Style(
         backgroundColor: Theme.of(context).colorScheme.primary.withOpacity(0.1),
@@ -410,10 +473,12 @@ class _LessonViewerScreenState extends State<LessonViewerScreen>
       ),
       'a': Style(
         color: Color(0xFF0080FF),
-        textDecoration: TextDecoration.none,
+        textDecoration: TextDecoration.underline,
+        textDecorationColor: Color(0xFF0080FF),
       ),
     };
   }
+
 
   @override
   void dispose() {

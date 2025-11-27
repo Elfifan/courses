@@ -264,7 +264,6 @@ class Submodule {
   }
 }
 
-// Модель теста (таблица test)
 class Test {
   final int id;
   final String? name;
@@ -274,6 +273,8 @@ class Test {
   final String? wrongAnswer2;
   final String? wrongAnswer3;
   final bool? status;
+  final int? difficulty;
+  final String? category;
 
   Test({
     required this.id,
@@ -284,6 +285,8 @@ class Test {
     this.wrongAnswer2,
     this.wrongAnswer3,
     this.status,
+    this.difficulty,
+    this.category,
   });
 
   factory Test.fromJson(Map<String, dynamic> json) {
@@ -296,6 +299,8 @@ class Test {
       wrongAnswer2: json['wrong_answer2'] as String?,
       wrongAnswer3: json['wrong_answer3'] as String?,
       status: json['status'] as bool?,
+      difficulty: json['difficulty'] as int?,
+      category: json['category'] as String?,
     );
   }
 
@@ -309,49 +314,88 @@ class Test {
       'wrong_answer2': wrongAnswer2,
       'wrong_answer3': wrongAnswer3,
       'status': status,
+      'difficulty': difficulty,
+      'category': category,
     };
   }
 }
 
-// Связующая таблица test_module (таблица test_module)
-class TestModule {
+class StudentTestResult {
   final int id;
-  final int? idModule;
+  final int? idUser;
   final int? idTest;
+  final int? idSubmodule;
+  final String? selectedAnswer;
+  final bool? isCorrect;
+  final DateTime? dateCompleted;
 
-  TestModule({required this.id, this.idModule, this.idTest});
+  StudentTestResult({
+    required this.id,
+    this.idUser,
+    this.idTest,
+    this.idSubmodule,
+    this.selectedAnswer,
+    this.isCorrect,
+    this.dateCompleted,
+  });
 
-  factory TestModule.fromJson(Map<String, dynamic> json) {
-    return TestModule(
+  factory StudentTestResult.fromJson(Map<String, dynamic> json) {
+    return StudentTestResult(
       id: json['id'] as int,
-      idModule: json['id_module'] as int?,
+      idUser: json['id_user'] as int?,
       idTest: json['id_test'] as int?,
+      idSubmodule: json['id_submodule'] as int?,
+      selectedAnswer: json['selected_answer'] as String?,
+      isCorrect: json['is_correct'] as bool?,
+      dateCompleted: json['date_completed'] != null
+          ? DateTime.parse(json['date_completed'] as String)
+          : null,
     );
   }
 
   Map<String, dynamic> toJson() {
     return {
       'id': id,
-      'id_module': idModule,
+      'id_user': idUser,
       'id_test': idTest,
+      'id_submodule': idSubmodule,
+      'selected_answer': selectedAnswer,
+      'is_correct': isCorrect,
+      'date_completed': dateCompleted?.toIso8601String(),
     };
   }
 }
 
-// Модель performs (таблица performs)
-class Performs {
+class PracticalTask {
   final int id;
   final int? idSubmodule;
-  final int? idModule;
+  final String? name;
+  final String? description;
+  final String? content;
+  final int? orderTask;
+  final int? difficulty;
   final bool? status;
 
-  Performs({required this.id, this.idSubmodule, this.idModule, this.status});
+  PracticalTask({
+    required this.id,
+    this.idSubmodule,
+    this.name,
+    this.description,
+    this.content,
+    this.orderTask,
+    this.difficulty,
+    this.status,
+  });
 
-  factory Performs.fromJson(Map<String, dynamic> json) {
-    return Performs(
+  factory PracticalTask.fromJson(Map<String, dynamic> json) {
+    return PracticalTask(
       id: json['id'] as int,
       idSubmodule: json['id_submodule'] as int?,
-      idModule: json['id_module'] as int?,
+      name: json['name'] as String?,
+      description: json['description'] as String?,
+      content: json['content'] as String?,
+      orderTask: json['order_task'] as int?,
+      difficulty: json['difficulty'] as int?,
       status: json['status'] as bool?,
     );
   }
@@ -360,33 +404,62 @@ class Performs {
     return {
       'id': id,
       'id_submodule': idSubmodule,
-      'id_module': idModule,
+      'name': name,
+      'description': description,
+      'content': content,
+      'order_task': orderTask,
+      'difficulty': difficulty,
       'status': status,
     };
   }
 }
 
-// Модель tasks_module (таблица tasks_module)
-class TasksModule {
+class StudentPracticalResult {
   final int id;
+  final int? idUser;
+  final int? idTask;
   final int? idSubmodule;
-  final int? idType;
+  final String? submission;
+  final String? status;
+  final double? score;
+  final DateTime? dateSubmitted;
 
-  TasksModule({required this.id, this.idSubmodule, this.idType});
+  StudentPracticalResult({
+    required this.id,
+    this.idUser,
+    this.idTask,
+    this.idSubmodule,
+    this.submission,
+    this.status,
+    this.score,
+    this.dateSubmitted,
+  });
 
-  factory TasksModule.fromJson(Map<String, dynamic> json) {
-    return TasksModule(
+  factory StudentPracticalResult.fromJson(Map<String, dynamic> json) {
+    return StudentPracticalResult(
       id: json['id'] as int,
+      idUser: json['id_user'] as int?,
+      idTask: json['id_task'] as int?,
       idSubmodule: json['id_submodule'] as int?,
-      idType: json['id_type'] as int?,
+      submission: json['submission'] as String?,
+      status: json['status'] as String?,
+      score: (json['score'] as num?)?.toDouble(),
+      dateSubmitted: json['date_submitted'] != null
+          ? DateTime.parse(json['date_submitted'] as String)
+          : null,
     );
   }
 
   Map<String, dynamic> toJson() {
     return {
       'id': id,
+      'id_user': idUser,
+      'id_task': idTask,
       'id_submodule': idSubmodule,
-      'id_type': idType,
+      'submission': submission,
+      'status': status,
+      'score': score,
+      'date_submitted': dateSubmitted?.toIso8601String(),
     };
   }
 }
@@ -598,6 +671,39 @@ class UserAchievement {
       'id': id,
       'id_user': idUser,
       'id_achievement': idAchievement,
+    };
+  }
+}
+
+
+class SubmoduleTest {
+  final int id;
+  final int? idSubmodule;
+  final int? idTest;
+  final int? orderTest;
+
+  SubmoduleTest({
+    required this.id,
+    this.idSubmodule,
+    this.idTest,
+    this.orderTest,
+  });
+
+  factory SubmoduleTest.fromJson(Map<String, dynamic> json) {
+    return SubmoduleTest(
+      id: json['id'] as int,
+      idSubmodule: json['id_submodule'] as int?,
+      idTest: json['id_test'] as int?,
+      orderTest: json['order_test'] as int?,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'id_submodule': idSubmodule,
+      'id_test': idTest,
+      'order_test': orderTest,
     };
   }
 }
