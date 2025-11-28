@@ -1,3 +1,4 @@
+import 'package:cyrs/repositories/staff_repository.dart';
 import 'package:flutter/material.dart';
 import '../shared/side_panel.dart';
 import '../shared/top_bar.dart';
@@ -27,6 +28,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   String _selectedStudentFilter = 'Все пользователи';
 
   final GlobalKey _achievementsKey = GlobalKey();
+  final GlobalKey _staffScreenKey = GlobalKey();
 
   final List<String> _menuItems = [
     'Dashboard',
@@ -45,157 +47,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
     Icons.settings_rounded
   ];
 
-  void _showAddCourseForm() {
-    final _formKey = GlobalKey<FormState>();
-    final _nameController = TextEditingController();
-    final _descriptionController = TextEditingController();
-    final _priceController = TextEditingController();
-
-    String _selectedType = 'Бесплатный';
-
-    // Список эмодзи для выбора
-    final List<String> emojiOptions = ['📚', '🐍', '⚡', '📱', '🧑‍💻', '🎯', '🚀', '💻'];
-    String _selectedEmoji = emojiOptions[0];
-
-    showDialog(
-      context: context,
-      builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setState) {
-            return AlertDialog(
-              title: const Text('Добавить новый курс'),
-              content: SizedBox(
-                width: 600,
-                child: Form(
-                  key: _formKey,
-                  child: SingleChildScrollView(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        // Выбор эмодзи
-                        Container(
-                          alignment: Alignment.centerLeft,
-                          child: Text('Выберите иконку:', style: TextStyle(fontWeight: FontWeight.w600)),
-                        ),
-                        const SizedBox(height: 8),
-                        Wrap(
-                          spacing: 8,
-                          children: emojiOptions.map((emoji) {
-                            final isSelected = emoji == _selectedEmoji;
-                            return GestureDetector(
-                              onTap: () {
-                                setState(() {
-                                  _selectedEmoji = emoji;
-                                });
-                              },
-                              child: Container(
-                                padding: const EdgeInsets.all(8),
-                                decoration: BoxDecoration(
-                                  color: isSelected ? Colors.blueAccent.withValues(alpha: 0.3) : null,
-                                  border: isSelected ? Border.all(color: Colors.blue, width: 2) : null,
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Text(
-                                  emoji,
-                                  style: const TextStyle(fontSize: 32),
-                                ),
-                              ),
-                            );
-                          }).toList(),
-                        ),
-                        const SizedBox(height: 20),
-                        // Название курса
-                        TextFormField(
-                          controller: _nameController,
-                          decoration: const InputDecoration(
-                            labelText: 'Название курса *',
-                            border: OutlineInputBorder(),
-                          ),
-                          validator: (v) => v == null || v.isEmpty ? 'Введите название курса' : null,
-                        ),
-                        const SizedBox(height: 20),
-                        // Описание курса
-                        TextFormField(
-                          controller: _descriptionController,
-                          decoration: const InputDecoration(
-                            labelText: 'Описание',
-                            border: OutlineInputBorder(),
-                          ),
-                          maxLines: 4,
-                        ),
-                        const SizedBox(height: 20),
-                        // Выбор типа курса
-                        DropdownButtonFormField<String>(
-                          value: _selectedType,
-                          items: const [
-                            DropdownMenuItem(value: 'Бесплатный', child: Text('Бесплатный')),
-                            DropdownMenuItem(value: 'Платный', child: Text('Платный')),
-                          ],
-                          decoration: const InputDecoration(
-                            labelText: 'Тип курса',
-                            border: OutlineInputBorder(),
-                          ),
-                          onChanged: (value) {
-                            if (value != null) {
-                              setState(() {
-                                _selectedType = value;
-                                if (_selectedType == 'Бесплатный') {
-                                  _priceController.text = '';
-                                }
-                              });
-                            }
-                          },
-                        ),
-                        const SizedBox(height: 20),
-                        // Цена (если платный)
-                        if (_selectedType == 'Платный')
-                          TextFormField(
-                            controller: _priceController,
-                            decoration: const InputDecoration(
-                              labelText: 'Цена (₽)',
-                              border: OutlineInputBorder(),
-                            ),
-                            keyboardType: TextInputType.number,
-                            validator: (value) {
-                              if (_selectedType == 'Платный') {
-                                if (value == null || value.isEmpty) {
-                                  return 'Введите цену';
-                                }
-                                if (double.tryParse(value) == null) {
-                                  return 'Введите корректное число';
-                                }
-                              }
-                              return null;
-                            },
-                          ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  child: const Text('Отмена'),
-                ),
-                ElevatedButton(
-                  onPressed: () {
-                    if (_formKey.currentState!.validate()) {
-                      Navigator.of(context).pop();
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Курс "${_nameController.text}" добавлен')),
-                      );
-                    }
-                  },
-                  child: const Text('Добавить'),
-                ),
-              ],
-            );
-          },
-        );
-      },
-    );
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -223,12 +74,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   menuItems: _menuItems,
                   onAddStaff: () {
                     if (_selectedIndex == 3) {
-                      CourseService.showAddCourseForm(context);
+                     StaffRepository.showAddStaffDialog(context, () {
+      // Обновляем StaffScreen
+      final state = _staffScreenKey.currentState as dynamic;
+      state?.refreshStaff();
+    });
                     }
                   },
                   onAddCourse: () {
                     if (_selectedIndex == 1) {
-                      _showAddCourseForm();
+                      CourseService.showAddCourseForm(context);
                     }
                   },
                   onAddAchievement: () {
@@ -275,7 +130,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         );
       case 3:
         return StaffScreen(
-          isDarkMode: widget.isDarkMode,
+          key: _staffScreenKey,
         );
       case 4:
         return AchievementsScreen(

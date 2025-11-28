@@ -707,3 +707,34 @@ class SubmoduleTest {
     };
   }
 }
+
+class Staff {
+  final int id;
+  final String name;
+  final String email;
+  final String position;
+
+  Staff({
+    required this.id,
+    required this.name,
+    required this.email,
+    required this.position,
+  });
+
+  factory Staff.fromJson(Map<String, dynamic> json) {
+    return Staff(
+      id: json['id'],
+      name: json['name'],
+      email: json['email'],
+      position: json['position'],
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'name': name,
+      'email': email,
+      'position': position,
+    };
+  }
+}

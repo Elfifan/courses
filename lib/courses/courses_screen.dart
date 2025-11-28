@@ -17,9 +17,9 @@ class _CoursesScreenState extends State<CoursesScreen> {
   final TextEditingController _searchController = TextEditingController();
   List<Course> _courses = [];
   bool _isLoading = true;
-  String _selectedFilter = 'all';  // ← ДОБАВЛЕНО
+  String _selectedFilter = 'all';  
 
-  final List<Map<String, String>> _filters = [  // ← ДОБАВЛЕНО
+  final List<Map<String, String>> _filters = [ 
     {'value': 'all', 'label': 'Все курсы'},
     {'value': 'active', 'label': 'Активные'},
     {'value': 'draft', 'label': 'Черновики'},
