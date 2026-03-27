@@ -96,7 +96,7 @@ class TopBar extends StatelessWidget {
   String _getPageTitle() {
     switch (selectedIndex) {
       case 0:
-        return 'Dashboard';
+        return 'Статистика';
       case 1:
         return 'Управление курсами';
       case 2:

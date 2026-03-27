@@ -73,7 +73,19 @@ class CourseService {
                         labelText: 'Название курса *',
                         border: OutlineInputBorder(),
                       ),
-                      validator: (v) => v == null || v.isEmpty ? 'Введите название' : null,
+                      validator: (v) {
+                        if (v == null || v.isEmpty) {
+                          return 'Введите название';
+                        }
+                        // Проверяем, что название не состоит только из знаков препинания и специальных символов
+                        final trimmed = v.trim();
+                        // Регулярное выражение: если после удаления всех не-буквенно-цифровых символов остается пустая строка
+                        final alphanumericOnly = RegExp(r'[a-zA-Zа-яА-Я0-9]').hasMatch(trimmed);
+                        if (!alphanumericOnly) {
+                          return 'Название должно содержать хотя бы одну букву или цифру';
+                        }
+                        return null;
+                      },
                     ),
                     const SizedBox(height: 12),
 

@@ -52,9 +52,18 @@ class _CourseEditGeneralTabState extends State<CourseEditGeneralTab> {
   Future<void> _saveCourse() async {
     if (!mounted) return;
     
-    if (_titleController.text.isEmpty) {
+    final title = _titleController.text.trim();
+    if (title.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Введите название курса')),
+      );
+      return;
+    }
+    // Проверяем, что название не состоит только из знаков препинания и специальных символов
+    final alphanumericOnly = RegExp(r'[a-zA-Zа-яА-Я0-9]').hasMatch(title);
+    if (!alphanumericOnly) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Название не может состоять только из знаков препинания и специальных символов')),
       );
       return;
     }

@@ -606,8 +606,15 @@ class _CourseEditModulesTabState extends State<CourseEditModulesTab> {
                         prefixIcon: Icon(Icons.schedule),
                         hintText: 'Например: 15',
                       ),
-                      validator: (value) =>
-                          value?.isEmpty == true ? 'Введите время' : null,
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Введите время';
+                        }
+                        if (int.tryParse(value) == null) {
+                          return 'Можно вводить только цифры';
+                        }
+                        return null;
+                      },
                     ),
                   ],
                 ),

@@ -31,7 +31,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   final GlobalKey _staffScreenKey = GlobalKey();
 
   final List<String> _menuItems = [
-    'Dashboard',
+    'Статистика',
     'Курсы',
     'Пользователь',
     'Сотрудники',
