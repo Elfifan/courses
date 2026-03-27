@@ -160,7 +160,7 @@ class _StudentsScreenState extends State<StudentsScreen> {
                   ),
                   child: Row(
                     children: [
-                      Expanded(flex: 1, child: Text('ID', style: headerStyle(onSurface))),
+                      Expanded(flex: 1, child: Text('Номер', style: headerStyle(onSurface))),
                       Expanded(flex: 1, child: Text('Аватар', style: headerStyle(onSurface))),
                       Expanded(flex: 3, child: Text('ФИО', style: headerStyle(onSurface))),
                       Expanded(flex: 3, child: Text('Email', style: headerStyle(onSurface))),
@@ -169,7 +169,6 @@ class _StudentsScreenState extends State<StudentsScreen> {
                     ],
                   ),
                 ),
-                // Строки
                 Expanded(
                   child: _isLoading
                       ? Center(child: CircularProgressIndicator())

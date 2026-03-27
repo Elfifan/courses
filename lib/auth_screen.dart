@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'services/email_service.dart';
@@ -26,8 +25,6 @@ class _AuthScreenState extends State<AuthScreen> {
   final _passwordController = TextEditingController();
   bool _showPassword = false;
   bool _isLoading = false;
-
-  DateTime? _nextResetPasswordEmailAt;
 
   final String bgImage =
       "https://image.winudf.com/v2/image/bW9iaS5hbmRyb2FwcC5wcm9zcGVyaXR5YXBwcy5jNTExMV9zY3JlZW5fN18xNTI0MDQxMDUwXzAyMQ/screen-7.jpg?fakeurl=1&type=.jpg";
@@ -60,7 +57,7 @@ class _AuthScreenState extends State<AuthScreen> {
           } else {
             if (mounted) {
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Неверный логин или пароль (или аккаунт отключен)')),
+                const SnackBar(content: Text('Неверный логин или пароль')),
               );
             }
           }
@@ -77,182 +74,20 @@ class _AuthScreenState extends State<AuthScreen> {
     }
   }
 
-  Future<void> _onForgotPassword() async {
-    final emailController = TextEditingController();
-    final formKey = GlobalKey<FormState>();
-
-    final emailResult = await showDialog<String>(
+  void _showPasswordRecoveryDialog() {
+    showDialog(
       context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text('Восстановление пароля'),
-          contentPadding: const EdgeInsets.all(24),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Text('Введите ваш email, привязанный к аккаунту.'),
-                const SizedBox(height: 16),
-                Form(
-                  key: formKey,
-                  child: TextFormField(
-                    controller: emailController,
-                    keyboardType: TextInputType.emailAddress,
-                    autofocus: true,
-                    decoration: InputDecoration(
-                      labelText: 'Email',
-                      prefixIcon: const Icon(Icons.email),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                    ),
-                    validator: (value) {
-                      if (value == null || value.isEmpty) return 'Введите email';
-                      if (!RegExp(r"^[^@]+@[^@]+\.[^@]+$").hasMatch(value)) {
-                        return 'Введите корректный email';
-                      }
-                      return null;
-                    },
-                  ),
-                ),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Отмена'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                if (formKey.currentState?.validate() ?? false) {
-                  Navigator.of(context).pop(emailController.text.trim());
-                }
-              },
-              child: const Text('Получить код'),
-            ),
-          ],
-        );
-      },
-    );
-
-    if (emailResult == null) return;
-
-    try {
-      // 1. ПРОВЕРЯЕМ, ЕСТЬ ЛИ ПОЧТА В ПРИНЦИПЕ В БАЗЕ
-      final user = await supabase
-          .from('employee')
-          .select('id, email')
-          .eq('email', emailResult)
-          .maybeSingle();
-
-      if (user == null) {
-        if (mounted) {
-          showDialog(
-            context: context,
-            builder: (context) => AlertDialog(
-              title: const Text('Ошибка'),
-              content: const Text('Пользователь с таким email не найден в системе.'),
-              actions: [
-                ElevatedButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  child: const Text('Ок'),
-                ),
-              ],
-            ),
-          );
-        }
-        return;
+      barrierDismissible: false, // Запрещаем закрывать кликом мимо
+      builder: (context) => const PasswordRecoveryDialog(),
+    ).then((recoveredEmail) {
+      // Если диалог вернул email (после успешного сброса), подставляем его в логин
+      if (recoveredEmail != null && recoveredEmail is String) {
+        setState(() {
+          _loginController.text = recoveredEmail;
+          _passwordController.clear();
+        });
       }
-
-      // 2. ОТПРАВЛЯЕМ КОД И СОХРАНЯЕМ В БАЗУ
-      final emailSent = await _sendRecoveryCodeEmail(emailResult);
-      if (!emailSent) return;
-
-      if (mounted) {
-        showDialog(
-          context: context,
-          barrierDismissible: false,
-          builder: (context) => AlertDialog(
-            title: const Text('✅ Код отправлен'),
-            content: const Text('Проверьте папку "Входящие" и "Спам". Код действителен 15 минут.'),
-            actions: [
-              ElevatedButton(
-                onPressed: () {
-                  Navigator.of(context).pop(); // Закрываем диалог
-                  // Переходим на экран ввода кода и смены пароля
-                  Navigator.of(context).pushNamed('/reset-password', arguments: emailResult);
-                },
-                child: const Text('Ввести код'),
-              ),
-            ],
-          ),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Ошибка: $e')),
-        );
-      }
-    }
-  }
-
-  Future<bool> _sendRecoveryCodeEmail(String toEmail) async {
-    final now = DateTime.now();
-    // Защита от спама (1 раз в минуту)
-    if (_nextResetPasswordEmailAt != null && now.isBefore(_nextResetPasswordEmailAt!)) {
-      final waitSeconds = _nextResetPasswordEmailAt!.difference(now).inSeconds;
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Подождите $waitSeconds сек. перед следующей отправкой.')),
-        );
-      }
-      return false;
-    }
-
-    try {
-      if (mounted) {
-        showDialog(
-          context: context,
-          barrierDismissible: false,
-          builder: (context) => const AlertDialog(
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                CircularProgressIndicator(),
-                SizedBox(height: 16),
-                Text('Отправляем письмо...'),
-              ],
-            ),
-          ),
-        );
-      }
-
-      // Генерируем и отправляем код через ваш Gmail
-      final recoveryCode = await EmailService.sendRecoveryCode(toEmail);
-      
-      if (recoveryCode == null) {
-        if (mounted) Navigator.of(context).pop(); // Убираем лоадер
-        throw Exception("Сбой SMTP сервера");
-      }
-
-      // Сохраняем код в Supabase для дальнейшей проверки
-      final repository = PasswordRecoveryRepository();
-      await repository.saveRecoveryCode(toEmail, recoveryCode);
-
-      _nextResetPasswordEmailAt = DateTime.now().add(const Duration(minutes: 1));
-
-      if (mounted) Navigator.of(context).pop(); // Убираем лоадер
-      return true;
-
-    } catch (e) {
-      if (mounted) Navigator.of(context).pop(); // Убираем лоадер
-      if (mounted) {
-         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Ошибка отправки: $e')),
-        );
-      }
-      return false;
-    }
+    });
   }
 
   @override
@@ -327,7 +162,7 @@ class _AuthScreenState extends State<AuthScreen> {
                               Align(
                                 alignment: Alignment.centerRight,
                                 child: TextButton(
-                                  onPressed: _onForgotPassword,
+                                  onPressed: _showPasswordRecoveryDialog,
                                   child: Text("Забыли пароль?", style: TextStyle(color: theme.colorScheme.primary)),
                                 ),
                               ),
@@ -365,233 +200,338 @@ class _AuthScreenState extends State<AuthScreen> {
   }
 }
 
-// -------------------------------------------------------------------
-// ЭКРАН СБРОСА ПАРОЛЯ
-// -------------------------------------------------------------------
+// ============================================================================
+// УМНОЕ ДИАЛОГОВОЕ ОКНО ВОССТАНОВЛЕНИЯ ПАРОЛЯ
+// ============================================================================
 
-class ResetPasswordScreen extends StatefulWidget {
-  final String? email;
-  final bool isDarkMode;
-  final ValueChanged<bool> onToggleTheme;
-  final VoidCallback onSuccess;
-
-  const ResetPasswordScreen({
-    super.key,
-    required this.email,
-    required this.isDarkMode,
-    required this.onToggleTheme,
-    required this.onSuccess,
-  });
+class PasswordRecoveryDialog extends StatefulWidget {
+  const PasswordRecoveryDialog({super.key});
 
   @override
-  State<ResetPasswordScreen> createState() => _ResetPasswordScreenState();
+  State<PasswordRecoveryDialog> createState() => _PasswordRecoveryDialogState();
 }
 
-class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
-  final _formKey = GlobalKey<FormState>();
+class _PasswordRecoveryDialogState extends State<PasswordRecoveryDialog> {
+  int _currentStep = 0; // 0: Email, 1: Код, 2: Новый пароль, 3: Успех
+  bool _isLoading = false;
+  String? _errorMessage;
+
+  // Контроллеры для разных шагов
+  final _emailController = TextEditingController();
   final _codeController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmController = TextEditingController();
-  bool _isLoading = false;
+
   bool _showPassword = false;
   bool _showConfirm = false;
-  bool _codeVerified = false;
 
-  Future<void> _verifyCode() async {
-    if (_codeController.text.trim().isEmpty || _codeController.text.length != 6) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Введите 6-значный код из письма')),
-      );
+  final supabase = Supabase.instance.client;
+  final repository = PasswordRecoveryRepository();
+
+  // --- ЛОГИКА ШАГОВ ---
+
+  Future<void> _submitEmail() async {
+    final email = _emailController.text.trim();
+    if (email.isEmpty || !RegExp(r"^[^@]+@[^@]+\.[^@]+$").hasMatch(email)) {
+      setState(() => _errorMessage = "Введите корректный email");
       return;
     }
 
-    setState(() => _isLoading = true);
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
 
     try {
-      final repository = PasswordRecoveryRepository();
-      // 3. ПРОВЕРЯЕМ ВВЕДЕННЫЙ КОД
-      final isValid = await repository.verifyRecoveryCode(
-        widget.email ?? '',
-        _codeController.text.trim(),
-      );
+      // 1. Проверяем, есть ли такой юзер в базе
+      final user = await supabase
+          .from('employee')
+          .select('id')
+          .eq('email', email)
+          .maybeSingle();
 
-      if (isValid) {
-        setState(() => _codeVerified = true);
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('✅ Код подтверждён! Установите новый пароль.')),
-          );
-        }
-      } else {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('❌ Неверный или просроченный код')),
-          );
-        }
+      if (user == null) {
+        setState(() => _errorMessage = "Пользователь с таким email не найден");
+        return;
       }
+
+      // 2. Отправляем код на почту (Яндекс.Почта)
+      final recoveryCode = await EmailService.sendRecoveryCode(email);
+      if (recoveryCode == null) {
+        setState(() => _errorMessage = "Ошибка сервера. Не удалось отправить код.");
+        return;
+      }
+
+      // 3. Сохраняем код локально
+      await repository.saveRecoveryCode(email, recoveryCode);
+
+      // Переходим к вводу кода
+      setState(() {
+        _currentStep = 1;
+      });
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Ошибка: $e')));
-      }
+      setState(() => _errorMessage = "Ошибка: $e");
     } finally {
-      if (mounted) setState(() => _isLoading = false);
+      setState(() => _isLoading = false);
     }
   }
 
-  Future<void> _changePassword() async {
-    if (!(_formKey.currentState?.validate() ?? false)) return;
+  Future<void> _submitCode() async {
+    final code = _codeController.text.trim();
+    if (code.length != 6) {
+      setState(() => _errorMessage = "Введите 6-значный код");
+      return;
+    }
 
-    setState(() => _isLoading = true);
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
 
     try {
-      final supabase = Supabase.instance.client;
-      
-      // ИСПРАВЛЕНИЕ: Обновляем пароль ТОЛЬКО в таблице employee.
-      // Метод supabase.auth.updateUser удален, так как пользователь не авторизован в Supabase Auth.
-      if (widget.email != null) {
-        await supabase
-            .from('employee')
-            .update({'password': _passwordController.text.trim()})
-            .eq('email', widget.email!);
-      }
+      // Проверяем код локально
+      final isValid = await repository.verifyRecoveryCode(_emailController.text.trim(), code);
 
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('✅ Пароль успешно изменён! Вы можете войти.')),
-        );
+      if (isValid) {
+        setState(() => _currentStep = 2); // Идем придумывать новый пароль
+      } else {
+        setState(() => _errorMessage = "Неверный или просроченный код");
       }
-
-      // Вызываем коллбек успеха, который вернет нас на главную
-      widget.onSuccess();
     } catch (e) {
-      if (mounted) {
-        showDialog(
-          context: context,
-          builder: (context) => AlertDialog(
-            title: const Text('Ошибка'),
-            content: Text('Не удалось изменить пароль:\n$e'),
-            actions: [
-              ElevatedButton(
-                onPressed: () => Navigator.of(context).pop(),
-                child: const Text('Ок'),
-              ),
-            ],
-          ),
-        );
-      }
+      setState(() => _errorMessage = "Ошибка: $e");
     } finally {
-      if (mounted) setState(() => _isLoading = false);
+      setState(() => _isLoading = false);
     }
+  }
+
+  Future<void> _submitPassword() async {
+    final password = _passwordController.text;
+    final confirm = _confirmController.text;
+
+    if (password.length < 6) {
+      setState(() => _errorMessage = "Пароль должен содержать минимум 6 символов");
+      return;
+    }
+    if (password != confirm) {
+      setState(() => _errorMessage = "Пароли не совпадают");
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    try {
+      // Обновляем пароль в БД
+      await supabase
+          .from('employee')
+          .update({'password': password.trim()})
+          .eq('email', _emailController.text.trim());
+
+      setState(() => _currentStep = 3); // Идем на экран успеха
+    } catch (e) {
+      setState(() => _errorMessage = "Не удалось сохранить пароль: $e");
+    } finally {
+      setState(() => _isLoading = false);
+    }
+  }
+
+  // --- ИНТЕРФЕЙС ШАГОВ ---
+
+  Widget _buildStep0Email() {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text("Введите ваш email, привязанный к аккаунту. Мы отправим на него код подтверждения."),
+        const SizedBox(height: 16),
+        TextField(
+          controller: _emailController,
+          keyboardType: TextInputType.emailAddress,
+          decoration: InputDecoration(
+            labelText: 'Email',
+            prefixIcon: const Icon(Icons.email),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+            errorText: _errorMessage,
+          ),
+        ),
+        const SizedBox(height: 24),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.end,
+          children: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Отмена'),
+            ),
+            const SizedBox(width: 8),
+            ElevatedButton(
+              onPressed: _isLoading ? null : _submitEmail,
+              child: _isLoading 
+                ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                : const Text('Отправить код'),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildStep1Code() {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text("Проверьте вашу почту (и папку Спам). Введите полученный 6-значный код ниже."),
+        const SizedBox(height: 16),
+        TextField(
+          controller: _codeController,
+          keyboardType: TextInputType.number,
+          maxLength: 6,
+          textAlign: TextAlign.center,
+          style: const TextStyle(fontSize: 24, letterSpacing: 8, fontWeight: FontWeight.bold),
+          decoration: InputDecoration(
+            counterText: "",
+            hintText: "000000",
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+            errorText: _errorMessage,
+          ),
+        ),
+        const SizedBox(height: 24),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.end,
+          children: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Отмена'),
+            ),
+            const SizedBox(width: 8),
+            ElevatedButton(
+              onPressed: _isLoading ? null : _submitCode,
+              child: _isLoading 
+                ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                : const Text('Подтвердить'),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildStep2Password() {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text("Код подтвержден! Придумайте новый надежный пароль."),
+        const SizedBox(height: 16),
+        if (_errorMessage != null) ...[
+           Text(_errorMessage!, style: const TextStyle(color: Colors.red, fontSize: 12)),
+           const SizedBox(height: 8),
+        ],
+        TextField(
+          controller: _passwordController,
+          obscureText: !_showPassword,
+          decoration: InputDecoration(
+            labelText: 'Новый пароль',
+            prefixIcon: const Icon(Icons.lock),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+            suffixIcon: IconButton(
+              icon: Icon(_showPassword ? Icons.visibility : Icons.visibility_off),
+              onPressed: () => setState(() => _showPassword = !_showPassword),
+            ),
+          ),
+        ),
+        const SizedBox(height: 12),
+        TextField(
+          controller: _confirmController,
+          obscureText: !_showConfirm,
+          decoration: InputDecoration(
+            labelText: 'Повторите пароль',
+            prefixIcon: const Icon(Icons.lock_outline),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+            suffixIcon: IconButton(
+              icon: Icon(_showConfirm ? Icons.visibility : Icons.visibility_off),
+              onPressed: () => setState(() => _showConfirm = !_showConfirm),
+            ),
+          ),
+        ),
+        const SizedBox(height: 24),
+        SizedBox(
+          width: double.infinity,
+          height: 48,
+          child: ElevatedButton(
+            onPressed: _isLoading ? null : _submitPassword,
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
+            child: _isLoading 
+                ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                : const Text('Сохранить', style: TextStyle(color: Colors.white)),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildStep3Success() {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const Icon(Icons.check_circle, color: Colors.green, size: 64),
+        const SizedBox(height: 16),
+        const Text(
+          "Ура! Пароль успешно изменён.",
+          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: 8),
+        const Text("Теперь вы можете войти в систему с новым паролем."),
+        const SizedBox(height: 24),
+        SizedBox(
+          width: double.infinity,
+          height: 48,
+          child: ElevatedButton(
+            // Закрываем диалог и передаем email обратно на главный экран
+            onPressed: () => Navigator.of(context).pop(_emailController.text.trim()),
+            child: const Text('Войти'),
+          ),
+        ),
+      ],
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Сброс пароля'),
-        actions: [
-          Switch(value: widget.isDarkMode, onChanged: widget.onToggleTheme),
-        ],
-      ),
-      body: Center(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 460),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Form(
-                  key: _formKey,
-                  child: Column(
-                    children: [
-                      TextFormField(
-                        initialValue: widget.email,
-                        readOnly: true,
-                        decoration: InputDecoration(
-                          labelText: 'Ваш Email',
-                          prefixIcon: const Icon(Icons.email),
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                        ),
-                      ),
-                      const SizedBox(height: 16),
+    // Выбираем какой контент показывать в зависимости от шага
+    Widget content;
+    String title;
 
-                      // ШАГ 1: Ввод кода (Показываем пока код не подтвержден)
-                      if (!_codeVerified) ...[
-                        TextFormField(
-                          controller: _codeController,
-                          keyboardType: TextInputType.number,
-                          maxLength: 6,
-                          decoration: InputDecoration(
-                            labelText: 'Код восстановления из письма',
-                            prefixIcon: const Icon(Icons.security),
-                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                            counterText: '',
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        SizedBox(
-                          width: double.infinity,
-                          height: 52,
-                          child: ElevatedButton(
-                            onPressed: _isLoading ? null : _verifyCode,
-                            child: _isLoading
-                                ? const CircularProgressIndicator(color: Colors.white)
-                                : const Text('Проверить код'),
-                          ),
-                        ),
-                      ],
+    switch (_currentStep) {
+      case 0:
+        title = 'Восстановление пароля';
+        content = _buildStep0Email();
+        break;
+      case 1:
+        title = 'Ввод кода';
+        content = _buildStep1Code();
+        break;
+      case 2:
+        title = 'Смена пароля';
+        content = _buildStep2Password();
+        break;
+      case 3:
+      default:
+        title = 'Успех';
+        content = _buildStep3Success();
+        break;
+    }
 
-                      // ШАГ 2: Ввод нового пароля (Показываем после ввода правильного кода)
-                      if (_codeVerified) ...[
-                        TextFormField(
-                          controller: _passwordController,
-                          obscureText: !_showPassword,
-                          decoration: InputDecoration(
-                            labelText: 'Новый пароль',
-                            prefixIcon: const Icon(Icons.lock),
-                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                            suffixIcon: IconButton(
-                              icon: Icon(_showPassword ? Icons.visibility : Icons.visibility_off),
-                              onPressed: () => setState(() => _showPassword = !_showPassword),
-                            ),
-                          ),
-                          validator: (value) => (value == null || value.length < 6) ? 'Минимум 6 символов' : null,
-                        ),
-                        const SizedBox(height: 16),
-                        TextFormField(
-                          controller: _confirmController,
-                          obscureText: !_showConfirm,
-                          decoration: InputDecoration(
-                            labelText: 'Повторите пароль',
-                            prefixIcon: const Icon(Icons.lock),
-                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                            suffixIcon: IconButton(
-                              icon: Icon(_showConfirm ? Icons.visibility : Icons.visibility_off),
-                              onPressed: () => setState(() => _showConfirm = !_showConfirm),
-                            ),
-                          ),
-                          validator: (value) => value != _passwordController.text ? 'Пароли не совпадают' : null,
-                        ),
-                        const SizedBox(height: 24),
-                        SizedBox(
-                          width: double.infinity,
-                          height: 52,
-                          child: ElevatedButton(
-                            onPressed: _isLoading ? null : _changePassword,
-                            style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
-                            child: _isLoading
-                                ? const CircularProgressIndicator(color: Colors.white)
-                                : const Text('Сохранить новый пароль', style: TextStyle(color: Colors.white)),
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
+    return AlertDialog(
+      title: Text(title),
+      contentPadding: const EdgeInsets.all(24),
+      content: SingleChildScrollView(
+        child: SizedBox(
+          width: 400, // Фиксированная ширина, чтобы диалог не прыгал
+          child: content,
         ),
       ),
     );
@@ -599,6 +539,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
 
   @override
   void dispose() {
+    _emailController.dispose();
     _codeController.dispose();
     _passwordController.dispose();
     _confirmController.dispose();

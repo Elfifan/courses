@@ -109,19 +109,6 @@ class _AdminAppState extends State<AdminApp> {
                 onToggleTheme: (value) => toggleTheme(value),
                 onLoginSuccess: loginSuccess,
               ),
-        '/reset-password': (context) {
-          final email = ModalRoute.of(context)?.settings.arguments as String?;
-          return ResetPasswordScreen(
-            email: email,
-            onSuccess: () {
-              if (mounted) {
-                Navigator.of(context).pushNamedAndRemoveUntil('/', (r) => false);
-              }
-            },
-            isDarkMode: isDarkMode,
-            onToggleTheme: toggleTheme,
-          );
-        },
       },
     );
   }
