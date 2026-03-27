@@ -1,10 +1,8 @@
-import 'package:cyrs/repositories/staff_repository.dart';
 import 'package:flutter/material.dart';
 import '../shared/side_panel.dart';
 import '../shared/top_bar.dart';
 import '../courses/courses_screen.dart';
 import '../students/students_screen.dart';
-import '../staff/staff_screen.dart';
 import '../achievements/achievements_screen.dart';
 import '../repositories/course_repository.dart';
 
@@ -28,13 +26,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
   String _selectedStudentFilter = 'Все пользователи';
 
   final GlobalKey _achievementsKey = GlobalKey();
-  final GlobalKey _staffScreenKey = GlobalKey();
 
   final List<String> _menuItems = [
     'Статистика',
     'Курсы',
     'Пользователь',
-    'Сотрудники',
     'Достижения'
   ];
 
@@ -42,7 +38,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
     Icons.dashboard_rounded,
     Icons.school_rounded,
     Icons.people_rounded,
-    Icons.work_rounded,
     Icons.analytics_rounded,
     Icons.settings_rounded
   ];
@@ -72,24 +67,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   onThemeToggle: widget.onThemeToggle,
                   isDarkMode: widget.isDarkMode,
                   menuItems: _menuItems,
-                  onAddStaff: () {
-                    if (_selectedIndex == 3) {
-                     StaffRepository.showAddStaffDialog(context, () {
-      // Обновляем StaffScreen
-      final state = _staffScreenKey.currentState as dynamic;
-      state?.refreshStaff();
-    });
-                    }
-                  },
                   onAddCourse: () {
                     if (_selectedIndex == 1) {
                       CourseService.showAddCourseForm(context);
                     }
                   },
                   onAddAchievement: () {
-                    if (_selectedIndex == 4) {
-    final state = _achievementsKey.currentState as dynamic;
-    state.showForm();
+                    if (_selectedIndex == 3) {
+                      final state = _achievementsKey.currentState as dynamic;
+                      state.showForm();
                     }
                   },
                 ),
@@ -129,10 +115,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
           isDarkMode: widget.isDarkMode,
         );
       case 3:
-        return StaffScreen(
-          key: _staffScreenKey,
-        );
-      case 4:
         return AchievementsScreen(
           key: _achievementsKey,
           isDarkMode: widget.isDarkMode,

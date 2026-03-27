@@ -6,7 +6,6 @@ class TopBar extends StatelessWidget {
   final VoidCallback onThemeToggle;
   final bool isDarkMode;
   final List<String> menuItems;
-  final VoidCallback? onAddStaff;
   final VoidCallback? onAddCourse;
   final VoidCallback? onAddAchievement;
 
@@ -16,16 +15,14 @@ class TopBar extends StatelessWidget {
     required this.onThemeToggle,
     required this.isDarkMode,
     required this.menuItems,
-    this.onAddStaff,
     this.onAddCourse,
     this.onAddAchievement,
   });
 
   @override
   Widget build(BuildContext context) {
-    final bool showAddButton = [1, 3, 4].contains(selectedIndex) && (
+    final bool showAddButton = [1, 4].contains(selectedIndex) && (
       (selectedIndex == 1 && onAddCourse != null) ||
-      (selectedIndex == 3 && onAddStaff != null) ||
       (selectedIndex == 4 && onAddAchievement != null)
     );
 
@@ -72,8 +69,6 @@ class TopBar extends StatelessWidget {
               onPressed: () {
                 if (selectedIndex == 1) {
                   CourseService.showAddCourseForm(context);
-                } else if (selectedIndex == 3) {
-                  onAddStaff?.call();
                 } else if (selectedIndex == 4) {
                 onAddAchievement?.call();
             }
@@ -114,8 +109,6 @@ class TopBar extends StatelessWidget {
     switch (selectedIndex) {
       case 1:
         return 'Добавить курс';
-      case 3:
-        return 'Добавить сотрудника';
       case 4:
         return 'Добавить достижение';
       default:

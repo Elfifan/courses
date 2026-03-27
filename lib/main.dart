@@ -1,3 +1,6 @@
+import 'dart:async';
+
+import 'package:app_links/app_links.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'app.dart';
@@ -28,6 +31,8 @@ class AdminApp extends StatefulWidget {
 class _AdminAppState extends State<AdminApp> {
   bool isDarkMode = true;
   bool isLoggedIn = false;
+  late final AppLinks _appLinks;
+  StreamSubscription<Uri?>? _linkSub;
 
   void toggleTheme(bool newValue) {
     setState(() {
@@ -41,6 +46,49 @@ class _AdminAppState extends State<AdminApp> {
     });
   }
 
+  void logout() {
+    setState(() {
+      isLoggedIn = false;
+    });
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _appLinks = AppLinks();
+    _linkSub = _appLinks.uriLinkStream.listen((uri) {
+      if (uri != null) {
+        _handleDeepLink(uri);
+      }
+    });
+
+    // Cold-start link
+    _appLinks.getInitialLink().then((uri) {
+      if (uri != null) {
+        _handleDeepLink(uri);
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _linkSub?.cancel();
+    super.dispose();
+  }
+
+  void _handleDeepLink(Uri uri) {
+    final queryType = uri.queryParameters['type'];
+    if (queryType == 'reset_password') {
+      final email = uri.queryParameters['email'];
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        Navigator.of(context).pushNamed(
+          '/reset-password',
+          arguments: email,
+        );
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -49,16 +97,32 @@ class _AdminAppState extends State<AdminApp> {
       darkTheme: darkTheme,
       themeMode: isDarkMode ? ThemeMode.dark : ThemeMode.light,
       debugShowCheckedModeBanner: false,
-      home: isLoggedIn
-          ? DashboardScreen(
-              onThemeToggle: () => toggleTheme(!isDarkMode),
-              isDarkMode: isDarkMode,
-            )
-          : AuthScreen(
-              isDarkMode: isDarkMode,
-              onToggleTheme: (value) => toggleTheme(value),
-              onLoginSuccess: loginSuccess,
-            ),
+      initialRoute: '/',
+      routes: {
+        '/': (context) => isLoggedIn
+            ? DashboardScreen(
+                onThemeToggle: () => toggleTheme(!isDarkMode),
+                isDarkMode: isDarkMode,
+              )
+            : AuthScreen(
+                isDarkMode: isDarkMode,
+                onToggleTheme: (value) => toggleTheme(value),
+                onLoginSuccess: loginSuccess,
+              ),
+        '/reset-password': (context) {
+          final email = ModalRoute.of(context)?.settings.arguments as String?;
+          return ResetPasswordScreen(
+            email: email,
+            onSuccess: () {
+              if (mounted) {
+                Navigator.of(context).pushNamedAndRemoveUntil('/', (r) => false);
+              }
+            },
+            isDarkMode: isDarkMode,
+            onToggleTheme: toggleTheme,
+          );
+        },
+      },
     );
   }
 }

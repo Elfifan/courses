@@ -45,6 +45,47 @@ class Employee {
   }
 }
 
+// Модель для кодов восстановления пароля
+class PasswordRecoveryCode {
+  final int id;
+  final String email;
+  final String code;
+  final DateTime createdAt;
+  final DateTime expiresAt;
+  final bool used;
+
+  PasswordRecoveryCode({
+    required this.id,
+    required this.email,
+    required this.code,
+    required this.createdAt,
+    required this.expiresAt,
+    required this.used,
+  });
+
+  factory PasswordRecoveryCode.fromJson(Map<String, dynamic> json) {
+    return PasswordRecoveryCode(
+      id: json['id'] as int,
+      email: json['email'] as String,
+      code: json['code'] as String,
+      createdAt: DateTime.parse(json['created_at'] as String),
+      expiresAt: DateTime.parse(json['expires_at'] as String),
+      used: json['used'] as bool,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'email': email,
+      'code': code,
+      'created_at': createdAt.toIso8601String(),
+      'expires_at': expiresAt.toIso8601String(),
+      'used': used,
+    };
+  }
+}
+
 // Модель пользователя (таблица users)
 class User {
   final int id;
@@ -708,33 +749,4 @@ class SubmoduleTest {
   }
 }
 
-class Staff {
-  final int id;
-  final String name;
-  final String email;
-  final String position;
 
-  Staff({
-    required this.id,
-    required this.name,
-    required this.email,
-    required this.position,
-  });
-
-  factory Staff.fromJson(Map<String, dynamic> json) {
-    return Staff(
-      id: json['id'],
-      name: json['name'],
-      email: json['email'],
-      position: json['position'],
-    );
-  }
-
-  Map<String, dynamic> toJson() {
-    return {
-      'name': name,
-      'email': email,
-      'position': position,
-    };
-  }
-}
