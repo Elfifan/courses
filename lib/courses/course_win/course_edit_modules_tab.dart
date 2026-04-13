@@ -50,7 +50,8 @@ class _CourseEditModulesTabState extends State<CourseEditModulesTab> {
 
       for (var moduleData in modulesData) {
         final moduleId = moduleData['id'];
-        expandedMap[moduleId] = _expandedModules[moduleId] ?? true; // По умолчанию развернуто
+        expandedMap[moduleId] =
+            _expandedModules[moduleId] ?? true; // По умолчанию развернуто
 
         final submodulesData = await SupabaseService.client
             .from('submodule')
@@ -70,12 +71,10 @@ class _CourseEditModulesTabState extends State<CourseEditModulesTab> {
               .eq('id_submodule', submoduleId)
               .order('order_test', ascending: true);
 
-          testsMap[submoduleId] = (testsData as List)
-              .map((item) {
-                final testData = item['test'] as Map<String, dynamic>;
-                return db_models.Test.fromJson(testData);
-              })
-              .toList();
+          testsMap[submoduleId] = (testsData as List).map((item) {
+            final testData = item['test'] as Map<String, dynamic>;
+            return db_models.Test.fromJson(testData);
+          }).toList();
         }
       }
 
@@ -93,9 +92,9 @@ class _CourseEditModulesTabState extends State<CourseEditModulesTab> {
     } catch (e) {
       if (mounted) {
         setState(() => _isLoading = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Ошибка загрузки модулей: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Ошибка загрузки модулей: $e')));
       }
     }
   }
@@ -112,7 +111,10 @@ class _CourseEditModulesTabState extends State<CourseEditModulesTab> {
               Expanded(
                 child: Text(
                   'Модули курса',
-                  style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                  style: const TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
               const SizedBox(width: 16),
@@ -128,15 +130,15 @@ class _CourseEditModulesTabState extends State<CourseEditModulesTab> {
             child: _isLoading
                 ? const Center(child: CircularProgressIndicator())
                 : _modules.isEmpty
-                    ? const Center(child: Text('Модулей нет'))
-                    : ListView.builder(
-                        itemCount: _modules.length,
-                        itemBuilder: (context, index) {
-                          final module = _modules[index];
-                          final submodules = _submodules[module.id] ?? [];
-                          return _buildModuleCard(module, submodules, index);
-                        },
-                      ),
+                ? const Center(child: Text('Модулей нет'))
+                : ListView.builder(
+                    itemCount: _modules.length,
+                    itemBuilder: (context, index) {
+                      final module = _modules[index];
+                      final submodules = _submodules[module.id] ?? [];
+                      return _buildModuleCard(module, submodules, index);
+                    },
+                  ),
           ),
         ],
       ),
@@ -223,10 +225,7 @@ class _CourseEditModulesTabState extends State<CourseEditModulesTab> {
               if (submodules.isEmpty)
                 Text(
                   'Нет подмодулей',
-                  style: TextStyle(
-                    color: Colors.grey[600],
-                    fontSize: 14,
-                  ),
+                  style: TextStyle(color: Colors.grey[600], fontSize: 14),
                 )
               else
                 ListView.builder(
@@ -243,7 +242,7 @@ class _CourseEditModulesTabState extends State<CourseEditModulesTab> {
                     );
                   },
                 ),
-            ]
+            ],
           ],
         ),
       ),
@@ -392,58 +391,63 @@ class _CourseEditModulesTabState extends State<CourseEditModulesTab> {
                   ),
                 ),
                 const SizedBox(height: 8),
-                ...tests.map((test) => GestureDetector(
-                  onTap: () => _showEditTestDialog(test, submodule.id), // ← НОВОЕ: редактирование
-                  child: Container(
-                    padding: const EdgeInsets.all(8),
-                    margin: const EdgeInsets.only(bottom: 6),
-                    decoration: BoxDecoration(
-                      color: Colors.blue.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(6),
-                      border: Border.all(color: Colors.blue.withOpacity(0.3)),
-                    ),
-                    child: Row(
-                      children: [
-                        const Icon(Icons.quiz, size: 16, color: Colors.blue),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                test.question ?? 'Вопрос',
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w500,
+                ...tests.map(
+                  (test) => GestureDetector(
+                    onTap: () => _showEditTestDialog(
+                      test,
+                      submodule.id,
+                    ), // ← НОВОЕ: редактирование
+                    child: Container(
+                      padding: const EdgeInsets.all(8),
+                      margin: const EdgeInsets.only(bottom: 6),
+                      decoration: BoxDecoration(
+                        color: Colors.blue.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(color: Colors.blue.withOpacity(0.3)),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.quiz, size: 16, color: Colors.blue),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  test.question ?? 'Вопрос',
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w500,
+                                  ),
                                 ),
-                              ),
-                              Text(
-                                'Ответ: ${test.rightAnswer}',
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  color: Colors.grey[600],
+                                Text(
+                                  'Ответ: ${test.rightAnswer}',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: Colors.grey[600],
+                                  ),
                                 ),
+                              ],
+                            ),
+                          ),
+                          PopupMenuButton(
+                            itemBuilder: (ctx) => [
+                              PopupMenuItem(
+                                child: const Text('Удалить'),
+                                onTap: () => _deleteTest(test.id, submodule.id),
                               ),
                             ],
+                            icon: const Icon(Icons.more_vert, size: 16),
                           ),
-                        ),
-                        PopupMenuButton(
-                          itemBuilder: (ctx) => [
-                            PopupMenuItem(
-                              child: const Text('Удалить'),
-                              onTap: () => _deleteTest(test.id, submodule.id),
-                            ),
-                          ],
-                          icon: const Icon(Icons.more_vert, size: 16),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
-                )),
+                ),
               ],
             ),
           ),
@@ -517,9 +521,7 @@ class _CourseEditModulesTabState extends State<CourseEditModulesTab> {
                     Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        border: Border.all(
-                          color: Colors.grey.withOpacity(0.3),
-                        ),
+                        border: Border.all(color: Colors.grey.withOpacity(0.3)),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Column(
@@ -545,8 +547,11 @@ class _CourseEditModulesTabState extends State<CourseEditModulesTab> {
                                   ),
                                   child: Row(
                                     children: [
-                                      const Icon(Icons.check_circle,
-                                          color: Colors.green, size: 18),
+                                      const Icon(
+                                        Icons.check_circle,
+                                        color: Colors.green,
+                                        size: 18,
+                                      ),
                                       const SizedBox(width: 8),
                                       Expanded(
                                         child: Text(
@@ -567,11 +572,15 @@ class _CourseEditModulesTabState extends State<CourseEditModulesTab> {
                             ),
                           ElevatedButton.icon(
                             onPressed: () async {
-                              final result =
-                                  await FilePicker.platform.pickFiles(
-                                type: FileType.custom,
-                                allowedExtensions: ['md', 'markdown', 'txt'],
-                              );
+                              final result = await FilePicker.platform
+                                  .pickFiles(
+                                    type: FileType.custom,
+                                    allowedExtensions: [
+                                      'md',
+                                      'markdown',
+                                      'txt',
+                                    ],
+                                  );
 
                               if (result != null) {
                                 setState(() {
@@ -645,7 +654,8 @@ class _CourseEditModulesTabState extends State<CourseEditModulesTab> {
                       } else if (selectedFilePath == null) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
-                              content: Text('Выберите markdown файл')),
+                            content: Text('Выберите markdown файл'),
+                          ),
                         );
                       }
                     },
@@ -767,7 +777,8 @@ class _CourseEditModulesTabState extends State<CourseEditModulesTab> {
                       if (selectedCorrectAnswer == null) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
-                              content: Text('Выберите правильный ответ')),
+                            content: Text('Выберите правильный ответ'),
+                          ),
                         );
                         return;
                       }
@@ -903,7 +914,8 @@ class _CourseEditModulesTabState extends State<CourseEditModulesTab> {
                       if (selectedCorrectAnswer == null) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
-                              content: Text('Выберите правильный ответ')),
+                            content: Text('Выберите правильный ответ'),
+                          ),
                         );
                         return;
                       }
@@ -936,7 +948,10 @@ class _CourseEditModulesTabState extends State<CourseEditModulesTab> {
     try {
       final nextOrder = _modules.isEmpty
           ? 1
-          : (_modules.map((m) => m.orderModule ?? 0).reduce((a, b) => a > b ? a : b)) + 1;
+          : (_modules
+                    .map((m) => m.orderModule ?? 0)
+                    .reduce((a, b) => a > b ? a : b)) +
+                1;
 
       await SupabaseService.client.from('module').insert({
         'id_courses': widget.courseId,
@@ -947,15 +962,15 @@ class _CourseEditModulesTabState extends State<CourseEditModulesTab> {
 
       if (mounted) {
         _loadModules();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Модуль "$name" добавлен')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Модуль "$name" добавлен')));
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Ошибка: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Ошибка: $e')));
       }
     }
   }
@@ -979,8 +994,10 @@ class _CourseEditModulesTabState extends State<CourseEditModulesTab> {
       final fileExtension = file.path.split('.').last;
       final fileBytes = await file.readAsBytes();
 
-      final safeFileName = 'submodule_${DateTime.now().millisecondsSinceEpoch}.$fileExtension';
-      final storagePath = 'c${widget.courseId}/module$orderModule/$safeFileName';
+      final safeFileName =
+          'submodule_${DateTime.now().millisecondsSinceEpoch}.$fileExtension';
+      final storagePath =
+          'c${widget.courseId}/module$orderModule/$safeFileName';
 
       print('📤 Загружаем файл: $storagePath');
 
@@ -997,7 +1014,10 @@ class _CourseEditModulesTabState extends State<CourseEditModulesTab> {
       final submodules = _submodules[moduleId] ?? [];
       final nextOrder = submodules.isEmpty
           ? 1
-          : (submodules.map((s) => s.orderSubmodule ?? 0).reduce((a, b) => a > b ? a : b)) + 1;
+          : (submodules
+                    .map((s) => s.orderSubmodule ?? 0)
+                    .reduce((a, b) => a > b ? a : b)) +
+                1;
 
       await SupabaseService.client.from('submodule').insert({
         'id_module': moduleId,
@@ -1010,132 +1030,134 @@ class _CourseEditModulesTabState extends State<CourseEditModulesTab> {
 
       if (mounted) {
         _loadModules();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Подмодуль "$name" добавлен')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Подмодуль "$name" добавлен')));
       }
     } catch (e) {
       print('❌ Ошибка: $e');
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Ошибка: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Ошибка: $e')));
       }
     }
   }
 
   Future<void> _addTest(
-  int submoduleId,
-  String question,
-  int difficulty,
-  List<TextEditingController> answerControllers,
-  int correctAnswerIndex,
-) async {
-  try {
-    final existingTests = await SupabaseService.client
-        .from('submodule_test')
-        .select('order_test')
-        .eq('id_submodule', submoduleId)
-        .order('order_test', ascending: false)
-        .limit(1);
+    int submoduleId,
+    String question,
+    int difficulty,
+    List<TextEditingController> answerControllers,
+    int correctAnswerIndex,
+  ) async {
+    try {
+      final existingTests = await SupabaseService.client
+          .from('submodule_test')
+          .select('order_test')
+          .eq('id_submodule', submoduleId)
+          .order('order_test', ascending: false)
+          .limit(1);
 
-    int nextOrder = 1;
-    if (existingTests.isNotEmpty) {
-      nextOrder = (existingTests[0]['order_test'] as int? ?? 0) + 1;
-    }
+      int nextOrder = 1;
+      if (existingTests.isNotEmpty) {
+        nextOrder = (existingTests[0]['order_test'] as int? ?? 0) + 1;
+      }
 
-    // ← ИСПРАВЛЕНО: Правильное распределение ответов
-    String rightAnswer = answerControllers[correctAnswerIndex].text;
-    
-    // Собираем неправильные ответы в правильном порядке
-    List<String> wrongAnswers = [];
-    for (int i = 0; i < 4; i++) {
-      if (i != correctAnswerIndex) {
-        wrongAnswers.add(answerControllers[i].text);
+      // ← ИСПРАВЛЕНО: Правильное распределение ответов
+      String rightAnswer = answerControllers[correctAnswerIndex].text;
+
+      // Собираем неправильные ответы в правильном порядке
+      List<String> wrongAnswers = [];
+      for (int i = 0; i < 4; i++) {
+        if (i != correctAnswerIndex) {
+          wrongAnswers.add(answerControllers[i].text);
+        }
+      }
+
+      final testResponse = await SupabaseService.client
+          .from('test')
+          .insert({
+            'question': question,
+            'right_answer': rightAnswer,
+            'wrong_answer1': wrongAnswers[0],
+            'wrong_answer2': wrongAnswers[1],
+            'wrong_answer3': wrongAnswers[2],
+            'difficulty': difficulty,
+            'status': true,
+          })
+          .select()
+          .single();
+
+      final testId = testResponse['id'];
+
+      await SupabaseService.client.from('submodule_test').insert({
+        'id_submodule': submoduleId,
+        'id_test': testId,
+        'order_test': nextOrder,
+      });
+
+      if (mounted) {
+        _loadModules();
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Тест добавлен')));
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Ошибка: $e')));
       }
     }
-
-    final testResponse = await SupabaseService.client
-        .from('test')
-        .insert({
-          'question': question,
-          'right_answer': rightAnswer,
-          'wrong_answer1': wrongAnswers[0],
-          'wrong_answer2': wrongAnswers[1],
-          'wrong_answer3': wrongAnswers[2],
-          'difficulty': difficulty,
-          'status': true,
-        })
-        .select()
-        .single();
-
-    final testId = testResponse['id'];
-
-    await SupabaseService.client.from('submodule_test').insert({
-      'id_submodule': submoduleId,
-      'id_test': testId,
-      'order_test': nextOrder,
-    });
-
-    if (mounted) {
-      _loadModules();
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Тест добавлен')),
-      );
-    }
-  } catch (e) {
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Ошибка: $e')),
-      );
-    }
   }
-}
 
   // ← НОВОЕ: Обновление теста
   Future<void> _updateTest(
-  int testId,
-  String question,
-  int difficulty,
-  List<TextEditingController> answerControllers,
-  int correctAnswerIndex,
-) async {
-  try {
-    // ← ИСПРАВЛЕНО: Правильное распределение ответов
-    String rightAnswer = answerControllers[correctAnswerIndex].text;
-    
-    // Собираем неправильные ответы в правильном порядке
-    List<String> wrongAnswers = [];
-    for (int i = 0; i < 4; i++) {
-      if (i != correctAnswerIndex) {
-        wrongAnswers.add(answerControllers[i].text);
+    int testId,
+    String question,
+    int difficulty,
+    List<TextEditingController> answerControllers,
+    int correctAnswerIndex,
+  ) async {
+    try {
+      // ← ИСПРАВЛЕНО: Правильное распределение ответов
+      String rightAnswer = answerControllers[correctAnswerIndex].text;
+
+      // Собираем неправильные ответы в правильном порядке
+      List<String> wrongAnswers = [];
+      for (int i = 0; i < 4; i++) {
+        if (i != correctAnswerIndex) {
+          wrongAnswers.add(answerControllers[i].text);
+        }
+      }
+
+      await SupabaseService.client
+          .from('test')
+          .update({
+            'question': question,
+            'right_answer': rightAnswer,
+            'wrong_answer1': wrongAnswers[0],
+            'wrong_answer2': wrongAnswers[1],
+            'wrong_answer3': wrongAnswers[2],
+            'difficulty': difficulty,
+          })
+          .eq('id', testId);
+
+      if (mounted) {
+        _loadModules();
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Тест обновлен')));
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Ошибка: $e')));
       }
     }
-
-    await SupabaseService.client.from('test').update({
-      'question': question,
-      'right_answer': rightAnswer,
-      'wrong_answer1': wrongAnswers[0],
-      'wrong_answer2': wrongAnswers[1],
-      'wrong_answer3': wrongAnswers[2],
-      'difficulty': difficulty,
-    }).eq('id', testId);
-
-    if (mounted) {
-      _loadModules();
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Тест обновлен')),
-      );
-    }
-  } catch (e) {
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Ошибка: $e')),
-      );
-    }
   }
-}
-
 
   Future<void> _deleteModule(int moduleId) async {
     try {
@@ -1143,37 +1165,61 @@ class _CourseEditModulesTabState extends State<CourseEditModulesTab> {
 
       if (mounted) {
         _loadModules();
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Модуль удален')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Модуль удален')));
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Ошибка: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Ошибка: $e')));
       }
     }
   }
 
   Future<void> _deleteSubmodule(int submoduleId, int moduleId) async {
     try {
-      await SupabaseService.client
-          .from('submodule')
+      final client = SupabaseService.client;
+
+      await client
+          .from('user_submodule_progress')
           .delete()
-          .eq('id', submoduleId);
+          .eq('id_submodule', submoduleId);
+
+      await client
+          .from('student_test_result')
+          .delete()
+          .eq('id_submodule', submoduleId);
+
+      await client
+          .from('student_practical_result')
+          .delete()
+          .eq('id_submodule', submoduleId);
+
+      await client
+          .from('submodule_test')
+          .delete()
+          .eq('id_submodule', submoduleId);
+
+      await client
+          .from('practical_task')
+          .delete()
+          .eq('id_submodule', submoduleId);
+
+      await client.from('submodule').delete().eq('id', submoduleId);
 
       if (mounted) {
         _loadModules();
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Подмодуль удален')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Подмодуль удален')));
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Ошибка: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Ошибка: $e')));
       }
     }
   }
@@ -1189,15 +1235,15 @@ class _CourseEditModulesTabState extends State<CourseEditModulesTab> {
 
       if (mounted) {
         _loadModules();
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Тест удален')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Тест удален')));
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Ошибка: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Ошибка: $e')));
       }
     }
   }
