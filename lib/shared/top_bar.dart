@@ -21,9 +21,9 @@ class TopBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bool showAddButton = [1, 4].contains(selectedIndex) && (
+    final bool showAddButton = [1, 3].contains(selectedIndex) && (
       (selectedIndex == 1 && onAddCourse != null) ||
-      (selectedIndex == 4 && onAddAchievement != null)
+      (selectedIndex == 3 && onAddAchievement != null)
     );
 
     return Container(
@@ -69,10 +69,10 @@ class TopBar extends StatelessWidget {
               onPressed: () {
                 if (selectedIndex == 1) {
                   CourseService.showAddCourseForm(context);
-                } else if (selectedIndex == 4) {
-                onAddAchievement?.call();
-            }
-          },
+                } else if (selectedIndex == 3) {
+                  onAddAchievement?.call();
+                }
+              },
               icon: const Icon(Icons.add),
               label: Text(_getButtonText()),
               style: ElevatedButton.styleFrom(
@@ -97,8 +97,6 @@ class TopBar extends StatelessWidget {
       case 2:
         return 'Студенты';
       case 3:
-        return 'Сотрудники';
-      case 4:
         return 'Достижения';
       default:
         return 'Dashboard';
@@ -109,7 +107,7 @@ class TopBar extends StatelessWidget {
     switch (selectedIndex) {
       case 1:
         return 'Добавить курс';
-      case 4:
+      case 3:
         return 'Добавить достижение';
       default:
         return '';

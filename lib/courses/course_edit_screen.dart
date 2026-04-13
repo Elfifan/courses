@@ -165,7 +165,7 @@ class _CourseEditScreenState extends State<CourseEditScreen>
                 Row(
                   children: [
                     Text(
-                      'ID: #${_course!.id}',
+                      'Номер курса: ${_course!.id}',
                       style: TextStyle(color: Colors.grey[600], fontSize: 14),
                     ),
                     const SizedBox(width: 16),
