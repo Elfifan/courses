@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../core/theme/app_components.dart'; // Подключаем вашу дизайн-систему
 import '../models/database_models.dart';
 import '../services/supabase_service.dart';
 import '../shared/search_row.dart';
@@ -65,33 +66,20 @@ class _CoursesScreenState extends State<CoursesScreen> {
     final q = _searchController.text.trim().toLowerCase();
     
     return _courses.where((c) {
-      // Фильтр по поиску
       final matchesSearch = q.isEmpty || 
           c.name?.toLowerCase().contains(q) == true ||
           c.description?.toLowerCase().contains(q) == true;
       
-      // Фильтр по статусу и сложности
       bool matchesFilter = true;
       if (_selectedFilter != 'all') {
         switch (_selectedFilter) {
-          case 'active':
-            matchesFilter = c.status == true;
-            break;
-          case 'draft':
-            matchesFilter = c.status == false;
-            break;
-          case 'beginner':
-            matchesFilter = c.complexity == 1;
-            break;
-          case 'intermediate':
-            matchesFilter = c.complexity == 2;
-            break;
-          case 'advanced':
-            matchesFilter = c.complexity == 3;
-            break;
+          case 'active': matchesFilter = c.status == true; break;
+          case 'draft': matchesFilter = c.status == false; break;
+          case 'beginner': matchesFilter = c.complexity == 1; break;
+          case 'intermediate': matchesFilter = c.complexity == 2; break;
+          case 'advanced': matchesFilter = c.complexity == 3; break;
         }
       }
-      
       return matchesSearch && matchesFilter;
     }).toList();
   }
@@ -104,7 +92,6 @@ class _CoursesScreenState extends State<CoursesScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final filtered = _filteredCourses;
 
     return Column(
@@ -119,9 +106,9 @@ class _CoursesScreenState extends State<CoursesScreen> {
                 onChanged: (_) => setState(() {}),
               ),
               const SizedBox(height: 16),
-              // Фильтры
+              // Обновленные фильтры в стиле Кодикс
               SizedBox(
-                height: 40,
+                height: 42,
                 child: ListView.builder(
                   scrollDirection: Axis.horizontal,
                   itemCount: _filters.length,
@@ -130,26 +117,20 @@ class _CoursesScreenState extends State<CoursesScreen> {
                     final isSelected = _selectedFilter == filter['value'];
                     
                     return Padding(
-                      padding: const EdgeInsets.only(right: 8),
-                      child: FilterChip(
+                      padding: const EdgeInsets.only(right: 10),
+                      child: ChoiceChip(
                         label: Text(filter['label']!),
                         selected: isSelected,
-                        onSelected: (selected) {
-                          setState(() {
-                            _selectedFilter = filter['value']!;
-                          });
-                        },
-                        backgroundColor: Colors.transparent,
-                        side: BorderSide(
-                          color: isSelected 
-                            ? theme.primaryColor 
-                            : theme.colorScheme.outlineVariant,
+                        onSelected: (val) => setState(() => _selectedFilter = filter['value']!),
+                        selectedColor: AppColors.primaryPurple, // Фиолетовый акцент
+                        backgroundColor: AppColors.bgLight, // Светлый фон
+                        labelStyle: AppStyles.label.copyWith(
+                          color: isSelected ? Colors.white : AppColors.textGrey,
+                          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
                         ),
-                        labelStyle: TextStyle(
-                          color: isSelected
-                            ? theme.primaryColor
-                            : theme.colorScheme.onSurface,
-                        ),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        side: BorderSide.none,
+                        showCheckmark: false,
                       ),
                     );
                   },
@@ -160,193 +141,125 @@ class _CoursesScreenState extends State<CoursesScreen> {
         ),
         Expanded(
           child: _isLoading
-              ? const Center(child: CircularProgressIndicator())
+              ? const Center(child: CircularProgressIndicator(color: AppColors.primaryPurple))
               : filtered.isEmpty
                   ? Center(
-                      child: Text('Курсы не найдены',
-                          style: TextStyle(
-                              color: theme.colorScheme.onSurface
-                                  .withValues(alpha: 0.6))),
+                      child: Text('Курсы не найдены', style: AppStyles.label),
                     )
                   : ListView.builder(
-                      padding: const EdgeInsets.all(20),
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
                       itemCount: filtered.length,
-                      itemBuilder: (context, index) {
-                        final course = filtered[index];
-                        return _buildCourseCard(course, theme);
-                      },
+                      itemBuilder: (context, index) => _buildCourseCard(filtered[index]),
                     ),
         ),
       ],
     );
   }
 
-  Widget _buildCourseCard(Course course, ThemeData theme) {
-    return GestureDetector(
-      onTap: () async {
-        final updated = await Navigator.push<bool>(
-          context,
-          MaterialPageRoute(
-            builder: (_) => CourseEditScreen(courseId: course.id),
-          ),
-        );
-        
-        if (updated == true) {
-          _loadCourses();
-        }
-      },
-      child: Card(
-        margin: const EdgeInsets.only(bottom: 12),
-        elevation: 0,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        color: theme.colorScheme.surface,
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            children: [
-              Container(
-                width: 60,
-                height: 60,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(12),
-                  gradient: const LinearGradient(
-                    colors: [Color(0xFF667eea), Color(0xFF764ba2)],
+  Widget _buildCourseCard(Course course) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      // Используем универсальный контейнер Кодикс
+      child: KodixComponents.cardContainer(
+        padding: EdgeInsets.zero,
+        child: InkWell(
+          onTap: () async {
+            final updated = await Navigator.push<bool>(
+              context,
+              MaterialPageRoute(builder: (_) => CourseEditScreen(courseId: course.id)),
+            );
+            if (updated == true) _loadCourses();
+          },
+          borderRadius: AppStyles.cardRadius,
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                // Градиентная иконка курса в стиле Кодикс[cite: 1]
+                Container(
+                  width: 64,
+                  height: 64,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(16),
+                    gradient: AppColors.primaryGradient,
+                  ),
+                  child: Center(
+                    child: Text(course.icon ?? '📚', style: const TextStyle(fontSize: 30)),
                   ),
                 ),
-                child: Center(
-                  child: Text(course.icon ?? '📚',
-                      style: const TextStyle(fontSize: 32)),
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      course.name ?? 'Без названия',
-                      style: theme.textTheme.titleMedium,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      course.description ?? '',
-                      style: theme.textTheme.bodySmall,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        if (course.price != null)
-                          Text(
-                            '${course.price}₽',
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        const SizedBox(width: 16),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 4,
-                          ),
-                          decoration: BoxDecoration(
-                            color: _getComplexityColor(course.complexity),
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: Text(
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(course.name ?? 'Без названия', style: AppStyles.h1.copyWith(fontSize: 18)),
+                      const SizedBox(height: 4),
+                      Text(
+                        course.description ?? '',
+                        style: AppStyles.label,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          if (course.price != null)
+                            Text('${course.price}₽', style: AppStyles.body.copyWith(fontWeight: FontWeight.bold, color: AppColors.primaryPurple)),
+                          const SizedBox(width: 12),
+                          _buildBadge(
                             _getComplexityLabel(course.complexity ?? 1),
-                            style: const TextStyle(
-                              fontSize: 12,
-                              color: Colors.white,
-                              fontWeight: FontWeight.w600,
-                            ),
+                            _getComplexityColor(course.complexity).withOpacity(0.1),
+                            _getComplexityColor(course.complexity),
                           ),
-                        ),
-                        const SizedBox(width: 8),
-                        if (course.status == true)
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 4,
-                            ),
-                            decoration: BoxDecoration(
-                              color: Colors.green.withOpacity(0.2),
-                              borderRadius: BorderRadius.circular(6),
-                              border: Border.all(
-                                color: Colors.green.withOpacity(0.5),
-                              ),
-                            ),
-                            child: const Text(
-                              'Активный',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: Colors.green,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          )
-                        else
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 4,
-                            ),
-                            decoration: BoxDecoration(
-                              color: Colors.orange.withOpacity(0.2),
-                              borderRadius: BorderRadius.circular(6),
-                              border: Border.all(
-                                color: Colors.orange.withOpacity(0.5),
-                              ),
-                            ),
-                            child: const Text(
-                              'Черновик',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: Colors.orange,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
+                          const SizedBox(width: 8),
+                          _buildBadge(
+                            course.status == true ? 'Активный' : 'Черновик',
+                            (course.status == true ? Colors.green : Colors.orange).withOpacity(0.1),
+                            course.status == true ? Colors.green : Colors.orange,
                           ),
-                      ],
-                    ),
-                  ],
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-              Icon(Icons.arrow_forward,
-                  color: theme.colorScheme.onSurface.withValues(alpha: 0.5)),
-            ],
+                const Icon(Icons.chevron_right, color: AppColors.textGrey),
+              ],
+            ),
           ),
         ),
       ),
     );
   }
 
+  Widget _buildBadge(String text, Color bgColor, Color textColor) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Text(
+        text,
+        style: AppStyles.label.copyWith(fontSize: 11, color: textColor, fontWeight: FontWeight.bold),
+      ),
+    );
+  }
+
   String _getComplexityLabel(int complexity) {
     switch (complexity) {
-      case 1:
-        return 'Начальный';
-      case 2:
-        return 'Средний';
-      case 3:
-        return 'Продвинутый';
-      default:
-        return 'Неизвестно';
+      case 1: return 'Начальный';
+      case 2: return 'Средний';
+      case 3: return 'Продвинутый';
+      default: return 'Неизвестно';
     }
   }
 
   Color _getComplexityColor(int? complexity) {
     switch (complexity) {
-      case 1:
-        return Colors.blue;
-      case 2:
-        return Colors.orange;
-      case 3:
-        return Colors.red;
-      default:
-        return Colors.grey;
+      case 1: return const Color(0xFF38BDF8);
+      case 2: return const Color(0xFFF59E0B);
+      case 3: return const Color(0xFFEF4444);
+      default: return AppColors.textGrey;
     }
   }
 }

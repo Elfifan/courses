@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../core/theme/app_components.dart'; // Ваша дизайн-система
 
 class StudentProfileScreen extends StatefulWidget {
   final bool isDarkMode;
@@ -11,15 +12,11 @@ class StudentProfileScreen extends StatefulWidget {
 
 class _StudentProfileScreenState extends State<StudentProfileScreen> {
   bool _showPassword = false;
-  bool _isBlocked = false; // статус заблокирован/нет
+  bool _isBlocked = false;
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final cardBg = theme.colorScheme.surface;
-    final textColor = theme.colorScheme.onSurface;
-    final textSecondary = theme.colorScheme.onSurface.withValues(alpha: 0.7);
-
+    // Данные студента (сохранены из оригинала)
     final student = {
       'avatar': 'А',
       'name': 'Анна Петрова',
@@ -30,380 +27,250 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
       'last_login': '20 сентября, 18:45',
     };
 
-    final activityList = [
-      {'title': 'Вошёл на платформу', 'time': '2 минуты назад'},
-      {'title': 'Завершил курс Flutter Mobile Dev', 'time': '1 час назад'},
-      {'title': 'Пройден тест по Python', 'time': '3 часа назад'},
-      {'title': 'Добавлен новый отзыв', 'time': '1 день назад'},
-    ];
-
     final courses = [
       {'name': 'Python для начинающих', 'icon': Icons.code, 'progress': 85, 'completed': false},
       {'name': 'Flutter Mobile Dev', 'icon': Icons.phone_iphone, 'progress': 100, 'completed': true},
       {'name': 'JavaScript Advanced', 'icon': Icons.javascript, 'progress': 60, 'completed': false},
     ];
 
-    final certificates = [
-      {'title': 'Сертификат Python', 'date': '10 сент.'},
-      {'title': 'Сертификат Flutter', 'date': '5 сент.'},
-      {'title': 'Сертификат JavaScript', 'date': '1 сент.'},
-    ];
-
-    final achievementEvents = [
-      {'event': 'Регистрация на платформе', 'date': '15 марта 2024'},
-      {'event': 'Начал курс Python', 'date': '16 марта 2024'},
-    ];
-
     return Scaffold(
-      backgroundColor: theme.scaffoldBackgroundColor,
+      backgroundColor: AppColors.bgLight, // Светлый фон приложения
       appBar: AppBar(
-        title: Text('Профиль студента', style: TextStyle(color: textColor)),
-        backgroundColor: cardBg,
-        elevation: 1,
-        iconTheme: IconThemeData(color: textColor),
+        title: Text('Профиль студента', style: AppStyles.h1.copyWith(fontSize: 20)),
+        backgroundColor: AppColors.white,
+        elevation: 0,
+        centerTitle: false,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: AppColors.textGrey),
+          onPressed: () => Navigator.pop(context),
+        ),
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(1),
+          child: Container(color: AppColors.bgLight, height: 1),
+        ),
       ),
-      body: Padding(
+      body: SingleChildScrollView(
         padding: const EdgeInsets.all(32.0),
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            return Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Левая панель
-                Container(
-                  width: constraints.maxWidth * 0.3,
-                  padding: EdgeInsets.all(25),
-                  decoration: BoxDecoration(
-                    color: cardBg,
-                    borderRadius: BorderRadius.circular(20),
-                    border: widget.isDarkMode ? Border.all(color: Color(0xFF30363D)) : null,
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Левая панель: Основная информация
+            SizedBox(
+              width: 380,
+              child: Column(
+                children: [
+                  _buildMainInfoCard(student),
+                  const SizedBox(height: 24),
+                  _buildActionCard(),
+                ],
+              ),
+            ),
+            const SizedBox(width: 32),
+            // Правая панель: Контент
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Активные курсы', style: AppStyles.h1.copyWith(fontSize: 22)),
+                  const SizedBox(height: 16),
+                  Wrap(
+                    spacing: 20,
+                    runSpacing: 20,
+                    children: courses.map((c) => _buildCourseCard(c)).toList(),
                   ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      CircleAvatar(
-                        radius: 32,
-                        backgroundColor: theme.primaryColor,
-                        child: Text(student['avatar']!,
-                            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white)),
-                      ),
-                      SizedBox(height: 10),
-                      Text(student['name']!,
-                          style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: textColor)),
-                      SizedBox(height: 4),
-                      Text(student['email']!, style: TextStyle(color: textSecondary)),
-                      SizedBox(height: 8),
-                      _infoRow('Телефон', student['phone']!, textSecondary),
-                      _passwordRow(student['password']!, textColor, textSecondary),
-                      SizedBox(height: 4),
-                      _infoRow('Регистрация', student['registration_date']!, textSecondary),
-                      SizedBox(height: 6),
-                      Row(
-                        children: [
-                          Text('Статус: ', style: TextStyle(fontWeight: FontWeight.w600, color: textSecondary)),
-                          _statusChip(_isBlocked ? 'Заблокирован' : 'Активен', _isBlocked),
-                        ],
-                      ),
-                      SizedBox(height: 10),
-                      Text('Последний вход:', style: TextStyle(fontWeight: FontWeight.w600, color: textSecondary)),
-                      Text(student['last_login']!,
-                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: textColor)),
-                      SizedBox(height: 8),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: ElevatedButton.icon(
-                              style: ElevatedButton.styleFrom(
-                                elevation: 0,
-                                backgroundColor: theme.colorScheme.primary,
-                                foregroundColor: Colors.white,
-                                minimumSize: Size(10, 38),
-                              ),
-                              icon: Icon(Icons.edit, size: 18),
-                              label: Text('Редактировать', style: TextStyle(fontSize: 14)),
-                              onPressed: () {},
-                            ),
-                          ),
-                          SizedBox(width: 10),
-                          Expanded(
-                            child: ElevatedButton.icon(
-                              style: ElevatedButton.styleFrom(
-                                elevation: 0,
-                                backgroundColor: _isBlocked ? Colors.red.shade300 : Colors.redAccent,
-                                foregroundColor: Colors.white,
-                                minimumSize: Size(10, 38),
-                              ),
-                              icon: Icon(Icons.block, size: 18),
-                              label: Text(_isBlocked ? 'Разблокировать' : 'Заблокировать', style: TextStyle(fontSize: 14)),
-                              onPressed: () => setState(() {
-                                _isBlocked = !_isBlocked;
-                              }),
-                            ),
-                          ),
-                        ],
-                      ),
-                      SizedBox(height: 10),
-                      Expanded(
-                        child: ScrollConfiguration(
-                          behavior: ScrollConfiguration.of(context).copyWith(scrollbars: false),
-                          child: _buildActivityCard(activityList, theme, widget.isDarkMode),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                SizedBox(width: 40),
-                Expanded(
-                  child: SingleChildScrollView(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('Курсы',
-                            style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: textColor)),
-                        SizedBox(height: 10),
-                        Wrap(
-                          spacing: 20,
-                          runSpacing: 20,
-                          children: courses
-                              .map((course) => _buildCourseCard(course, theme, widget.isDarkMode))
-                              .toList(),
-                        ),
-                        SizedBox(height: 30),
-                        Text('Достижения',
-                            style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: textColor)),
-                        SizedBox(height: 10),
-                        ...achievementEvents
-                            .map((event) =>
-                                _buildAchievementItem(event, theme, textSecondary, widget.isDarkMode))
-                            .toList(),
-                        SizedBox(height: 32),
-                        Text('Сертификаты',
-                            style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: textColor)),
-                        SizedBox(height: 12),
-                        ...certificates
-                            .map((cert) =>
-                                _buildCertificateItem(cert, theme, textSecondary, widget.isDarkMode))
-                            .toList(),
-                        SizedBox(height: 20),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            );
-          },
+                  const SizedBox(height: 40),
+                  _buildSectionHeader('Достижения и Сертификаты'),
+                  const SizedBox(height: 16),
+                  _buildAchievementTile('Сертификат Python', '10 сент.', Icons.workspace_premium),
+                  _buildAchievementTile('Регистрация на платформе', '15 марта', Icons.stars_rounded),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
     );
   }
 
-  Widget _infoRow(String label, String value, Color color) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 5),
-      child: Row(
+  Widget _buildMainInfoCard(Map<String, String> student) {
+    return KodixComponents.cardContainer(
+      child: Column(
         children: [
-          SizedBox(width: 120, child: Text(label, style: TextStyle(fontWeight: FontWeight.w600, color: color))),
-          Expanded(child: Text(value, style: TextStyle(color: color))),
-        ],
-      ),
-    );
-  }
-
-  Widget _statusChip(String status, bool blocked) {
-    final color = blocked ? Colors.redAccent.shade200 : Colors.greenAccent.shade400;
-    return Container(
-      padding: EdgeInsets.symmetric(horizontal: 18, vertical: 6),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.18),
-        borderRadius: BorderRadius.circular(30),
-      ),
-      child: Text(
-        status,
-        style: TextStyle(color: color, fontWeight: FontWeight.bold),
-      ),
-    );
-  }
-
-  Widget _passwordRow(String password, Color textColor, Color textSecondary) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 5),
-      child: Row(
-        children: [
-          SizedBox(width: 120, child: Text('Пароль', style: TextStyle(fontWeight: FontWeight.w600, color: textSecondary))),
-          Expanded(
-            child: Row(
-              children: [
-                Text(
-                  _showPassword ? password : '••••••••••',
-                  style: TextStyle(
-                    color: Theme.of(context).colorScheme.onSurface,
-                    fontSize: 16,
-                    fontWeight: FontWeight.normal,
-                  ),
-                ),
-                IconButton(
-                  padding: EdgeInsets.zero,
-                  icon: Icon(_showPassword ? Icons.visibility_off : Icons.visibility, size: 20, color: textSecondary),
-                  tooltip: _showPassword ? 'Скрыть пароль' : 'Показать пароль',
-                  onPressed: () => setState(() => _showPassword = !_showPassword),
-                ),
-              ],
+          // Аватар с градиентом Кодикс[cite: 1]
+          Container(
+            width: 90,
+            height: 90,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: AppColors.primaryGradient,
+              boxShadow: [BoxShadow(color: AppColors.primaryPurple.withOpacity(0.3), blurRadius: 15)],
+            ),
+            child: Center(
+              child: Text(student['avatar']!, style: const TextStyle(fontSize: 36, color: Colors.white, fontWeight: FontWeight.bold)),
             ),
           ),
+          const SizedBox(height: 16),
+          Text(student['name']!, style: AppStyles.h1.copyWith(fontSize: 24)),
+          Text(student['email']!, style: AppStyles.label),
+          const SizedBox(height: 24),
+          const Divider(color: AppColors.bgLight),
+          _buildInfoItem('Телефон', student['phone']!),
+          _buildPasswordItem(student['password']!),
+          _buildInfoItem('Регистрация', student['registration_date']!),
+          _buildInfoItem('Последний вход', student['last_login']!),
+          const SizedBox(height: 16),
+          _buildStatusBadge(),
         ],
       ),
     );
   }
 
-  Widget _buildCourseCard(Map course, ThemeData theme, bool isDarkMode) {
+  Widget _buildCourseCard(Map course) {
     final isComplete = course['completed'] as bool;
     final progress = course['progress'] as int;
+    
     return Container(
-      width: 280,
-      padding: EdgeInsets.all(16),
+      width: 300,
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: theme.colorScheme.surface,
-        borderRadius: BorderRadius.circular(15),
-        border: isDarkMode ? Border.all(color: Color(0xFF30363D)) : null,
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: theme.colorScheme.primary.withAlpha(30),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Icon(course['icon'] as IconData, size: 32, color: theme.primaryColor),
-          ),
-          SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(course['name'] as String, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: theme.colorScheme.onSurface)),
-                SizedBox(height: 2),
-                Row(
-                  children: [
-                    Icon(
-                      isComplete ? Icons.check_circle : Icons.access_time,
-                      size: 16,
-                      color: isComplete ? Colors.green : Colors.amber,
-                    ),
-                    SizedBox(width: 2),
-                    Text(
-                      isComplete ? 'Завершён' : 'В процессе',
-                      style: TextStyle(color: theme.colorScheme.onSurfaceVariant),
-                    ),
-                  ],
-                ),
-                SizedBox(height: 2),
-                LinearProgressIndicator(
-                  value: progress / 100,
-                  color: isComplete ? Colors.greenAccent : theme.primaryColor,
-                  backgroundColor: theme.dividerColor,
-                  minHeight: 6,
-                ),
-                SizedBox(height: 2),
-                Text('$progress% выполнено', style: TextStyle(color: theme.colorScheme.onSurfaceVariant, fontSize: 12)),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildAchievementItem(Map event, ThemeData theme, Color secondary, bool isDarkMode) {
-    return Container(
-      margin: EdgeInsets.symmetric(vertical: 6),
-      padding: EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surface,
-        borderRadius: BorderRadius.circular(12),
-        border: isDarkMode ? Border.all(color: Color(0xFF30363D)) : null,
-      ),
-      child: Row(
-        children: [
-          Icon(Icons.emoji_events, color: theme.primaryColor),
-          SizedBox(width: 16),
-          Expanded(child: Text(event['event'] as String, style: TextStyle(fontWeight: FontWeight.w600))),
-          Text(event['date'] as String, style: TextStyle(color: secondary)),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildCertificateItem(Map cert, ThemeData theme, Color secondary, bool isDarkMode) {
-    return Container(
-      margin: EdgeInsets.symmetric(vertical: 6),
-      padding: EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surface,
-        borderRadius: BorderRadius.circular(12),
-        border: isDarkMode ? Border.all(color: Color(0xFF30363D)) : null,
-      ),
-      child: Row(
-        children: [
-          Icon(Icons.workspace_premium, color: theme.primaryColor),
-          SizedBox(width: 14),
-          Expanded(child: Text(cert['title'] as String, style: TextStyle(fontWeight: FontWeight.w600))),
-          Text(cert['date'] as String, style: TextStyle(color: secondary)),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildActivityCard(List<Map> activities, ThemeData theme, bool isDarkMode) {
-    return Container(
-      padding: EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: isDarkMode
-            ? theme.colorScheme.surface
-            : const Color.fromARGB(255, 239, 240, 241),
-        borderRadius: BorderRadius.circular(16),
-        border: isDarkMode ? Border.all(color: Color(0xFF30363D)) : null,
+        color: AppColors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppColors.bgLight),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Активность',
-            style: TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.bold,
-              color: theme.colorScheme.onSurface,
+          Row(
+            children: [
+              Icon(course['icon'] as IconData, color: AppColors.primaryPurple),
+              const SizedBox(width: 12),
+              Expanded(child: Text(course['name'] as String, style: AppStyles.body.copyWith(fontWeight: FontWeight.bold))),
+            ],
+          ),
+          const SizedBox(height: 20),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(4),
+            child: LinearProgressIndicator(
+              value: progress / 100,
+              minHeight: 8,
+              backgroundColor: AppColors.bgLight,
+              color: isComplete ? const Color(0xFF10B981) : AppColors.primaryPurple,
             ),
           ),
-          SizedBox(height: 10),
-          Expanded(
-            child: ListView.builder(
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: activities.length,
-              itemBuilder: (context, index) {
-                final item = activities[index];
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          item['title'] as String,
-                          style: TextStyle(fontWeight: FontWeight.w600, color: theme.colorScheme.onSurface),
-                        ),
-                      ),
-                      Text(
-                        item['time'] as String,
-                        style: TextStyle(color: theme.colorScheme.onSurfaceVariant),
-                      ),
-                    ],
-                  ),
-                );
-              },
+          const SizedBox(height: 10),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text('$progress% завершено', style: AppStyles.label.copyWith(fontSize: 12)),
+              if (isComplete) const Icon(Icons.check_circle_rounded, color: Color(0xFF10B981), size: 18),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildActionCard() {
+    return KodixComponents.cardContainer(
+      child: Column(
+        children: [
+          ElevatedButton.icon(
+            onPressed: () {},
+            icon: const Icon(Icons.edit_rounded, size: 18),
+            label: const Text('Редактировать профиль'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primaryPurple,
+              foregroundColor: Colors.white,
+              minimumSize: const Size(double.infinity, 50),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+          ),
+          const SizedBox(height: 12),
+          OutlinedButton.icon(
+            onPressed: () => setState(() => _isBlocked = !_isBlocked),
+            icon: Icon(_isBlocked ? Icons.lock_open_rounded : Icons.block_rounded, size: 18),
+            label: Text(_isBlocked ? 'Разблокировать' : 'Заблокировать'),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: _isBlocked ? const Color(0xFF10B981) : const Color(0xFFEF4444),
+              side: BorderSide(color: _isBlocked ? const Color(0xFF10B981) : const Color(0xFFEF4444)),
+              minimumSize: const Size(double.infinity, 50),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             ),
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildInfoItem(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(label, style: AppStyles.label),
+          Text(value, style: AppStyles.body.copyWith(fontWeight: FontWeight.w600, fontSize: 13)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPasswordItem(String password) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text('Пароль', style: AppStyles.label),
+          Row(
+            children: [
+              Text(_showPassword ? password : '••••••••', style: AppStyles.body.copyWith(fontWeight: FontWeight.bold)),
+              IconButton(
+                icon: Icon(_showPassword ? Icons.visibility_off : Icons.visibility, size: 18, color: AppColors.textGrey),
+                onPressed: () => setState(() => _showPassword = !_showPassword),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatusBadge() {
+    final color = _isBlocked ? const Color(0xFFEF4444) : const Color(0xFF10B981);
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(vertical: 10),
+      decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(12)),
+      child: Center(
+        child: Text(_isBlocked ? 'Заблокирован' : 'Активен', style: AppStyles.label.copyWith(color: color, fontWeight: FontWeight.bold)),
+      ),
+    );
+  }
+
+  Widget _buildAchievementTile(String title, String date, IconData icon) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(color: AppColors.white, borderRadius: BorderRadius.circular(16), border: Border.all(color: AppColors.bgLight)),
+      child: Row(
+        children: [
+          Icon(icon, color: AppColors.primaryPurple, size: 24),
+          const SizedBox(width: 16),
+          Expanded(child: Text(title, style: AppStyles.body.copyWith(fontWeight: FontWeight.w600))),
+          Text(date, style: AppStyles.label.copyWith(fontSize: 12)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSectionHeader(String title) {
+    return Row(
+      children: [
+        Text(title, style: AppStyles.h1.copyWith(fontSize: 22)),
+        const SizedBox(width: 16),
+        const Expanded(child: Divider(color: AppColors.bgLight)),
+      ],
     );
   }
 }

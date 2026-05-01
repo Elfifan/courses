@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../core/theme/app_components.dart'; // Подключаем ваши компоненты[cite: 1]
 import '../shared/side_panel.dart';
 import '../shared/top_bar.dart';
 import '../courses/courses_screen.dart';
@@ -22,7 +23,6 @@ class DashboardScreen extends StatefulWidget {
 
 class _DashboardScreenState extends State<DashboardScreen> {
   int _selectedIndex = 0;
-  String _selectedCourseFilter = 'Все';
   String _selectedStudentFilter = 'Все пользователи';
 
   final GlobalKey _achievementsKey = GlobalKey();
@@ -42,10 +42,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
     Icons.settings_rounded
   ];
 
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppColors.white, // Используем белый из палитры[cite: 1]
       body: Row(
         children: [
           SidePanel(
@@ -81,9 +81,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 ),
                 Expanded(
                   child: Container(
-                    color: Theme.of(context).colorScheme.background,
+                    color: AppColors.bgLight, // Светлый фон подложки[cite: 1]
                     child: Padding(
-                      padding: EdgeInsets.all(32),
+                      padding: const EdgeInsets.all(32),
                       child: _buildContent(),
                     ),
                   ),
@@ -101,9 +101,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       case 0:
         return _buildDashboard();
       case 1:
-        return CoursesScreen(
-          isDarkMode: widget.isDarkMode,
-        );
+        return CoursesScreen(isDarkMode: widget.isDarkMode);
       case 2:
         return StudentsScreen(
           selectedFilter: _selectedStudentFilter,
@@ -127,15 +125,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
               Icon(
                 _menuIcons[_selectedIndex],
                 size: 64,
-                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3),
+                color: AppColors.textGrey.withOpacity(0.3), // Серый из палитры[cite: 1]
               ),
-              SizedBox(height: 16),
+              const SizedBox(height: 16),
               Text(
                 'Раздел "${_menuItems[_selectedIndex]}" в разработке',
-                style: TextStyle(
-                  fontSize: 18,
-                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
-                ),
+                style: AppStyles.body.copyWith(color: AppColors.textGrey), // Roboto[cite: 1]
               ),
             ],
           ),
@@ -146,50 +141,36 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Widget _buildDashboard() {
     return Column(
       children: [
-        // Статистические карточки
         Row(
           children: [
-            _buildStatCard('Всего курсов', '24', Theme.of(context).primaryColor, Icons.school_rounded),
-            SizedBox(width: 20),
-            _buildStatCard('Студентов зарегистрировано', '892', Color(0xFF10B981), Icons.people_rounded),
-            SizedBox(width: 20),
-            _buildStatCard('Платных курсов', '8', Color(0xFFF59E0B), Icons.attach_money_rounded),
-            SizedBox(width: 20),
-            _buildStatCard('Общий доход', '₽347,820', Color(0xFF38BDF8), Icons.account_balance_wallet_rounded),
+            _buildStatCard('Всего курсов', '24', AppColors.primaryPurple, Icons.school_rounded), // Фиолетовый акцент[cite: 1]
+            const SizedBox(width: 20),
+            _buildStatCard('Студентов зарегистрировано', '892', const Color(0xFF10B981), Icons.people_rounded),
+            const SizedBox(width: 20),
+            _buildStatCard('Платных курсов', '8', const Color(0xFFF59E0B), Icons.attach_money_rounded),
+            const SizedBox(width: 20),
+            _buildStatCard('Общий доход', '₽347,820', const Color(0xFF38BDF8), Icons.account_balance_wallet_rounded),
           ],
         ),
-
-        SizedBox(height: 30),
-
-        // Дополнительная статистика
+        const SizedBox(height: 30),
         Row(
           children: [
-            _buildInfoCard('Средняя оценка курсов', '4.7', Icons.star_rounded, Color(0xFFEAB308)),
-            SizedBox(width: 20),
-            _buildInfoCard('Курсов в разработке', '2', Icons.autorenew, Color.fromARGB(255, 197, 113, 16)),
-            SizedBox(width: 20),
-            _buildInfoCard('Новых студентов за месяц', '+156', Icons.trending_up_rounded, Color(0xFF38BDF8)),
-            SizedBox(width: 20),
-            _buildInfoCard('Кол-во завершённых курсов', '132', Icons.school, Color.fromARGB(255, 28, 173, 60)),
+            _buildInfoCard('Средняя оценка курсов', '4.7', Icons.star_rounded, const Color(0xFFEAB308)),
+            const SizedBox(width: 20),
+            _buildInfoCard('Курсов в разработке', '2', Icons.autorenew, const Color(0xFFC57110)),
+            const SizedBox(width: 20),
+            _buildInfoCard('Новых студентов за месяц', '+156', Icons.trending_up_rounded, const Color(0xFF38BDF8)),
+            const SizedBox(width: 20),
+            _buildInfoCard('Кол-во завершённых курсов', '132', Icons.school, const Color(0xFF1CAD3C)),
           ],
         ),
-
-        SizedBox(height: 30),
-
-        // Таблицы - только последние курсы и активность
+        const SizedBox(height: 30),
         Expanded(
           child: Row(
             children: [
-              // Последние курсы
-              Expanded(
-                flex: 2,
-                child: _buildRecentCoursesCard(),
-              ),
-              SizedBox(width: 20),
-              // Активность на всю высоту
-              Expanded(
-                child: _buildActivityCard(),
-              ),
+              Expanded(flex: 2, child: _buildRecentCoursesCard()),
+              const SizedBox(width: 20),
+              Expanded(child: _buildActivityCard()),
             ],
           ),
         ),
@@ -197,15 +178,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  // Статистические карточки
   Widget _buildStatCard(String title, String value, Color color, IconData icon) {
     return Expanded(
       child: Container(
-        padding: EdgeInsets.all(24),
+        padding: const EdgeInsets.all(24),
         decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surface,
-          borderRadius: BorderRadius.circular(16),
-          border: widget.isDarkMode ? Border.all(color: Color(0xFF30363D)) : null,
+          color: AppColors.white,
+          borderRadius: AppStyles.cardRadius, // Радиус 24px[cite: 1]
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.04),
+              blurRadius: 20,
+              offset: const Offset(0, 10),
+            ),
+          ],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -213,50 +199,40 @@ class _DashboardScreenState extends State<DashboardScreen> {
             Row(
               children: [
                 Container(
-                  padding: EdgeInsets.all(12),
+                  padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
                     color: color.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Icon(icon, color: color, size: 24),
                 ),
-                Spacer(),
-                Icon(Icons.trending_up_rounded, color: Color(0xFF10B981), size: 20),
+                const Spacer(),
+                const Icon(Icons.trending_up_rounded, color: Color(0xFF10B981), size: 20),
               ],
             ),
-            SizedBox(height: 16),
-            Text(
-              value,
-              style: TextStyle(
-                fontSize: 28,
-                fontWeight: FontWeight.bold,
-                color: Theme.of(context).colorScheme.onSurface,
-              ),
-            ),
-            SizedBox(height: 4),
-            Text(
-              title,
-              style: TextStyle(
-                color: widget.isDarkMode ? Color(0xFF8B949E) : Color(0xFF64748B),
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
+            const SizedBox(height: 16),
+            Text(value, style: AppStyles.h1.copyWith(fontSize: 28)), // Roboto Bold[cite: 1]
+            const SizedBox(height: 4),
+            Text(title, style: AppStyles.label), // Roboto Grey[cite: 1]
           ],
         ),
       ),
     );
   }
 
-  // Информационные карточки
   Widget _buildInfoCard(String title, String value, IconData icon, Color color) {
     return Expanded(
       child: Container(
-        padding: EdgeInsets.all(20),
+        padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surface,
+          color: AppColors.white,
           borderRadius: BorderRadius.circular(14),
-          border: widget.isDarkMode ? Border.all(color: Color(0xFF30363D)) : null,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.03),
+              blurRadius: 10,
+            ),
+          ],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -264,33 +240,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
             Row(
               children: [
                 Container(
-                  padding: EdgeInsets.all(8),
+                  padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
                     color: color.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Icon(icon, color: color, size: 16),
                 ),
-                SizedBox(width: 8),
-                Text(
-                  value,
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Theme.of(context).colorScheme.onSurface,
-                  ),
-                ),
+                const SizedBox(width: 8),
+                Text(value, style: AppStyles.body.copyWith(fontWeight: FontWeight.bold, fontSize: 18)),
               ],
             ),
-            SizedBox(height: 8),
-            Text(
-              title,
-              style: TextStyle(
-                color: widget.isDarkMode ? Color(0xFF8B949E) : Color(0xFF64748B),
-                fontSize: 12,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
+            const SizedBox(height: 8),
+            Text(title, style: AppStyles.label.copyWith(fontSize: 12)),
           ],
         ),
       ),
@@ -299,32 +261,23 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Widget _buildRecentCoursesCard() {
     return Container(
-      padding: EdgeInsets.all(22),
+      padding: const EdgeInsets.all(22),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: widget.isDarkMode ? Border.all(color: Color(0xFF30363D)) : null,
+        color: AppColors.white,
+        borderRadius: AppStyles.cardRadius,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Последние курсы',
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.w700,
-              color: Theme.of(context).colorScheme.onSurface,
-            ),
-          ),
-          SizedBox(height: 0),
+          Text('Последние курсы', style: AppStyles.h1.copyWith(fontSize: 20)),
+          const SizedBox(height: 16),
           Expanded(
             child: ListView(
               children: [
-                _buildCourseRow('Python для начинающих', 'Активный', Color(0xFF10B981), '234 студента'),
-                _buildCourseRow('JavaScript Advanced', 'В разработке', Color(0xFFF59E0B), '0 студентов'),
-                _buildCourseRow('React.js Fundamentals', 'Активный', Color(0xFF10B981), '189 студентов'),
-                _buildCourseRow('Flutter Mobile Dev', 'Завершен', Color(0xFF6B7280), '145 студентов'),
-                _buildCourseRow('Node.js Backend', 'Активный', Color(0xFF10B981), '87 студентов'),
+                _buildCourseRow('Python для начинающих', 'Активный', const Color(0xFF10B981), '234 студента'),
+                _buildCourseRow('JavaScript Advanced', 'В разработке', const Color(0xFFF59E0B), '0 студентов'),
+                _buildCourseRow('React.js Fundamentals', 'Активный', const Color(0xFF10B981), '189 студентов'),
+                _buildCourseRow('Flutter Mobile Dev', 'Завершен', AppColors.textGrey, '145 студентов'),
               ],
             ),
           ),
@@ -335,57 +288,25 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Widget _buildCourseRow(String name, String status, Color statusColor, String students) {
     return Container(
-      padding: EdgeInsets.symmetric(vertical: 11),
-      decoration: BoxDecoration(
-        border: Border(
-          bottom: BorderSide(
-            color: widget.isDarkMode ? Color(0xFF30363D) : Color(0xFFE2E8F0),
-            width: 1,
-          ),
-        ),
+      padding: const EdgeInsets.symmetric(vertical: 11),
+      decoration: const BoxDecoration(
+        border: Border(bottom: BorderSide(color: AppColors.bgLight, width: 1)),
       ),
       child: Row(
         children: [
-          Expanded(
-            flex: 2,
-            child: Text(
-              name,
-              style: TextStyle(
-                fontWeight: FontWeight.w600,
-                color: widget.isDarkMode ? Color(0xFFE6EDF3) : Color(0xFF1E293B),
-                fontSize: 14,
-              ),
-            ),
-          ),
+          Expanded(flex: 2, child: Text(name, style: AppStyles.body.copyWith(fontWeight: FontWeight.w600))),
           Expanded(
             child: Container(
-              padding: EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
               decoration: BoxDecoration(
-                color: statusColor.withValues(alpha: 0.1),
+                color: statusColor.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(16),
               ),
-              child: Text(
-                status,
-                style: TextStyle(
-                  color: statusColor,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                ),
-                textAlign: TextAlign.center,
-              ),
+              child: Text(status, style: AppStyles.label.copyWith(color: statusColor, fontWeight: FontWeight.bold), textAlign: TextAlign.center),
             ),
           ),
-          SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              students,
-              style: TextStyle(
-                color: widget.isDarkMode ? Color(0xFF8B949E) : Color(0xFF64748B),
-                fontSize: 13,
-              ),
-              textAlign: TextAlign.right,
-            ),
-          ),
+          const SizedBox(width: 12),
+          Expanded(child: Text(students, style: AppStyles.label, textAlign: TextAlign.right)),
         ],
       ),
     );
@@ -393,35 +314,23 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Widget _buildActivityCard() {
     return Container(
-      padding: EdgeInsets.all(20),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: widget.isDarkMode ? Border.all(color: Color(0xFF30363D)) : null,
+        color: AppColors.white,
+        borderRadius: AppStyles.cardRadius,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Активность',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w700,
-              color: Theme.of(context).colorScheme.onSurface,
-            ),
-          ),
-          SizedBox(height: 16),
+          Text('Активность', style: AppStyles.h1.copyWith(fontSize: 18)),
+          const SizedBox(height: 16),
           Expanded(
             child: ListView(
               children: [
-                _buildActivityItem('Новый студент зарегистрирован', '2 мин назад', Icons.person_add_rounded, Color(0xFF10B981)),
-                _buildActivityItem('Курс Python обновлен', '15 мин назад', Icons.edit_rounded, Color(0xFF38BDF8)),
-                _buildActivityItem('Оплата получена', '1 час назад', Icons.payment_rounded, Color(0xFFF59E0B)),
-                _buildActivityItem('Новый отзыв добавлен', '3 часа назад', Icons.star_rounded, Color(0xFF9F7AEA)),
-                _buildActivityItem('Пользователь завершил курс', '4 часа назад', Icons.done_all_rounded, Color(0xFF10B981)),
-                _buildActivityItem('Новая регистрация', '6 часов назад', Icons.person_add_alt_rounded, Color(0xFF3B82F6)),
-                _buildActivityItem('Обновлен контент курса', '1 день назад', Icons.edit_note_rounded, Color(0xFF8B5CF6)),
-                _buildActivityItem('Получен новый отзыв', '2 дня назад', Icons.rate_review_rounded, Color(0xFFEC4899)),
+                _buildActivityItem('Новый студент', '2 мин назад', Icons.person_add_rounded, const Color(0xFF10B981)),
+                _buildActivityItem('Курс обновлен', '15 мин назад', Icons.edit_rounded, AppColors.primaryPurple),
+                _buildActivityItem('Оплата получена', '1 час назад', Icons.payment_rounded, const Color(0xFFF59E0B)),
+                _buildActivityItem('Отзыв добавлен', '3 часа назад', Icons.star_rounded, const Color(0xFF9F7AEA)),
               ],
             ),
           ),
@@ -432,38 +341,24 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Widget _buildActivityItem(String title, String time, IconData icon, Color color) {
     return Container(
-      padding: EdgeInsets.symmetric(vertical: 8),
+      padding: const EdgeInsets.symmetric(vertical: 8),
       child: Row(
         children: [
           Container(
-            padding: EdgeInsets.all(6),
+            padding: const EdgeInsets.all(6),
             decoration: BoxDecoration(
               color: color.withOpacity(0.1),
               borderRadius: BorderRadius.circular(6),
             ),
             child: Icon(icon, color: color, size: 14),
           ),
-          SizedBox(width: 12),
+          const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  title,
-                  style: TextStyle(
-                    fontWeight: FontWeight.w600,
-                    color: Theme.of(context).colorScheme.onSurface,
-                    fontSize: 12,
-                  ),
-                ),
-                SizedBox(height: 2),
-                Text(
-                  time,
-                  style: TextStyle(
-                    color: widget.isDarkMode ? Color(0xFF8B949E) : Color(0xFF64748B),
-                    fontSize: 10,
-                  ),
-                ),
+                Text(title, style: AppStyles.body.copyWith(fontSize: 12, fontWeight: FontWeight.w600)),
+                Text(time, style: AppStyles.label.copyWith(fontSize: 10)),
               ],
             ),
           ),

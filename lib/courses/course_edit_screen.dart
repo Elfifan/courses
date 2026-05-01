@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../core/theme/app_components.dart'; // Подключаем вашу дизайн-систему
 import '../models/database_models.dart';
 import '../services/supabase_service.dart';
 import 'course_win/course_edit_general_tab.dart';
@@ -56,7 +57,6 @@ class _CourseEditScreenState extends State<CourseEditScreen>
     }
   }
 
-  // ← НОВЫЙ МЕТОД: обновляет только данные курса без перезагрузки
   Future<void> _updateCourseData(String name, String description, double price, int complexity) async {
     if (mounted) {
       setState(() {
@@ -83,21 +83,21 @@ class _CourseEditScreenState extends State<CourseEditScreen>
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
-      return Scaffold(
-        backgroundColor: Theme.of(context).colorScheme.background,
-        body: const Center(child: CircularProgressIndicator()),
+      return const Scaffold(
+        backgroundColor: AppColors.bgLight, // Используем bgLight из компонентов
+        body: Center(child: CircularProgressIndicator(color: AppColors.primaryPurple)),
       );
     }
 
     if (_course == null) {
       return Scaffold(
-        backgroundColor: Theme.of(context).colorScheme.background,
-        body: Center(child: Text('Курс не найден')),
+        backgroundColor: AppColors.bgLight,
+        body: Center(child: Text('Курс не найден', style: AppStyles.label)),
       );
     }
 
     return Scaffold(
-      backgroundColor: Theme.of(context).colorScheme.background,
+      backgroundColor: AppColors.bgLight, // Светлый фон приложения
       body: Column(
         children: [
           _buildAdminHeader(),
@@ -109,7 +109,7 @@ class _CourseEditScreenState extends State<CourseEditScreen>
                 CourseEditGeneralTab(
                   formKey: _formKey,
                   course: _course!,
-                  onCourseUpdated: _updateCourseData,  // ← ПЕРЕДАЁМ ЭТО
+                  onCourseUpdated: _updateCourseData,
                 ),
                 CourseEditModulesTab(
                   courseId: _course!.id,
@@ -128,52 +128,50 @@ class _CourseEditScreenState extends State<CourseEditScreen>
 
   Widget _buildAdminHeader() {
     return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        border: Border(bottom: BorderSide(color: Colors.grey.withValues(alpha: 0.2))),
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+      decoration: const BoxDecoration(
+        color: AppColors.white,
+        border: Border(bottom: BorderSide(color: AppColors.bgLight, width: 2)),
       ),
       child: Row(
         children: [
           IconButton(
             onPressed: () => Navigator.pop(context, true),
-            icon: const Icon(Icons.arrow_back),
+            icon: const Icon(Icons.arrow_back_ios_new_rounded, color: AppColors.textGrey, size: 20),
           ),
           const SizedBox(width: 12),
+          // Иконка курса с градиентом Кодикс[cite: 1]
           Container(
-            width: 50,
-            height: 50,
+            width: 54,
+            height: 54,
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(12),
-              gradient: const LinearGradient(colors: [Color(0xFF667eea), Color(0xFF764ba2)]),
+              borderRadius: BorderRadius.circular(16),
+              gradient: AppColors.primaryGradient,
             ),
-            child: Center(child: Text(_course?.icon ?? '📚', style: const TextStyle(fontSize: 24))),
+            child: Center(child: Text(_course?.icon ?? '📚', style: const TextStyle(fontSize: 26))),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 16),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   _course?.name ?? 'Редактирование курса',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: Theme.of(context).colorScheme.onSurface,
-                  ),
+                  style: AppStyles.h1.copyWith(fontSize: 22), // Roboto Bold[cite: 1]
                 ),
+                const SizedBox(height: 4),
                 Row(
                   children: [
                     Text(
-                      'Номер курса: ${_course!.id}',
-                      style: TextStyle(color: Colors.grey[600], fontSize: 14),
+                      'ID: ${_course!.id}',
+                      style: AppStyles.label.copyWith(fontSize: 13),
                     ),
                     const SizedBox(width: 16),
-                    Icon(Icons.calendar_today, size: 16, color: Colors.grey[600]),
-                    const SizedBox(width: 4),
+                    const Icon(Icons.calendar_today_rounded, size: 14, color: AppColors.textGrey),
+                    const SizedBox(width: 6),
                     Text(
-                      'Создан: ${_course!.dateCreate?.toString().split(' ')[0] ?? 'N/A'}',
-                      style: TextStyle(color: Colors.grey[600], fontSize: 14),
+                      'Создан: ${_course!.dateCreate?.toString().split(' ')[0] ?? '—'}',
+                      style: AppStyles.label.copyWith(fontSize: 13),
                     ),
                   ],
                 ),
@@ -188,21 +186,20 @@ class _CourseEditScreenState extends State<CourseEditScreen>
 
   Widget _buildStatusChip() {
     final isActive = _course!.status ?? true;
-    final color = isActive ? Colors.green : Colors.orange;
+    final color = isActive ? const Color(0xFF10B981) : const Color(0xFFF59E0B);
     final label = isActive ? 'Активный' : 'Черновик';
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: color.withValues(alpha: 0.3)),
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(12),
       ),
       child: Text(
         label,
-        style: TextStyle(
+        style: AppStyles.label.copyWith(
           color: color,
-          fontWeight: FontWeight.w600,
+          fontWeight: FontWeight.bold,
           fontSize: 12,
         ),
       ),
@@ -211,28 +208,35 @@ class _CourseEditScreenState extends State<CourseEditScreen>
 
   Widget _buildTabBar() {
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-      height: 48,
+      margin: const EdgeInsets.fromLTRB(24, 20, 24, 8),
+      padding: const EdgeInsets.all(6),
       decoration: BoxDecoration(
-        color: Colors.grey.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(12),
+        color: const Color(0xFFF1F5F9), // Мягкий фон под вкладки
+        borderRadius: BorderRadius.circular(16),
       ),
       child: TabBar(
         controller: _tabController,
         dividerColor: Colors.transparent,
         indicator: BoxDecoration(
-          color: Theme.of(context).primaryColor,
+          color: AppColors.primaryPurple, // Акцентный цвет[cite: 1]
           borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.primaryPurple.withOpacity(0.3),
+              blurRadius: 8,
+              offset: const Offset(0, 4),
+            ),
+          ],
         ),
         indicatorSize: TabBarIndicatorSize.tab,
         labelColor: Colors.white,
-        unselectedLabelColor: Colors.grey[600],
-        labelStyle: const TextStyle(fontWeight: FontWeight.w600),
-        unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.normal),
+        unselectedLabelColor: AppColors.textGrey,
+        labelStyle: AppStyles.body.copyWith(fontWeight: FontWeight.bold, fontSize: 13),
+        unselectedLabelStyle: AppStyles.body.copyWith(fontSize: 13),
         tabs: const [
           Tab(text: 'Общие'),
-          Tab(text: 'Модуль'),
-          Tab(text: 'Аналитика и Пользователи'),
+          Tab(text: 'Модули'),
+          Tab(text: 'Аналитика'),
           Tab(text: 'Отзывы'),
         ],
       ),

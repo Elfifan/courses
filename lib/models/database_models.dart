@@ -1,4 +1,6 @@
 import 'dart:convert';
+import 'dart:typed_data';
+import '../repositories/achievement_repository.dart';
 
 
 class Employee {
@@ -23,7 +25,7 @@ class Employee {
   factory Employee.fromJson(Map<String, dynamic> json) {
     return Employee(
       id: json['id'] as int,
-      surname: json['surname'] as String? ,
+      surname: json['surname'] as String?,
       name: json['name'] as String?,
       patronymic: json['patronymic'] as String?,
       email: json['email'] as String?,
@@ -156,11 +158,7 @@ class TypeTask {
   }
 
   Map<String, dynamic> toJson() {
-    return {
-      'id': id,
-      'name': name,
-      'view': view,
-    };
+    return {'id': id, 'name': name, 'view': view};
   }
 }
 
@@ -300,7 +298,7 @@ class Submodule {
       'content': content,
       'lead_time': leadTime,
       'status': status,
-      'order_submodule': orderSubmodule
+      'order_submodule': orderSubmodule,
     };
   }
 }
@@ -631,7 +629,7 @@ class Achievement {
   final String name;
   final String? description;
   final bool status;
-  final List<int>? imageData;
+  final String? imageUrl; // <-- ТЕПЕРЬ ЭТО URL ИЗ STORAGE
 
   Achievement({
     required this.id,
@@ -639,41 +637,63 @@ class Achievement {
     required this.name,
     this.description,
     required this.status,
-    this.imageData,
+    this.imageUrl,
   });
 
   factory Achievement.fromJson(Map<String, dynamic> json) {
-    List<int>? imageData;
-    
-    if (json['image'] != null) {
-      try {
-        final imageValue = json['image'];
-        
-        if (imageValue is String) {
-          // Декодируем base64 строку
-          imageData = base64Decode(imageValue);
-        } else if (imageValue is List) {
-          // Если это List, приводим к List<int>
-          imageData = List<int>.from(imageValue);
-        }
-      } catch (e) {
-        print('Error decoding image: $e');
-        imageData = null;
-      }
+    // Получаем путь из БД (поле 'image')
+    final String? imagePath = json['image'] as String?;
+
+    // Преобразуем путь в полный URL через репозиторий
+    // ВАЖНО: Убедитесь, что AchievementRepository импортирован или
+    // используйте этот метод статически, как показано ниже.
+    // Чтобы избежать циклических зависимостей, можно просто хранить путь,
+    // а URL формировать на уровне UI. Но для удобства оставим так.
+    String? imageUrl;
+    try {
+      // Небольшая задержка для избежания циклического импорта на этапе анализа.
+      // Импортируйте 'achievement_repository.dart' вверху файла.
+      imageUrl = AchievementRepository.getImageUrl(imagePath);
+    } catch (e) {
+      // На случай, если что-то пойдет не так
+      imageUrl = null;
     }
-    
+
+    // Обработка даты
+    DateTime createdAt;
+    final createdAtValue = json['created_at'];
+    if (createdAtValue is String) {
+      createdAt = DateTime.tryParse(createdAtValue) ?? DateTime.now();
+    } else if (createdAtValue is DateTime) {
+      createdAt = createdAtValue;
+    } else {
+      createdAt = DateTime.now();
+    }
+
+    // Обработка статуса
+    final statusValue = json['status'];
+    final bool status = statusValue is bool
+        ? statusValue
+        : statusValue?.toString().toLowerCase() == 'true';
+
+    // Обработка ID
+    final idValue = json['id'];
+    final int id = idValue is int
+        ? idValue
+        : int.tryParse(idValue?.toString() ?? '') ?? 0;
+
     return Achievement(
-      id: json['id'] as int,
-      createdAt: json['created_at'] != null 
-        ? DateTime.parse(json['created_at'] as String)
-        : DateTime.now(),
+      id: id,
+      createdAt: createdAt,
       name: json['name'] as String? ?? 'Без названия',
       description: json['description'] as String?,
-      status: json['status'] as bool? ?? true,
-      imageData: imageData,
+      status: status,
+      imageUrl: imageUrl,
     );
   }
 
+  // toJson больше НЕ ИСПОЛЬЗУЕТСЯ для сохранения, так как сохранение теперь через File.
+  // Оставлен для возможной отладки.
   Map<String, dynamic> toJson() {
     return {
       'id': id,
@@ -681,12 +701,10 @@ class Achievement {
       'name': name,
       'description': description,
       'status': status,
-      'image': imageData != null ? base64Encode(imageData!) : null,
+      // URL не сохраняем обратно, это вычисляемое поле
     };
   }
 }
-
-
 
 class UserAchievement {
   final int id;
@@ -708,14 +726,9 @@ class UserAchievement {
   }
 
   Map<String, dynamic> toMap() {
-    return {
-      'id': id,
-      'id_user': idUser,
-      'id_achievement': idAchievement,
-    };
+    return {'id': id, 'id_user': idUser, 'id_achievement': idAchievement};
   }
 }
-
 
 class SubmoduleTest {
   final int id;
@@ -748,5 +761,3 @@ class SubmoduleTest {
     };
   }
 }
-
-

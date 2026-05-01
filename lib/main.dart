@@ -29,7 +29,7 @@ class AdminApp extends StatefulWidget {
 }
 
 class _AdminAppState extends State<AdminApp> {
-  bool isDarkMode = true;
+  bool isDarkMode = false;
   bool isLoggedIn = false;
   late final AppLinks _appLinks;
   StreamSubscription<Uri?>? _linkSub;
@@ -62,7 +62,6 @@ class _AdminAppState extends State<AdminApp> {
       }
     });
 
-    // Cold-start link
     _appLinks.getInitialLink().then((uri) {
       if (uri != null) {
         _handleDeepLink(uri);
