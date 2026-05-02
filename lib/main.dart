@@ -7,6 +7,8 @@ import 'app.dart';
 import 'auth_screen.dart';
 import 'home/dashboard_screen.dart';
 
+typedef LoginSuccessCallback = void Function(String? role, int? employeeId);
+
 
 
 void main() async {
@@ -32,6 +34,7 @@ class _AdminAppState extends State<AdminApp> {
   bool isDarkMode = false;
   bool isLoggedIn = false;
   String? employeeRole;
+  int? employeeId;
   late final AppLinks _appLinks;
   StreamSubscription<Uri?>? _linkSub;
 
@@ -41,10 +44,11 @@ class _AdminAppState extends State<AdminApp> {
     });
   }
 
-  void loginSuccess(String? role) {
+  void loginSuccess(String? role, int? id) {
     setState(() {
       isLoggedIn = true;
       employeeRole = role;
+      employeeId = id;
     });
   }
 
@@ -59,9 +63,7 @@ class _AdminAppState extends State<AdminApp> {
     super.initState();
     _appLinks = AppLinks();
     _linkSub = _appLinks.uriLinkStream.listen((uri) {
-      if (uri != null) {
-        _handleDeepLink(uri);
-      }
+      _handleDeepLink(uri);
     });
 
     _appLinks.getInitialLink().then((uri) {
@@ -105,6 +107,7 @@ class _AdminAppState extends State<AdminApp> {
                 onThemeToggle: () => toggleTheme(!isDarkMode),
                 isDarkMode: isDarkMode,
                 userRole: employeeRole,
+                userId: employeeId,
                 onLogout: logout,
               )
             : AuthScreen(

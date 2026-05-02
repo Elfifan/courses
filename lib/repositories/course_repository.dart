@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../core/theme/app_components.dart';
 
 class CourseService {
-  static void showAddCourseForm(BuildContext context) {
+  static void showAddCourseForm(BuildContext context, {required int? authorId}) {
     final nameController = TextEditingController();
     final descriptionController = TextEditingController();
     final priceController = TextEditingController();
@@ -18,22 +19,21 @@ class CourseService {
       builder: (context) => StatefulBuilder(
         builder: (context, setState) {
           return AlertDialog(
-            title: const Text('Добавить новый курс'),
+            backgroundColor: AppColors.white,
+            shape: RoundedRectangleBorder(borderRadius: AppStyles.mainRadius),
+            titlePadding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
+            contentPadding: const EdgeInsets.fromLTRB(24, 16, 24, 0),
+            actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+            title: Text('Добавить новый курс', style: AppStyles.h1.copyWith(fontSize: 20)),
             content: SingleChildScrollView(
               child: Form(
                 key: formKey,
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    // Выбор эмодзи
-                    Container(
-                      alignment: Alignment.centerLeft,
-                      margin: const EdgeInsets.only(bottom: 12),
-                      child: const Text(
-                        'Выберите иконку:',
-                        style: TextStyle(fontWeight: FontWeight.w600),
-                      ),
-                    ),
+                    Text('Выберите иконку', style: AppStyles.label.copyWith(fontWeight: FontWeight.w700)),
+                    const SizedBox(height: 12),
                     Wrap(
                       spacing: 8,
                       runSpacing: 8,
@@ -46,40 +46,31 @@ class CourseService {
                             });
                           },
                           child: Container(
-                            padding: const EdgeInsets.all(8),
+                            width: 52,
+                            height: 52,
+                            alignment: Alignment.center,
                             decoration: BoxDecoration(
-                              color: isSelected
-                                  ? Colors.blueAccent.withValues(alpha: 0.3)
-                                  : Colors.transparent,
-                              border: isSelected
-                                  ? Border.all(color: Colors.blue, width: 2)
-                                  : Border.all(color: Colors.grey, width: 1),
-                              borderRadius: BorderRadius.circular(8),
+                              color: isSelected ? AppColors.primaryPurple.withValues(alpha: 0.15) : AppColors.bgLight,
+                              border: Border.all(
+                                color: isSelected ? AppColors.primaryPurple : AppColors.bgLight,
+                                width: 2,
+                              ),
+                              borderRadius: BorderRadius.circular(14),
                             ),
-                            child: Text(
-                              emoji,
-                              style: const TextStyle(fontSize: 32),
-                            ),
+                            child: Text(emoji, style: const TextStyle(fontSize: 28)),
                           ),
                         );
                       }).toList(),
                     ),
                     const SizedBox(height: 20),
-
-                    // Название курса
                     TextFormField(
                       controller: nameController,
-                      decoration: const InputDecoration(
-                        labelText: 'Название курса *',
-                        border: OutlineInputBorder(),
-                      ),
+                      decoration: KodixComponents.textFieldDecoration(hintText: 'Название курса *', prefixIcon: Icons.menu_book_outlined),
                       validator: (v) {
                         if (v == null || v.isEmpty) {
                           return 'Введите название';
                         }
-                        // Проверяем, что название не состоит только из знаков препинания и специальных символов
                         final trimmed = v.trim();
-                        // Регулярное выражение: если после удаления всех не-буквенно-цифровых символов остается пустая строка
                         final alphanumericOnly = RegExp(r'[a-zA-Zа-яА-Я0-9]').hasMatch(trimmed);
                         if (!alphanumericOnly) {
                           return 'Название должно содержать хотя бы одну букву или цифру';
@@ -88,26 +79,16 @@ class CourseService {
                       },
                     ),
                     const SizedBox(height: 12),
-
-                    // Описание
                     TextFormField(
                       controller: descriptionController,
-                      decoration: const InputDecoration(
-                        labelText: 'Описание',
-                        border: OutlineInputBorder(),
-                      ),
+                      decoration: KodixComponents.textFieldDecoration(hintText: 'Описание курса', prefixIcon: Icons.description_outlined),
                       minLines: 3,
                       maxLines: 5,
                     ),
                     const SizedBox(height: 12),
-
-                    // Цена
                     TextFormField(
                       controller: priceController,
-                      decoration: const InputDecoration(
-                        labelText: 'Цена (₽)',
-                        border: OutlineInputBorder(),
-                      ),
+                      decoration: KodixComponents.textFieldDecoration(hintText: 'Цена (₽)', prefixIcon: Icons.attach_money_outlined),
                       keyboardType: TextInputType.number,
                       validator: (v) {
                         if (v != null && v.isNotEmpty && double.tryParse(v) == null) {
@@ -117,14 +98,9 @@ class CourseService {
                       },
                     ),
                     const SizedBox(height: 12),
-
-                    // Сложность
                     TextFormField(
                       controller: complexityController,
-                      decoration: const InputDecoration(
-                        labelText: 'Сложность (1-5)',
-                        border: OutlineInputBorder(),
-                      ),
+                      decoration: KodixComponents.textFieldDecoration(hintText: 'Сложность (1-5)', prefixIcon: Icons.bar_chart_outlined),
                       keyboardType: TextInputType.number,
                       validator: (v) {
                         if (v == null || v.isEmpty) {
@@ -144,45 +120,63 @@ class CourseService {
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(context),
+                style: TextButton.styleFrom(
+                  foregroundColor: AppColors.primaryPurple,
+                  textStyle: AppStyles.body.copyWith(fontWeight: FontWeight.w700),
+                ),
                 child: const Text('Отмена'),
               ),
-              ElevatedButton(
-                onPressed: () async {
-                  if (formKey.currentState!.validate()) {
-                    try {
-                      await Supabase.instance.client
-                          .from('courses')
-                          .insert({
-                            'id_employee': 1, // Замени на реальный ID
-                            'name': nameController.text.trim(),
-                            'description': descriptionController.text.trim(),
-                            'date_create': DateTime.now().toIso8601String(),
-                            'price': double.tryParse(priceController.text) ?? 0.0,
-                            'complexity': int.parse(complexityController.text),
-                            'status': true,
-                            'icon': selectedEmoji, // Сохраняем эмодзи как текст
-                          });
+              SizedBox(
+                width: 140,
+                child: KodixComponents.primaryButton(
+                  text: 'Добавить',
+                  onTap: () async {
+                    if (formKey.currentState!.validate()) {
+                      if (authorId == null) {
+                        final scaffold = ScaffoldMessenger.of(context);
+                        scaffold.showSnackBar(
+                          const SnackBar(content: Text('Не удалось определить автора курса')),
+                        );
+                        return;
+                      }
 
-                      Navigator.pop(context);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text('Курс "${nameController.text}" успешно добавлен'),
-                          backgroundColor: Colors.green,
-                        ),
-                      );
-                    } catch (e) {
-                      Navigator.pop(context);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text('Ошибка при сохранении: $e'),
-                          backgroundColor: Colors.red,
-                        ),
-                      );
-                      print('Ошибка: $e');
+                      final navigator = Navigator.of(context);
+                      final scaffold = ScaffoldMessenger.of(context);
+
+                      try {
+                        await Supabase.instance.client
+                            .from('courses')
+                            .insert({
+                              'id_employee': authorId,
+                              'name': nameController.text.trim(),
+                              'description': descriptionController.text.trim(),
+                              'date_create': DateTime.now().toIso8601String(),
+                              'price': double.tryParse(priceController.text) ?? 0.0,
+                              'complexity': int.parse(complexityController.text),
+                              'status': true,
+                              'icon': selectedEmoji,
+                            });
+
+                        navigator.pop();
+                        scaffold.showSnackBar(
+                          SnackBar(
+                            content: Text('Курс "${nameController.text}" успешно добавлен'),
+                            backgroundColor: Colors.green,
+                          ),
+                        );
+                      } catch (e) {
+                        navigator.pop();
+                        scaffold.showSnackBar(
+                          SnackBar(
+                            content: Text('Ошибка при сохранении: $e'),
+                            backgroundColor: Colors.red,
+                          ),
+                        );
+                        debugPrint('Ошибка: $e');
+                      }
                     }
-                  }
-                },
-                child: const Text('Добавить'),
+                  },
+                ),
               ),
             ],
           );

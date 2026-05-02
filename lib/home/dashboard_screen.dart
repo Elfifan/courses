@@ -11,6 +11,7 @@ class DashboardScreen extends StatefulWidget {
   final VoidCallback onThemeToggle;
   final bool isDarkMode;
   final String? userRole;
+  final int? userId;
   final VoidCallback onLogout;
 
   const DashboardScreen({
@@ -18,10 +19,12 @@ class DashboardScreen extends StatefulWidget {
     required this.onThemeToggle,
     required this.isDarkMode,
     required this.userRole,
+    required this.userId,
     required this.onLogout,
   });
 
   @override
+  // ignore: library_private_types_in_public_api
   _DashboardScreenState createState() => _DashboardScreenState();
 }
 
@@ -74,7 +77,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   menuItems: _menuItems,
                   onAddCourse: () {
                     if (_menuItems[_selectedIndex] == 'Курсы') {
-                      CourseService.showAddCourseForm(context);
+                      CourseService.showAddCourseForm(context, authorId: widget.userId);
                     }
                   },
                   onAddAchievement: () {
@@ -103,14 +106,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Widget _buildContent() {
     if (_isAuthor) {
-      return CoursesScreen(isDarkMode: widget.isDarkMode);
+      return CoursesScreen(isDarkMode: widget.isDarkMode, authorId: widget.userId);
     }
 
     switch (_selectedIndex) {
       case 0:
         return _buildDashboard();
       case 1:
-        return CoursesScreen(isDarkMode: widget.isDarkMode);
+        return CoursesScreen(isDarkMode: widget.isDarkMode, authorId: null);
       case 2:
         return StudentsScreen(
           selectedFilter: _selectedStudentFilter,

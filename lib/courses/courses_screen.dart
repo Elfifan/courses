@@ -7,10 +7,12 @@ import '../courses/course_edit_screen.dart';
 
 class CoursesScreen extends StatefulWidget {
   final bool isDarkMode;
+  final int? authorId;
 
-  const CoursesScreen({super.key, required this.isDarkMode});
+  const CoursesScreen({super.key, required this.isDarkMode, this.authorId});
 
   @override
+  // ignore: library_private_types_in_public_api
   _CoursesScreenState createState() => _CoursesScreenState();
 }
 
@@ -39,10 +41,10 @@ class _CoursesScreenState extends State<CoursesScreen> {
     if (!mounted) return;
     setState(() => _isLoading = true);
     try {
-      final data = await SupabaseService.client
-          .from('courses')
-          .select()
-          .order('date_create', ascending: false);
+      final query = SupabaseService.client.from('courses').select();
+      final data = await (widget.authorId != null
+          ? query.eq('id_employee', widget.authorId!).order('date_create', ascending: false)
+          : query.order('date_create', ascending: false));
       
       if (mounted) {
         setState(() {
@@ -208,13 +210,13 @@ class _CoursesScreenState extends State<CoursesScreen> {
                           const SizedBox(width: 12),
                           _buildBadge(
                             _getComplexityLabel(course.complexity ?? 1),
-                            _getComplexityColor(course.complexity).withOpacity(0.1),
+                            _getComplexityColor(course.complexity).withValues(alpha: 0.1),
                             _getComplexityColor(course.complexity),
                           ),
                           const SizedBox(width: 8),
                           _buildBadge(
                             course.status == true ? 'Активный' : 'Черновик',
-                            (course.status == true ? Colors.green : Colors.orange).withOpacity(0.1),
+                            (course.status == true ? Colors.green : Colors.orange).withValues(alpha: 0.1),
                             course.status == true ? Colors.green : Colors.orange,
                           ),
                         ],

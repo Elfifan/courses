@@ -5,8 +5,10 @@ import '../core/theme/app_components.dart';
 import '../services/email_service.dart';
 import '../repositories/password_recovery_repository.dart';
 
+typedef LoginSuccessCallback = void Function(String? role, int? employeeId);
+
 class AuthScreen extends StatefulWidget {
-  final ValueChanged<String?> onLoginSuccess;
+  final LoginSuccessCallback onLoginSuccess;
   final bool isDarkMode;
   final ValueChanged<bool> onToggleTheme;
 
@@ -47,7 +49,7 @@ class _AuthScreenState extends State<AuthScreen> {
         } else {
           if (response['password'] == _passwordController.text &&
               response['status'] == true) {
-            widget.onLoginSuccess(response['role'] as String?);
+            widget.onLoginSuccess(response['role'] as String?, response['id'] as int?);
           } else {
             _showSnackBar('Неверный логин или пароль');
           }
