@@ -4,8 +4,9 @@ import '../../services/supabase_service.dart';
 
 class CourseEditReviewsTab extends StatefulWidget {
   final int courseId;
+  final bool readOnly;
 
-  const CourseEditReviewsTab({super.key, required this.courseId});
+  const CourseEditReviewsTab({super.key, required this.courseId, this.readOnly = false});
 
   @override
   State<CourseEditReviewsTab> createState() => _CourseEditReviewsTabState();
@@ -411,7 +412,7 @@ class _CourseEditReviewsTabState extends State<CourseEditReviewsTab> {
                 ),
               ),
             // Кнопка "Ответить" или поле ввода
-            if (response == null) ...[
+            if (response == null && !widget.readOnly) ...[
               const SizedBox(height: 12),
               if (!isExpanded)
                 Align(

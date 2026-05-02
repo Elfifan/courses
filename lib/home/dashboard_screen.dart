@@ -106,14 +106,24 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Widget _buildContent() {
     if (_isAuthor) {
-      return CoursesScreen(isDarkMode: widget.isDarkMode, authorId: widget.userId);
+      return CoursesScreen(
+        isDarkMode: widget.isDarkMode,
+        authorId: widget.userId,
+        userRole: widget.userRole,
+        userId: widget.userId,
+      );
     }
 
     switch (_selectedIndex) {
       case 0:
         return _buildDashboard();
       case 1:
-        return CoursesScreen(isDarkMode: widget.isDarkMode, authorId: null);
+        return CoursesScreen(
+          isDarkMode: widget.isDarkMode,
+          authorId: null,
+          userRole: widget.userRole,
+          userId: widget.userId,
+        );
       case 2:
         return StudentsScreen(
           selectedFilter: _selectedStudentFilter,

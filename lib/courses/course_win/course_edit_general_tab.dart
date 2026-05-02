@@ -6,13 +6,15 @@ import '../../services/supabase_service.dart';
 class CourseEditGeneralTab extends StatefulWidget {
   final GlobalKey<FormState> formKey;
   final Course course;
-  final Function(String, String, double, int) onCourseUpdated;  // ← ИЗМЕНЕНО
+  final Function(String, String, double, int) onCourseUpdated;
+  final bool readOnly;
 
   const CourseEditGeneralTab({
     super.key,
     required this.formKey,
     required this.course,
     required this.onCourseUpdated,
+    this.readOnly = false,
   });
 
   @override
@@ -124,6 +126,7 @@ class _CourseEditGeneralTabState extends State<CourseEditGeneralTab> {
               const SizedBox(height: 8),
               TextFormField(
                 controller: _titleController,
+                enabled: !widget.readOnly,
                 decoration: KodixComponents.textFieldDecoration(hintText: 'Введите название курса', prefixIcon: Icons.book),
                 validator: (val) => val?.isEmpty == true ? 'Поле обязательно' : null,
               ),
@@ -134,6 +137,7 @@ class _CourseEditGeneralTabState extends State<CourseEditGeneralTab> {
               const SizedBox(height: 8),
               TextFormField(
                 controller: _descriptionController,
+                enabled: !widget.readOnly,
                 maxLines: 5,
                 decoration: KodixComponents.textFieldDecoration(hintText: 'Введите описание курса', prefixIcon: Icons.description),
               ),
@@ -144,6 +148,7 @@ class _CourseEditGeneralTabState extends State<CourseEditGeneralTab> {
               const SizedBox(height: 8),
               TextFormField(
                 controller: _priceController,
+                enabled: !widget.readOnly,
                 keyboardType: TextInputType.number,
                 decoration: KodixComponents.textFieldDecoration(hintText: 'Введите цену', prefixIcon: Icons.attach_money),
               ),
@@ -161,7 +166,7 @@ class _CourseEditGeneralTabState extends State<CourseEditGeneralTab> {
                     child: Text(entry.value),
                   );
                 }).toList(),
-                onChanged: (value) {
+                onChanged: widget.readOnly ? null : (value) {
                   if (value != null) {
                     setState(() => _selectedComplexity = value);
                   }
@@ -170,19 +175,20 @@ class _CourseEditGeneralTabState extends State<CourseEditGeneralTab> {
               const SizedBox(height: 30),
 
               // Кнопка сохранения
-              SizedBox(
-                width: double.infinity,
-                child: KodixComponents.primaryButton(
-                  onPressed: _isSaving ? null : _saveCourse,
-                  child: _isSaving
-                      ? const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                        )
-                      : const Text('Сохранить'),
+              if (!widget.readOnly)
+                SizedBox(
+                  width: double.infinity,
+                  child: KodixComponents.primaryButton(
+                    onPressed: _isSaving ? null : _saveCourse,
+                    child: _isSaving
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                          )
+                        : const Text('Сохранить'),
+                  ),
                 ),
-              ),
             ],
           ),
         ),

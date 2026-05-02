@@ -9,12 +9,14 @@ class CourseEditModulesTab extends StatefulWidget {
   final int courseId;
   final String courseName;
   final String courseIcon;
+  final bool readOnly;
 
   const CourseEditModulesTab({
     super.key,
     required this.courseId,
     required this.courseName,
     required this.courseIcon,
+    this.readOnly = false,
   });
 
   @override
@@ -118,11 +120,12 @@ class _CourseEditModulesTabState extends State<CourseEditModulesTab> {
                 ),
               ),
               const SizedBox(width: 16),
-              ElevatedButton.icon(
-                onPressed: () => _showAddModuleDialog(),
-                icon: const Icon(Icons.add),
-                label: const Text('Добавить модуль'),
-              ),
+              if (!widget.readOnly)
+                ElevatedButton.icon(
+                  onPressed: () => _showAddModuleDialog(),
+                  icon: const Icon(Icons.add),
+                  label: const Text('Добавить модуль'),
+                ),
             ],
           ),
           const SizedBox(height: 16),
@@ -187,40 +190,42 @@ class _CourseEditModulesTabState extends State<CourseEditModulesTab> {
                     ),
                   ),
                 ),
-                PopupMenuButton<String>(
-                  onSelected: (value) {
-                    if (value == 'delete') {
-                      _deleteModule(module.id);
-                    }
-                  },
-                  itemBuilder: (ctx) => [
-                    const PopupMenuItem(
-                      value: 'delete',
-                      child: Row(
-                        children: [
-                          Icon(Icons.delete, color: Colors.red, size: 18),
-                          SizedBox(width: 8),
-                          Text('Удалить', style: TextStyle(color: Colors.red)),
-                        ],
+                if (!widget.readOnly)
+                  PopupMenuButton<String>(
+                    onSelected: (value) {
+                      if (value == 'delete') {
+                        _deleteModule(module.id);
+                      }
+                    },
+                    itemBuilder: (ctx) => [
+                      const PopupMenuItem(
+                        value: 'delete',
+                        child: Row(
+                          children: [
+                            Icon(Icons.delete, color: Colors.red, size: 18),
+                            SizedBox(width: 8),
+                            Text('Удалить', style: TextStyle(color: Colors.red)),
+                          ],
+                        ),
                       ),
-                    ),
-                  ],
-                ),
+                    ],
+                  ),
               ],
             ),
             // ← НОВОЕ: Контент отображается только если развернуто
             if (isExpanded) ...[
               const SizedBox(height: 12),
-              Row(
-                children: [
-                  OutlinedButton.icon(
-                    onPressed: () => _showAddTheoryDialog(module.id),
-                    icon: const Icon(Icons.menu_book, size: 18),
-                    label: const Text('Добавить теорию'),
-                  ),
-                  // ← Убрали кнопку "Добавить задание"
-                ],
-              ),
+              if (!widget.readOnly)
+                Row(
+                  children: [
+                    OutlinedButton.icon(
+                      onPressed: () => _showAddTheoryDialog(module.id),
+                      icon: const Icon(Icons.menu_book, size: 18),
+                      label: const Text('Добавить теорию'),
+                    ),
+                    // ← Убрали кнопку "Добавить задание"
+                  ],
+                ),
               const SizedBox(height: 12),
               if (submodules.isEmpty)
                 Text(
@@ -340,38 +345,39 @@ class _CourseEditModulesTabState extends State<CourseEditModulesTab> {
                     ],
                   ),
                 ),
-                PopupMenuButton<String>(
-                  icon: const Icon(Icons.more_vert, size: 20),
-                  onSelected: (value) {
-                    if (value == 'delete') {
-                      _deleteSubmodule(submodule.id, moduleId);
-                    } else if (value == 'add_test') {
-                      _showAddTestDialog(submodule.id);
-                    }
-                  },
-                  itemBuilder: (ctx) => [
-                    const PopupMenuItem(
-                      value: 'add_test',
-                      child: Row(
-                        children: [
-                          Icon(Icons.quiz, size: 18),
-                          SizedBox(width: 8),
-                          Text('Добавить тест'),
-                        ],
+                if (!widget.readOnly)
+                  PopupMenuButton<String>(
+                    icon: const Icon(Icons.more_vert, size: 20),
+                    onSelected: (value) {
+                      if (value == 'delete') {
+                        _deleteSubmodule(submodule.id, moduleId);
+                      } else if (value == 'add_test') {
+                        _showAddTestDialog(submodule.id);
+                      }
+                    },
+                    itemBuilder: (ctx) => [
+                      const PopupMenuItem(
+                        value: 'add_test',
+                        child: Row(
+                          children: [
+                            Icon(Icons.quiz, size: 18),
+                            SizedBox(width: 8),
+                            Text('Добавить тест'),
+                          ],
+                        ),
                       ),
-                    ),
-                    const PopupMenuItem(
-                      value: 'delete',
-                      child: Row(
-                        children: [
-                          Icon(Icons.delete, color: Colors.red, size: 18),
-                          SizedBox(width: 8),
-                          Text('Удалить', style: TextStyle(color: Colors.red)),
-                        ],
+                      const PopupMenuItem(
+                        value: 'delete',
+                        child: Row(
+                          children: [
+                            Icon(Icons.delete, color: Colors.red, size: 18),
+                            SizedBox(width: 8),
+                            Text('Удалить', style: TextStyle(color: Colors.red)),
+                          ],
+                        ),
                       ),
-                    ),
-                  ],
-                ),
+                    ],
+                  ),
               ],
             ),
           ),
@@ -393,7 +399,7 @@ class _CourseEditModulesTabState extends State<CourseEditModulesTab> {
                 const SizedBox(height: 8),
                 ...tests.map(
                   (test) => GestureDetector(
-                    onTap: () => _showEditTestDialog(
+                    onTap: widget.readOnly ? null : () => _showEditTestDialog(
                       test,
                       submodule.id,
                     ), // ← НОВОЕ: редактирование
@@ -434,15 +440,16 @@ class _CourseEditModulesTabState extends State<CourseEditModulesTab> {
                               ],
                             ),
                           ),
-                          PopupMenuButton(
-                            itemBuilder: (ctx) => [
-                              PopupMenuItem(
-                                child: const Text('Удалить'),
-                                onTap: () => _deleteTest(test.id, submodule.id),
-                              ),
-                            ],
-                            icon: const Icon(Icons.more_vert, size: 16),
-                          ),
+                          if (!widget.readOnly)
+                            PopupMenuButton(
+                              itemBuilder: (ctx) => [
+                                PopupMenuItem(
+                                  child: const Text('Удалить'),
+                                  onTap: () => _deleteTest(test.id, submodule.id),
+                                ),
+                              ],
+                              icon: const Icon(Icons.more_vert, size: 16),
+                            ),
                         ],
                       ),
                     ),

@@ -219,6 +219,49 @@ class Course {
   }
 }
 
+// Модель лога модерации курса (таблица course_moderation_logs)
+class CourseModerationLog {
+  final int id;
+  final int? idCourses;
+  final int? idAdmin;
+  final String? comment;
+  final String? statusAssigned;
+  final DateTime? createdAt;
+
+  CourseModerationLog({
+    required this.id,
+    this.idCourses,
+    this.idAdmin,
+    this.comment,
+    this.statusAssigned,
+    this.createdAt,
+  });
+
+  factory CourseModerationLog.fromJson(Map<String, dynamic> json) {
+    return CourseModerationLog(
+      id: json['id'] as int,
+      idCourses: json['id_courses'] as int?,
+      idAdmin: json['id_admin'] as int?,
+      comment: json['comment'] as String?,
+      statusAssigned: json['status_assigned'] as String?,
+      createdAt: json['created_at'] != null
+          ? DateTime.parse(json['created_at'] as String)
+          : null,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'id_courses': idCourses,
+      'id_admin': idAdmin,
+      'comment': comment,
+      'status_assigned': statusAssigned,
+      'created_at': createdAt?.toIso8601String(),
+    };
+  }
+}
+
 // Модель модуля (таблица module)
 class Module {
   final int id;

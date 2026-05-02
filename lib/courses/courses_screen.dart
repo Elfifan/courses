@@ -8,8 +8,10 @@ import '../courses/course_edit_screen.dart';
 class CoursesScreen extends StatefulWidget {
   final bool isDarkMode;
   final int? authorId;
+  final String? userRole;
+  final int? userId;
 
-  const CoursesScreen({super.key, required this.isDarkMode, this.authorId});
+  const CoursesScreen({super.key, required this.isDarkMode, this.authorId, this.userRole, this.userId});
 
   @override
   // ignore: library_private_types_in_public_api
@@ -170,7 +172,13 @@ class _CoursesScreenState extends State<CoursesScreen> {
           onTap: () async {
             final updated = await Navigator.push<bool>(
               context,
-              MaterialPageRoute(builder: (_) => CourseEditScreen(courseId: course.id)),
+              MaterialPageRoute(
+                builder: (_) => CourseEditScreen(
+                  courseId: course.id,
+                  userRole: widget.userRole,
+                  userId: widget.userId,
+                ),
+              ),
             );
             if (updated == true) _loadCourses();
           },

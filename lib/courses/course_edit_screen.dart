@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../core/theme/app_components.dart'; // Подключаем вашу дизайн-систему
 import '../models/database_models.dart';
+import '../repositories/course_moderation_repository.dart';
 import '../services/supabase_service.dart';
 import 'course_win/course_edit_general_tab.dart';
 import 'course_win/course_edit_modules_tab.dart';
@@ -9,8 +10,15 @@ import 'course_win/course_edit_reviews_tab.dart';
 
 class CourseEditScreen extends StatefulWidget {
   final int courseId;
+  final String? userRole;
+  final int? userId;
 
-  const CourseEditScreen({super.key, required this.courseId});
+  const CourseEditScreen({
+    super.key,
+    required this.courseId,
+    this.userRole,
+    this.userId,
+  });
 
   @override
   _CourseEditScreenState createState() => _CourseEditScreenState();
@@ -74,6 +82,144 @@ class _CourseEditScreenState extends State<CourseEditScreen>
     }
   }
 
+  bool get _isAdmin => widget.userRole?.toLowerCase() == 'администратор';
+
+  /// Изменить статус курса (только для администратора)
+  Future<void> _changeStatusWithComment(String newStatus) async {
+    if (!_isAdmin || widget.userId == null) return;
+
+    if (newStatus == 'Отклонено') {
+      _showRejectionDialog(newStatus);
+      return;
+    }
+
+    await _saveModerationLog(newStatus);
+  }
+
+  void _showRejectionDialog(String status) {
+    final commentController = TextEditingController();
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: AppColors.white,
+        shape: RoundedRectangleBorder(borderRadius: AppStyles.cardRadius),
+        title: Text('Отклонить курс', style: AppStyles.h1),
+        content: SizedBox(
+          width: 400,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Причина отклонения',
+                style: AppStyles.label.copyWith(fontWeight: FontWeight.w600),
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: commentController,
+                maxLines: 5,
+                decoration: KodixComponents.textFieldDecoration(
+                  hintText: 'Укажите причину отклонения...',
+                ),
+                style: AppStyles.body,
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: Text('Отмена', style: AppStyles.label.copyWith(color: AppColors.textGrey)),
+          ),
+          KodixComponents.primaryButton(
+            onPressed: () {
+              final comment = commentController.text.trim();
+              if (comment.isEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Укажите причину отклонения курса')),
+                );
+                return;
+              }
+              Navigator.pop(dialogContext);
+              _saveModerationLog(status, comment: comment);
+            },
+            child: const Text('Отклонить'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _saveModerationLog(String newStatus, {String? comment}) async {
+    if (!mounted || _course == null || widget.userId == null) return;
+
+    try {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Row(
+            children: [
+              SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                ),
+              ),
+              SizedBox(width: 12),
+              Text('Изменение статуса...'),
+            ],
+          ),
+          backgroundColor: AppColors.primaryPurple,
+          duration: Duration(seconds: 30),
+        ),
+      );
+
+      await CourseModerationRepository.setCourseModerationStatus(
+        courseId: _course!.id,
+        adminId: widget.userId!,
+        newStatus: newStatus,
+        comment: comment,
+      );
+
+      if (mounted) {
+        setState(() {
+          _course = Course(
+            id: _course!.id,
+            name: _course!.name,
+            description: _course!.description,
+            price: _course!.price,
+            complexity: _course!.complexity,
+            icon: _course!.icon,
+            status: newStatus,
+            dateCreate: _course!.dateCreate,
+          );
+        });
+
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Статус изменён на "$newStatus"'),
+            backgroundColor: Colors.green,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Ошибка: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
   @override
   void dispose() {
     _tabController.dispose();
@@ -110,14 +256,16 @@ class _CourseEditScreenState extends State<CourseEditScreen>
                   formKey: _formKey,
                   course: _course!,
                   onCourseUpdated: _updateCourseData,
+                  readOnly: _isAdmin,
                 ),
                 CourseEditModulesTab(
                   courseId: _course!.id,
                   courseName: _course!.name ?? '',
                   courseIcon: _course!.icon ?? '',
+                  readOnly: _isAdmin,
                 ),
                 const CourseEditAnalyticsStudentsTab(),
-                CourseEditReviewsTab(courseId: _course!.id),
+                CourseEditReviewsTab(courseId: _course!.id, readOnly: _isAdmin),
               ],
             ),
           ),
@@ -178,7 +326,10 @@ class _CourseEditScreenState extends State<CourseEditScreen>
               ],
             ),
           ),
-          _buildStatusChip(),
+          if (_isAdmin)
+            _buildAdminStatusButtons()
+          else
+            _buildStatusChip(),
         ],
       ),
     );
@@ -205,6 +356,54 @@ class _CourseEditScreenState extends State<CourseEditScreen>
       ),
     );
   }
+
+/// Кнопки для администратора для смены статуса
+Widget _buildAdminStatusButtons() {
+  final currentStatus = _course!.status ?? 'На проверке';
+  const statuses = ['Активный', 'На проверке', 'Отклонено'];
+
+  return Row(
+    mainAxisSize: MainAxisSize.min,
+    children: statuses.map((status) {
+      final isActive = currentStatus == status;
+      return Padding(
+        padding: const EdgeInsets.only(left: 10),
+        child: OutlinedButton(
+          onPressed: isActive ? null : () => _changeStatusWithComment(status),
+          style: OutlinedButton.styleFrom(
+            backgroundColor: isActive 
+                ? AppColors.primaryPurple 
+                : Colors.transparent,
+            foregroundColor: isActive 
+                ? Colors.white 
+                : AppColors.primaryPurple,
+            side: BorderSide(
+              color: isActive 
+                  ? AppColors.primaryPurple 
+                  : AppColors.primaryPurple.withOpacity(0.5),
+              width: 1.5,
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            // Отключаем стандартные эффекты наведения/нажатия для заблокированной кнопки
+            disabledBackgroundColor: AppColors.primaryPurple,
+            disabledForegroundColor: Colors.white,
+          ),
+          child: Text(
+            status,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: isActive ? Colors.white : AppColors.primaryPurple,
+            ),
+          ),
+        ),
+      );
+    }).toList(),
+  );
+}
 
   Widget _buildTabBar() {
     return Container(
