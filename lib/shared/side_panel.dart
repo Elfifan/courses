@@ -7,6 +7,7 @@ class SidePanel extends StatelessWidget {
   final bool isDarkMode;
   final List<String> menuItems;
   final List<IconData> menuIcons;
+  final VoidCallback onLogout;
 
   const SidePanel({
     super.key,
@@ -15,6 +16,7 @@ class SidePanel extends StatelessWidget {
     required this.isDarkMode,
     required this.menuItems,
     required this.menuIcons,
+    required this.onLogout,
   });
 
   @override
@@ -111,38 +113,62 @@ class SidePanel extends StatelessWidget {
           Container(
             margin: EdgeInsets.all(16),
             padding: EdgeInsets.all(16),
-            child: Row(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
               children: [
-                CircleAvatar(
-                  backgroundColor: Theme.of(context).primaryColor,
-                  radius: 20,
-                  child: Text('А',
-                      style: TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16)),
+                Row(
+                  children: [
+                    CircleAvatar(
+                      backgroundColor: Theme.of(context).primaryColor,
+                      radius: 20,
+                      child: Text('А',
+                          style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16)),
+                    ),
+                    SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            'Админ Иванов',
+                            style: TextStyle(
+                                color: Theme.of(context).sidePanelTextColor,
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600),
+                          ),
+                          SizedBox(height: 2),
+                          Text(
+                            'Администратор',
+                            style: TextStyle(
+                                color: Theme.of(context).sidePanelTextSecondaryColor,
+                                fontSize: 12),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
-                SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        'Админ Иванов',
-                        style: TextStyle(
-                            color: Theme.of(context).sidePanelTextColor,
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600),
+                SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  child: TextButton.icon(
+                    onPressed: () => _showLogoutDialog(context),
+                    icon: Icon(Icons.logout, color: Theme.of(context).sidePanelTextSecondaryColor, size: 18),
+                    label: Text(
+                      'Выйти',
+                      style: TextStyle(
+                        color: Theme.of(context).sidePanelTextSecondaryColor,
+                        fontSize: 14,
                       ),
-                      SizedBox(height: 2),
-                      Text(
-                        'Администратор',
-                        style: TextStyle(
-                            color: Theme.of(context).sidePanelTextSecondaryColor,
-                            fontSize: 12),
-                      ),
-                    ],
+                    ),
+                    style: TextButton.styleFrom(
+                      padding: EdgeInsets.symmetric(vertical: 8),
+                      alignment: Alignment.centerLeft,
+                    ),
                   ),
                 ),
               ],
@@ -150,6 +176,31 @@ class SidePanel extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+
+  void _showLogoutDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('Подтверждение выхода'),
+          content: Text('Вы уверены, что хотите выйти из системы?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: Text('Нет'),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                onLogout();
+              },
+              child: Text('Да'),
+            ),
+          ],
+        );
+      },
     );
   }
 }

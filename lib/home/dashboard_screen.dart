@@ -10,11 +10,15 @@ import '../repositories/course_repository.dart';
 class DashboardScreen extends StatefulWidget {
   final VoidCallback onThemeToggle;
   final bool isDarkMode;
+  final String? userRole;
+  final VoidCallback onLogout;
 
   const DashboardScreen({
     super.key,
     required this.onThemeToggle,
     required this.isDarkMode,
+    required this.userRole,
+    required this.onLogout,
   });
 
   @override
@@ -27,20 +31,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   final GlobalKey _achievementsKey = GlobalKey();
 
-  final List<String> _menuItems = [
-    'Статистика',
-    'Курсы',
-    'Пользователь',
-    'Достижения'
-  ];
+  bool get _isAuthor => widget.userRole?.toLowerCase() == 'автор';
 
-  final List<IconData> _menuIcons = [
-    Icons.dashboard_rounded,
-    Icons.school_rounded,
-    Icons.people_rounded,
-    Icons.analytics_rounded,
-    Icons.settings_rounded
-  ];
+  List<String> get _menuItems => _isAuthor
+      ? ['Курсы']
+      : ['Статистика', 'Курсы', 'Пользователь', 'Достижения'];
+
+  List<IconData> get _menuIcons => _isAuthor
+      ? [Icons.school_rounded]
+      : [
+          Icons.dashboard_rounded,
+          Icons.school_rounded,
+          Icons.people_rounded,
+          Icons.analytics_rounded,
+        ];
 
   @override
   Widget build(BuildContext context) {
@@ -58,6 +62,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             isDarkMode: widget.isDarkMode,
             menuItems: _menuItems,
             menuIcons: _menuIcons,
+            onLogout: widget.onLogout,
           ),
           Expanded(
             child: Column(
@@ -68,12 +73,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   isDarkMode: widget.isDarkMode,
                   menuItems: _menuItems,
                   onAddCourse: () {
-                    if (_selectedIndex == 1) {
+                    if (_menuItems[_selectedIndex] == 'Курсы') {
                       CourseService.showAddCourseForm(context);
                     }
                   },
                   onAddAchievement: () {
-                    if (_selectedIndex == 3) {
+                    if (_menuItems[_selectedIndex] == 'Достижения') {
                       final state = _achievementsKey.currentState as dynamic;
                       state.showForm();
                     }
@@ -97,6 +102,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Widget _buildContent() {
+    if (_isAuthor) {
+      return CoursesScreen(isDarkMode: widget.isDarkMode);
+    }
+
     switch (_selectedIndex) {
       case 0:
         return _buildDashboard();
@@ -125,7 +134,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               Icon(
                 _menuIcons[_selectedIndex],
                 size: 64,
-                color: AppColors.textGrey.withOpacity(0.3), // Серый из палитры[cite: 1]
+                color: AppColors.textGrey.withValues(alpha: 0.3), // Серый из палитры[cite: 1]
               ),
               const SizedBox(height: 16),
               Text(
@@ -187,7 +196,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           borderRadius: AppStyles.cardRadius, // Радиус 24px[cite: 1]
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.04),
+              color: Colors.black.withValues(alpha: 0.04),
               blurRadius: 20,
               offset: const Offset(0, 10),
             ),
@@ -201,7 +210,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: color.withOpacity(0.1),
+                    color: color.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Icon(icon, color: color, size: 24),
@@ -229,7 +238,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           borderRadius: BorderRadius.circular(14),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.03),
+              color: Colors.black.withValues(alpha: 0.03),
               blurRadius: 10,
             ),
           ],
@@ -242,7 +251,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: color.withOpacity(0.1),
+                    color: color.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Icon(icon, color: color, size: 16),
@@ -299,7 +308,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
               decoration: BoxDecoration(
-                color: statusColor.withOpacity(0.1),
+                color: statusColor.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(16),
               ),
               child: Text(status, style: AppStyles.label.copyWith(color: statusColor, fontWeight: FontWeight.bold), textAlign: TextAlign.center),
@@ -347,7 +356,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           Container(
             padding: const EdgeInsets.all(6),
             decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
+              color: color.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(6),
             ),
             child: Icon(icon, color: color, size: 14),

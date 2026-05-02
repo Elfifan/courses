@@ -6,7 +6,7 @@ import '../services/email_service.dart';
 import '../repositories/password_recovery_repository.dart';
 
 class AuthScreen extends StatefulWidget {
-  final VoidCallback onLoginSuccess;
+  final ValueChanged<String?> onLoginSuccess;
   final bool isDarkMode;
   final ValueChanged<bool> onToggleTheme;
 
@@ -47,7 +47,7 @@ class _AuthScreenState extends State<AuthScreen> {
         } else {
           if (response['password'] == _passwordController.text &&
               response['status'] == true) {
-            widget.onLoginSuccess();
+            widget.onLoginSuccess(response['role'] as String?);
           } else {
             _showSnackBar('Неверный логин или пароль');
           }
@@ -95,7 +95,7 @@ class _AuthScreenState extends State<AuthScreen> {
                   style: GoogleFonts.roboto(
                     fontSize: 120,
                     fontWeight: FontWeight.w900,
-                    color: Colors.white.withOpacity(0.2),
+                    color: Colors.white.withValues(alpha: 0.2),
                     letterSpacing: 20,
                   ),
                 ),
@@ -203,10 +203,15 @@ class _PasswordRecoveryDialogState extends State<PasswordRecoveryDialog> {
   final repository = PasswordRecoveryRepository();
 
   Future<void> _handleAction() async {
-    if (_currentStep == 0) await _submitEmail();
-    else if (_currentStep == 1) await _submitCode();
-    else if (_currentStep == 2) await _submitPassword();
-    else Navigator.of(context).pop(_emailController.text.trim());
+    if (_currentStep == 0) {
+      await _submitEmail();
+    } else if (_currentStep == 1) {
+      await _submitCode();
+    } else if (_currentStep == 2) {
+      await _submitPassword();
+    } else {
+      Navigator.of(context).pop(_emailController.text.trim());
+    }
   }
 
   Future<void> _submitEmail() async {
@@ -243,8 +248,11 @@ class _PasswordRecoveryDialogState extends State<PasswordRecoveryDialog> {
     }
     setState(() { _isLoading = true; _errorMessage = null; });
     final isValid = await repository.verifyRecoveryCode(_emailController.text.trim(), _codeController.text.trim());
-    if (isValid) setState(() => _currentStep = 2);
-    else setState(() => _errorMessage = "Неверный код");
+    if (isValid) {
+      setState(() => _currentStep = 2);
+    } else {
+      setState(() => _errorMessage = "Неверный код");
+    }
     setState(() => _isLoading = false);
   }
 

@@ -1,5 +1,3 @@
-import 'dart:convert';
-import 'dart:typed_data';
 import '../repositories/achievement_repository.dart';
 
 
@@ -11,6 +9,7 @@ class Employee {
   final String? email;
   final String? password;
   final bool? status;
+  final String? role;
 
   Employee({
     required this.id,
@@ -20,6 +19,7 @@ class Employee {
     this.email,
     this.password,
     this.status,
+    this.role,
   });
 
   factory Employee.fromJson(Map<String, dynamic> json) {
@@ -31,6 +31,7 @@ class Employee {
       email: json['email'] as String?,
       password: json['password'] as String?,
       status: json['status'] as bool?,
+      role: json['role'] as String?,
     );
   }
 
@@ -43,6 +44,7 @@ class Employee {
       'email': email,
       'password': password,
       'status': status,
+      'role': role,
     };
   }
 }

@@ -31,6 +31,7 @@ class AdminApp extends StatefulWidget {
 class _AdminAppState extends State<AdminApp> {
   bool isDarkMode = false;
   bool isLoggedIn = false;
+  String? employeeRole;
   late final AppLinks _appLinks;
   StreamSubscription<Uri?>? _linkSub;
 
@@ -40,9 +41,10 @@ class _AdminAppState extends State<AdminApp> {
     });
   }
 
-  void loginSuccess() {
+  void loginSuccess(String? role) {
     setState(() {
       isLoggedIn = true;
+      employeeRole = role;
     });
   }
 
@@ -102,6 +104,8 @@ class _AdminAppState extends State<AdminApp> {
             ? DashboardScreen(
                 onThemeToggle: () => toggleTheme(!isDarkMode),
                 isDarkMode: isDarkMode,
+                userRole: employeeRole,
+                onLogout: logout,
               )
             : AuthScreen(
                 isDarkMode: isDarkMode,

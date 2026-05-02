@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../repositories/course_repository.dart';
 
 class TopBar extends StatelessWidget {
   final int selectedIndex;
@@ -21,10 +20,8 @@ class TopBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bool showAddButton = [1, 3].contains(selectedIndex) && (
-      (selectedIndex == 1 && onAddCourse != null) ||
-      (selectedIndex == 3 && onAddAchievement != null)
-    );
+    final bool showAddButton = menuItems[selectedIndex] == 'Курсы' && onAddCourse != null ||
+        menuItems[selectedIndex] == 'Достижения' && onAddAchievement != null;
 
     return Container(
       height: 70,
@@ -67,9 +64,9 @@ class TopBar extends StatelessWidget {
           if (showAddButton)
             ElevatedButton.icon(
               onPressed: () {
-                if (selectedIndex == 1) {
-                  CourseService.showAddCourseForm(context);
-                } else if (selectedIndex == 3) {
+                if (menuItems[selectedIndex] == 'Курсы') {
+                  onAddCourse?.call();
+                } else if (menuItems[selectedIndex] == 'Достижения') {
                   onAddAchievement?.call();
                 }
               },
@@ -89,28 +86,18 @@ class TopBar extends StatelessWidget {
   }
 
   String _getPageTitle() {
-    switch (selectedIndex) {
-      case 0:
-        return 'Статистика';
-      case 1:
-        return 'Управление курсами';
-      case 2:
-        return 'Студенты';
-      case 3:
-        return 'Достижения';
-      default:
-        return 'Dashboard';
+    if (selectedIndex >= 0 && selectedIndex < menuItems.length) {
+      return menuItems[selectedIndex];
     }
+    return 'Dashboard';
   }
 
   String _getButtonText() {
-    switch (selectedIndex) {
-      case 1:
-        return 'Добавить курс';
-      case 3:
-        return 'Добавить достижение';
-      default:
-        return '';
-    }
+    final item = selectedIndex >= 0 && selectedIndex < menuItems.length
+        ? menuItems[selectedIndex]
+        : '';
+    if (item == 'Курсы') return 'Добавить курс';
+    if (item == 'Достижения') return 'Добавить достижение';
+    return '';
   }
 }

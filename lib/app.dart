@@ -153,7 +153,6 @@ class _AdminCoursesAppState extends State<AdminCoursesApp> {
     return MaterialApp(
       title: 'Админ панель - Курсы программирования',
       theme: isDarkMode ? darkTheme : lightTheme,
-      home: DashboardScreen(onThemeToggle: toggleTheme, isDarkMode: isDarkMode),
       debugShowCheckedModeBanner: false,
     );
   }
