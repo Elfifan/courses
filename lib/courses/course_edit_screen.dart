@@ -31,6 +31,7 @@ class _CourseEditScreenState extends State<CourseEditScreen>
   
   Course? _course;
   bool _isLoading = true;
+  bool _isChangingStatus = false;
 
   @override
   void initState() {
@@ -152,31 +153,30 @@ class _CourseEditScreenState extends State<CourseEditScreen>
     );
   }
 
+  Future<void> _refreshCourse() async {
+    if (!mounted) return;
+    try {
+      final data = await SupabaseService.client
+          .from('courses')
+          .select()
+          .eq('id', widget.courseId)
+          .single();
+      if (mounted) {
+        setState(() {
+          _course = Course.fromJson(data as Map<String, dynamic>);
+        });
+      }
+    } catch (_) {
+      // Игнорируем временные ошибки при обновлении, чтобы не ломать UX
+    }
+  }
+
   Future<void> _saveModerationLog(String newStatus, {String? comment}) async {
     if (!mounted || _course == null || widget.userId == null) return;
 
-    try {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Row(
-            children: [
-              SizedBox(
-                width: 20,
-                height: 20,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                ),
-              ),
-              SizedBox(width: 12),
-              Text('Изменение статуса...'),
-            ],
-          ),
-          backgroundColor: AppColors.primaryPurple,
-          duration: Duration(seconds: 30),
-        ),
-      );
+    setState(() => _isChangingStatus = true);
 
+    try {
       await CourseModerationRepository.setCourseModerationStatus(
         courseId: _course!.id,
         adminId: widget.userId!,
@@ -184,38 +184,12 @@ class _CourseEditScreenState extends State<CourseEditScreen>
         comment: comment,
       );
 
-      if (mounted) {
-        setState(() {
-          _course = Course(
-            id: _course!.id,
-            name: _course!.name,
-            description: _course!.description,
-            price: _course!.price,
-            complexity: _course!.complexity,
-            icon: _course!.icon,
-            status: newStatus,
-            dateCreate: _course!.dateCreate,
-          );
-        });
+      await _refreshCourse();
 
-        ScaffoldMessenger.of(context).hideCurrentSnackBar();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Статус изменён на "$newStatus"'),
-            backgroundColor: Colors.green,
-            duration: const Duration(seconds: 2),
-          ),
-        );
-      }
-    } catch (e) {
+     
+    } finally {
       if (mounted) {
-        ScaffoldMessenger.of(context).hideCurrentSnackBar();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Ошибка: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
+        setState(() => _isChangingStatus = false);
       }
     }
   }
