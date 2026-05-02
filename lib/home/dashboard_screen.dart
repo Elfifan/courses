@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../core/theme/app_components.dart'; // Подключаем ваши компоненты[cite: 1]
+import '../core/theme/app_components.dart';
 import '../shared/side_panel.dart';
 import '../shared/top_bar.dart';
 import '../courses/courses_screen.dart';

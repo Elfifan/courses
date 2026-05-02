@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/theme/app_components.dart';
 import '../../models/database_models.dart';
 import '../../services/supabase_service.dart';
 
@@ -119,56 +120,41 @@ class _CourseEditGeneralTabState extends State<CourseEditGeneralTab> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // Название
-              Text('Название курса', style: Theme.of(context).textTheme.titleMedium),
+              Text('Название курса', style: AppStyles.label.copyWith(fontWeight: FontWeight.w700)),
               const SizedBox(height: 8),
               TextFormField(
                 controller: _titleController,
-                decoration: InputDecoration(
-                  hintText: 'Введите название курса',
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                  prefixIcon: const Icon(Icons.book),
-                ),
+                decoration: KodixComponents.textFieldDecoration(hintText: 'Введите название курса', prefixIcon: Icons.book),
                 validator: (val) => val?.isEmpty == true ? 'Поле обязательно' : null,
               ),
               const SizedBox(height: 20),
 
               // Описание
-              Text('Описание', style: Theme.of(context).textTheme.titleMedium),
+              Text('Описание', style: AppStyles.label.copyWith(fontWeight: FontWeight.w700)),
               const SizedBox(height: 8),
               TextFormField(
                 controller: _descriptionController,
                 maxLines: 5,
-                decoration: InputDecoration(
-                  hintText: 'Введите описание курса',
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                  prefixIcon: const Icon(Icons.description),
-                ),
+                decoration: KodixComponents.textFieldDecoration(hintText: 'Введите описание курса', prefixIcon: Icons.description),
               ),
               const SizedBox(height: 20),
 
               // Цена
-              Text('Цена', style: Theme.of(context).textTheme.titleMedium),
+              Text('Цена', style: AppStyles.label.copyWith(fontWeight: FontWeight.w700)),
               const SizedBox(height: 8),
               TextFormField(
                 controller: _priceController,
                 keyboardType: TextInputType.number,
-                decoration: InputDecoration(
-                  hintText: 'Введите цену',
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                  prefixIcon: const Icon(Icons.attach_money),
-                ),
+                decoration: KodixComponents.textFieldDecoration(hintText: 'Введите цену', prefixIcon: Icons.attach_money),
               ),
               const SizedBox(height: 20),
 
               // Сложность
-              Text('Уровень сложности', style: Theme.of(context).textTheme.titleMedium),
+              Text('Уровень сложности', style: AppStyles.label.copyWith(fontWeight: FontWeight.w700)),
               const SizedBox(height: 8),
               DropdownButtonFormField<int>(
                 value: _selectedComplexity,
-                decoration: InputDecoration(
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                  prefixIcon: const Icon(Icons.trending_up),
-                ),
+                decoration: KodixComponents.textFieldDecoration(hintText: 'Выберите уровень сложности', prefixIcon: Icons.trending_up),
                 items: _complexityLevels.entries.map((entry) {
                   return DropdownMenuItem<int>(
                     value: entry.key,
@@ -186,14 +172,13 @@ class _CourseEditGeneralTabState extends State<CourseEditGeneralTab> {
               // Кнопка сохранения
               SizedBox(
                 width: double.infinity,
-                height: 48,
-                child: ElevatedButton(
+                child: KodixComponents.primaryButton(
                   onPressed: _isSaving ? null : _saveCourse,
                   child: _isSaving
                       ? const SizedBox(
                           width: 20,
                           height: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2),
+                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                         )
                       : const Text('Сохранить'),
                 ),

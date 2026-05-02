@@ -24,8 +24,9 @@ class _CoursesScreenState extends State<CoursesScreen> {
 
   final List<Map<String, String>> _filters = [ 
     {'value': 'all', 'label': 'Все курсы'},
-    {'value': 'active', 'label': 'Активные'},
-    {'value': 'draft', 'label': 'Черновики'},
+    {'value': 'Активный', 'label': 'Активные'},
+    {'value': 'На проверке', 'label': 'На проверке'},
+    {'value': 'Отклонено', 'label': 'Отклонено'},
     {'value': 'beginner', 'label': 'Начальный уровень'},
     {'value': 'intermediate', 'label': 'Средний уровень'},
     {'value': 'advanced', 'label': 'Продвинутый уровень'},
@@ -75,8 +76,9 @@ class _CoursesScreenState extends State<CoursesScreen> {
       bool matchesFilter = true;
       if (_selectedFilter != 'all') {
         switch (_selectedFilter) {
-          case 'active': matchesFilter = c.status == true; break;
-          case 'draft': matchesFilter = c.status == false; break;
+          case 'Активный': matchesFilter = c.status == 'Активный'; break;
+          case 'На проверке': matchesFilter = c.status == 'На проверке'; break;
+          case 'Отклонено': matchesFilter = c.status == 'Отклонено'; break;
           case 'beginner': matchesFilter = c.complexity == 1; break;
           case 'intermediate': matchesFilter = c.complexity == 2; break;
           case 'advanced': matchesFilter = c.complexity == 3; break;
@@ -215,9 +217,9 @@ class _CoursesScreenState extends State<CoursesScreen> {
                           ),
                           const SizedBox(width: 8),
                           _buildBadge(
-                            course.status == true ? 'Активный' : 'Черновик',
-                            (course.status == true ? Colors.green : Colors.orange).withValues(alpha: 0.1),
-                            course.status == true ? Colors.green : Colors.orange,
+                            course.status ?? 'На проверке',
+                            (course.status == 'Активный' ? Colors.green : course.status == 'На проверке' ? Colors.orange : Colors.red).withValues(alpha: 0.1),
+                            course.status == 'Активный' ? Colors.green : course.status == 'На проверке' ? Colors.orange : Colors.red,
                           ),
                         ],
                       ),

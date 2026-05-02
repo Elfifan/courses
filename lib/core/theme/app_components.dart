@@ -46,12 +46,12 @@ class KodixComponents {
   
   /// Кнопка с градиентом «Кодикс»
   static Widget primaryButton({
-    required String text,
-    required VoidCallback onTap,
+    required Widget child,
+    VoidCallback? onPressed,
     double height = 56,
   }) {
     return InkWell(
-      onTap: onTap,
+      onTap: onPressed,
       borderRadius: AppStyles.mainRadius,
       child: Ink(
         decoration: BoxDecoration(
@@ -69,13 +69,41 @@ class KodixComponents {
           width: double.infinity,
           height: height,
           alignment: Alignment.center,
-          child: Text(
-            text,
-            style: GoogleFonts.roboto(
-              color: Colors.white,
-              fontWeight: FontWeight.bold,
-              fontSize: 16,
-            ),
+          child: child,
+        ),
+      ),
+    );
+  }
+
+  /// Вторичная кнопка
+  static Widget secondaryButton({
+    required Widget child,
+    VoidCallback? onPressed,
+    IconData? icon,
+    double height = 56,
+  }) {
+    return InkWell(
+      onTap: onPressed,
+      borderRadius: AppStyles.mainRadius,
+      child: Ink(
+        decoration: BoxDecoration(
+          color: AppColors.bgLight,
+          borderRadius: AppStyles.mainRadius,
+          border: Border.all(color: AppColors.primaryPurple.withOpacity(0.2)),
+        ),
+        child: Container(
+          width: double.infinity,
+          height: height,
+          alignment: Alignment.center,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              if (icon != null) ...[
+                Icon(icon, color: AppColors.primaryPurple, size: 20),
+                const SizedBox(width: 8),
+              ],
+              child,
+            ],
           ),
         ),
       ),

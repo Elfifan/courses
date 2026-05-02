@@ -188,8 +188,7 @@ void _showForm({Achievement? achievement}) async {
           SizedBox(
             width: 140,
             child: KodixComponents.primaryButton(
-              text: 'Сохранить',
-              onTap: () {
+              onPressed: () {
                 // Валидация
                 if (titleController.text.trim().isEmpty) {
                   ScaffoldMessenger.of(dialogContext).showSnackBar(
@@ -208,6 +207,7 @@ void _showForm({Achievement? achievement}) async {
                   'selectedFile': selectedFile,
                 });
               },
+              child: const Text('Сохранить'),
             ),
           ),
         ],
@@ -329,6 +329,11 @@ void _showForm({Achievement? achievement}) async {
     }
   }
 
+  /// Публичный метод для открытия формы из внешних источников
+  void showForm({Achievement? achievement}) {
+    _showForm(achievement: achievement);
+  }
+
   @override
   Widget build(BuildContext context) {
     return Padding(
@@ -350,8 +355,8 @@ void _showForm({Achievement? achievement}) async {
               SizedBox(
                 width: 50,
                 child: KodixComponents.primaryButton(
-                  text: '+',
-                  onTap: () => _showForm(),
+                  onPressed: () => _showForm(),
+                  child: const Text('+'),
                 ),
               ),
             ],

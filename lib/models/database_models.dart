@@ -173,7 +173,7 @@ class Course {
   final DateTime? dateCreate;
   final double? price;
   final int? complexity;
-  final bool? status;
+  final String? status;
   final String? icon;
 
   Course({
@@ -199,7 +199,7 @@ class Course {
           : null,
       price: (json['price'] as num?)?.toDouble(),
       complexity: json['complexity'] as int?,
-      status: json['status'] as bool?,
+      status: json['status'] as String?,
       icon: json['icon'] as String?,
     );
   }

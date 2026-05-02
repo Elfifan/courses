@@ -7,12 +7,18 @@ class CourseService {
     final nameController = TextEditingController();
     final descriptionController = TextEditingController();
     final priceController = TextEditingController();
-    final complexityController = TextEditingController(text: '1');
+    int selectedComplexity = 1;
     final formKey = GlobalKey<FormState>();
 
     // Список эмодзи для выбора
     final List<String> emojiOptions = ['📚', '🐍', '⚡', '📱', '🧑‍💻', '🎯', '🚀', '💻'];
     String selectedEmoji = emojiOptions[0]; // Начальное значение
+
+    final Map<int, String> complexityLevels = {
+      1: 'Начальный уровень',
+      2: 'Средний уровень',
+      3: 'Продвинутый уровень',
+    };
 
     showDialog(
       context: context,
@@ -32,7 +38,7 @@ class CourseService {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Text('Выберите иконку', style: AppStyles.label.copyWith(fontWeight: FontWeight.w700)),
+                    Text('Иконка курса', style: AppStyles.label.copyWith(fontWeight: FontWeight.w700)),
                     const SizedBox(height: 12),
                     Wrap(
                       spacing: 8,
@@ -63,9 +69,11 @@ class CourseService {
                       }).toList(),
                     ),
                     const SizedBox(height: 20),
+                    Text('Название курса', style: AppStyles.label.copyWith(fontWeight: FontWeight.w700)),
+                    const SizedBox(height: 8),
                     TextFormField(
                       controller: nameController,
-                      decoration: KodixComponents.textFieldDecoration(hintText: 'Название курса *', prefixIcon: Icons.menu_book_outlined),
+                      decoration: KodixComponents.textFieldDecoration(hintText: 'Введите название курса', prefixIcon: Icons.menu_book_outlined),
                       validator: (v) {
                         if (v == null || v.isEmpty) {
                           return 'Введите название';
@@ -79,16 +87,20 @@ class CourseService {
                       },
                     ),
                     const SizedBox(height: 12),
+                    Text('Описание курса', style: AppStyles.label.copyWith(fontWeight: FontWeight.w700)),
+                    const SizedBox(height: 8),
                     TextFormField(
                       controller: descriptionController,
-                      decoration: KodixComponents.textFieldDecoration(hintText: 'Описание курса', prefixIcon: Icons.description_outlined),
+                      decoration: KodixComponents.textFieldDecoration(hintText: 'Введите описание курса', prefixIcon: Icons.description_outlined),
                       minLines: 3,
                       maxLines: 5,
                     ),
                     const SizedBox(height: 12),
+                    Text('Цена курса', style: AppStyles.label.copyWith(fontWeight: FontWeight.w700)),
+                    const SizedBox(height: 8),
                     TextFormField(
                       controller: priceController,
-                      decoration: KodixComponents.textFieldDecoration(hintText: 'Цена (₽)', prefixIcon: Icons.attach_money_outlined),
+                      decoration: KodixComponents.textFieldDecoration(hintText: 'Введите цену (₽)', prefixIcon: Icons.attach_money_outlined),
                       keyboardType: TextInputType.number,
                       validator: (v) {
                         if (v != null && v.isNotEmpty && double.tryParse(v) == null) {
@@ -98,20 +110,23 @@ class CourseService {
                       },
                     ),
                     const SizedBox(height: 12),
-                    TextFormField(
-                      controller: complexityController,
-                      decoration: KodixComponents.textFieldDecoration(hintText: 'Сложность (1-5)', prefixIcon: Icons.bar_chart_outlined),
-                      keyboardType: TextInputType.number,
-                      validator: (v) {
-                        if (v == null || v.isEmpty) {
-                          return 'Введите сложность';
+                    Text('Уровень сложности', style: AppStyles.label.copyWith(fontWeight: FontWeight.w700)),
+                    const SizedBox(height: 8),
+                    DropdownButtonFormField<int>(
+                      value: selectedComplexity,
+                      decoration: KodixComponents.textFieldDecoration(hintText: 'Выберите уровень сложности', prefixIcon: Icons.bar_chart_outlined),
+                      items: complexityLevels.entries.map((entry) {
+                        return DropdownMenuItem<int>(
+                          value: entry.key,
+                          child: Text(entry.value),
+                        );
+                      }).toList(),
+                      onChanged: (value) {
+                        if (value != null) {
+                          setState(() => selectedComplexity = value);
                         }
-                        final complexity = int.tryParse(v);
-                        if (complexity == null || complexity < 1 || complexity > 5) {
-                          return 'Сложность должна быть от 1 до 5';
-                        }
-                        return null;
                       },
+                      validator: (value) => value == null ? 'Выберите уровень сложности' : null,
                     ),
                   ],
                 ),
@@ -129,8 +144,7 @@ class CourseService {
               SizedBox(
                 width: 140,
                 child: KodixComponents.primaryButton(
-                  text: 'Добавить',
-                  onTap: () async {
+                  onPressed: () async {
                     if (formKey.currentState!.validate()) {
                       if (authorId == null) {
                         final scaffold = ScaffoldMessenger.of(context);
@@ -152,8 +166,8 @@ class CourseService {
                               'description': descriptionController.text.trim(),
                               'date_create': DateTime.now().toIso8601String(),
                               'price': double.tryParse(priceController.text) ?? 0.0,
-                              'complexity': int.parse(complexityController.text),
-                              'status': true,
+                              'complexity': selectedComplexity,
+                              'status': 'На проверке',
                               'icon': selectedEmoji,
                             });
 
@@ -176,6 +190,7 @@ class CourseService {
                       }
                     }
                   },
+                  child: const Text('Добавить'),
                 ),
               ),
             ],

@@ -185,9 +185,9 @@ class _CourseEditScreenState extends State<CourseEditScreen>
   }
 
   Widget _buildStatusChip() {
-    final isActive = _course!.status ?? true;
-    final color = isActive ? const Color(0xFF10B981) : const Color(0xFFF59E0B);
-    final label = isActive ? 'Активный' : 'Черновик';
+    final status = _course!.status ?? 'На проверке';
+    final color = status == 'Активный' ? const Color(0xFF10B981) : status == 'На проверке' ? const Color(0xFFF59E0B) : const Color(0xFFEF4444);
+    final label = status;
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),

@@ -166,8 +166,8 @@ class _AuthScreenState extends State<AuthScreen> {
                         ? const Center(child: CircularProgressIndicator(color: AppColors.primaryPurple))
                         : MouseRegion(
                             child: KodixComponents.primaryButton(
-                              text: 'Войти',
-                              onTap: _tryLogin,
+                              onPressed: _tryLogin,
+                              child: const Text('Войти'),
                             ),
                           ),
                     ],
@@ -306,8 +306,8 @@ class _PasswordRecoveryDialogState extends State<PasswordRecoveryDialog> {
               cursor: SystemMouseCursors.click,
               child: KodixComponents.primaryButton(
                 height: 40,
-                text: _currentStep == 3 ? "Войти" : "Далее",
-                onTap: _isLoading ? () {} : _handleAction,
+                onPressed: _isLoading ? () {} : _handleAction,
+                child: Text(_currentStep == 3 ? "Войти" : "Далее"),
               ),
             ),
           ),
