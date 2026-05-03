@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../core/theme/app_components.dart'; // Подключаем вашу дизайн-систему
+import '../core/theme/app_components.dart';
 import '../models/database_models.dart';
 import '../repositories/course_moderation_repository.dart';
 import '../services/supabase_service.dart';
@@ -21,7 +21,7 @@ class CourseEditScreen extends StatefulWidget {
   });
 
   @override
-  _CourseEditScreenState createState() => _CourseEditScreenState();
+  State createState() => _CourseEditScreenState();
 }
 
 class _CourseEditScreenState extends State<CourseEditScreen>
@@ -52,7 +52,7 @@ class _CourseEditScreenState extends State<CourseEditScreen>
       
       if (mounted) {
         setState(() {
-          _course = Course.fromJson(data as Map<String, dynamic>);
+          _course = Course.fromJson(data);
           _isLoading = false;
         });
       }
@@ -163,7 +163,7 @@ class _CourseEditScreenState extends State<CourseEditScreen>
           .single();
       if (mounted) {
         setState(() {
-          _course = Course.fromJson(data as Map<String, dynamic>);
+          _course = Course.fromJson(data);
         });
       }
     } catch (_) {
@@ -174,7 +174,20 @@ class _CourseEditScreenState extends State<CourseEditScreen>
   Future<void> _saveModerationLog(String newStatus, {String? comment}) async {
     if (!mounted || _course == null || widget.userId == null) return;
 
-    setState(() => _isChangingStatus = true);
+    setState(() {
+      _isChangingStatus = true;
+      _course = Course(
+        id: _course!.id,
+        idEmployee: _course!.idEmployee,
+        name: _course!.name,
+        description: _course!.description,
+        price: _course!.price,
+        complexity: _course!.complexity,
+        icon: _course!.icon,
+        dateCreate: _course!.dateCreate,
+        status: newStatus,
+      );
+    });
 
     try {
       await CourseModerationRepository.setCourseModerationStatus(
@@ -185,8 +198,6 @@ class _CourseEditScreenState extends State<CourseEditScreen>
       );
 
       await _refreshCourse();
-
-     
     } finally {
       if (mounted) {
         setState(() => _isChangingStatus = false);
@@ -317,7 +328,7 @@ class _CourseEditScreenState extends State<CourseEditScreen>
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Text(
@@ -331,7 +342,6 @@ class _CourseEditScreenState extends State<CourseEditScreen>
     );
   }
 
-/// Кнопки для администратора для смены статуса
 Widget _buildAdminStatusButtons() {
   final currentStatus = _course!.status ?? 'На проверке';
   const statuses = ['Активный', 'На проверке', 'Отклонено'];
@@ -343,7 +353,7 @@ Widget _buildAdminStatusButtons() {
       return Padding(
         padding: const EdgeInsets.only(left: 10),
         child: OutlinedButton(
-          onPressed: isActive ? null : () => _changeStatusWithComment(status),
+          onPressed: isActive || _isChangingStatus ? null : () => _changeStatusWithComment(status),
           style: OutlinedButton.styleFrom(
             backgroundColor: isActive 
                 ? AppColors.primaryPurple 
@@ -354,7 +364,7 @@ Widget _buildAdminStatusButtons() {
             side: BorderSide(
               color: isActive 
                   ? AppColors.primaryPurple 
-                  : AppColors.primaryPurple.withOpacity(0.5),
+                  : AppColors.primaryPurple.withValues(alpha: 0.5),
               width: 1.5,
             ),
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
@@ -395,7 +405,7 @@ Widget _buildAdminStatusButtons() {
           borderRadius: BorderRadius.circular(12),
           boxShadow: [
             BoxShadow(
-              color: AppColors.primaryPurple.withOpacity(0.3),
+              color: AppColors.primaryPurple.withValues(alpha: 0.3),
               blurRadius: 8,
               offset: const Offset(0, 4),
             ),

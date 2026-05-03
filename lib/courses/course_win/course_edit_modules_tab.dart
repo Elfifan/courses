@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'dart:io';
+import 'dart:convert';
 import '../../models/database_models.dart' as db_models;
 import '../../services/supabase_service.dart';
 import '../lessons/lesson_viewer_screen.dart';
@@ -27,7 +28,8 @@ class _CourseEditModulesTabState extends State<CourseEditModulesTab> {
   List<db_models.Module> _modules = [];
   Map<int, List<db_models.Submodule>> _submodules = {};
   Map<int, List<db_models.Test>> _tests = {};
-  Map<int, bool> _expandedModules = {}; // ← НОВОЕ: свернутость модулей
+  Map<int, List<Map<String, dynamic>>> _practicalTasks = {}; // ← ДОБАВЛЕНО
+  Map<int, bool> _expandedModules = {};
   bool _isLoading = true;
 
   @override
@@ -48,12 +50,12 @@ class _CourseEditModulesTabState extends State<CourseEditModulesTab> {
 
       Map<int, List<db_models.Submodule>> submodulesMap = {};
       Map<int, List<db_models.Test>> testsMap = {};
+      Map<int, List<Map<String, dynamic>>> tasksMap = {}; // ← ДОБАВЛЕНО
       Map<int, bool> expandedMap = {};
 
       for (var moduleData in modulesData) {
         final moduleId = moduleData['id'];
-        expandedMap[moduleId] =
-            _expandedModules[moduleId] ?? true; // По умолчанию развернуто
+        expandedMap[moduleId] = _expandedModules[moduleId] ?? true;
 
         final submodulesData = await SupabaseService.client
             .from('submodule')
@@ -67,6 +69,8 @@ class _CourseEditModulesTabState extends State<CourseEditModulesTab> {
 
         for (var submoduleData in submodulesData) {
           final submoduleId = submoduleData['id'];
+          
+          // Тесты
           final testsData = await SupabaseService.client
               .from('submodule_test')
               .select('id_test, test(*)')
@@ -77,6 +81,16 @@ class _CourseEditModulesTabState extends State<CourseEditModulesTab> {
             final testData = item['test'] as Map<String, dynamic>;
             return db_models.Test.fromJson(testData);
           }).toList();
+
+          // ← ДОБАВЛЕНО: Практические задания
+          final tasksData = await SupabaseService.client
+              .from('practical_task')
+              .select('*')
+              .eq('id_submodule', submoduleId)
+              .eq('status', true)
+              .order('order_task', ascending: true);
+
+          tasksMap[submoduleId] = List<Map<String, dynamic>>.from(tasksData);
         }
       }
 
@@ -87,6 +101,7 @@ class _CourseEditModulesTabState extends State<CourseEditModulesTab> {
               .toList();
           _submodules = submodulesMap;
           _tests = testsMap;
+          _practicalTasks = tasksMap; // ← ДОБАВЛЕНО
           _expandedModules = expandedMap;
           _isLoading = false;
         });
@@ -94,9 +109,8 @@ class _CourseEditModulesTabState extends State<CourseEditModulesTab> {
     } catch (e) {
       if (mounted) {
         setState(() => _isLoading = false);
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Ошибка загрузки модулей: $e')));
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Ошибка загрузки модулей: $e')));
       }
     }
   }
@@ -113,10 +127,7 @@ class _CourseEditModulesTabState extends State<CourseEditModulesTab> {
               Expanded(
                 child: Text(
                   'Модули курса',
-                  style: const TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
                 ),
               ),
               const SizedBox(width: 16),
@@ -133,15 +144,15 @@ class _CourseEditModulesTabState extends State<CourseEditModulesTab> {
             child: _isLoading
                 ? const Center(child: CircularProgressIndicator())
                 : _modules.isEmpty
-                ? const Center(child: Text('Модулей нет'))
-                : ListView.builder(
-                    itemCount: _modules.length,
-                    itemBuilder: (context, index) {
-                      final module = _modules[index];
-                      final submodules = _submodules[module.id] ?? [];
-                      return _buildModuleCard(module, submodules, index);
-                    },
-                  ),
+                    ? const Center(child: Text('Модулей нет'))
+                    : ListView.builder(
+                        itemCount: _modules.length,
+                        itemBuilder: (context, index) {
+                          final module = _modules[index];
+                          final submodules = _submodules[module.id] ?? [];
+                          return _buildModuleCard(module, submodules, index);
+                        },
+                      ),
           ),
         ],
       ),
@@ -166,7 +177,6 @@ class _CourseEditModulesTabState extends State<CourseEditModulesTab> {
           children: [
             Row(
               children: [
-                // ← НОВОЕ: Кнопка свернуть/развернуть
                 IconButton(
                   icon: Icon(
                     isExpanded ? Icons.expand_less : Icons.expand_more,
@@ -184,18 +194,13 @@ class _CourseEditModulesTabState extends State<CourseEditModulesTab> {
                 Expanded(
                   child: Text(
                     '${module.orderModule}. ${module.name ?? 'Без названия'}',
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                   ),
                 ),
                 if (!widget.readOnly)
                   PopupMenuButton<String>(
                     onSelected: (value) {
-                      if (value == 'delete') {
-                        _deleteModule(module.id);
-                      }
+                      if (value == 'delete') _deleteModule(module.id);
                     },
                     itemBuilder: (ctx) => [
                       const PopupMenuItem(
@@ -212,7 +217,6 @@ class _CourseEditModulesTabState extends State<CourseEditModulesTab> {
                   ),
               ],
             ),
-            // ← НОВОЕ: Контент отображается только если развернуто
             if (isExpanded) ...[
               const SizedBox(height: 12),
               if (!widget.readOnly)
@@ -223,15 +227,11 @@ class _CourseEditModulesTabState extends State<CourseEditModulesTab> {
                       icon: const Icon(Icons.menu_book, size: 18),
                       label: const Text('Добавить теорию'),
                     ),
-                    // ← Убрали кнопку "Добавить задание"
                   ],
                 ),
               const SizedBox(height: 12),
               if (submodules.isEmpty)
-                Text(
-                  'Нет подмодулей',
-                  style: TextStyle(color: Colors.grey[600], fontSize: 14),
-                )
+                Text('Нет подмодулей', style: TextStyle(color: Colors.grey[600], fontSize: 14))
               else
                 ListView.builder(
                   shrinkWrap: true,
@@ -243,7 +243,7 @@ class _CourseEditModulesTabState extends State<CourseEditModulesTab> {
                       submodule,
                       module.id,
                       module.orderModule ?? 1,
-                      index + 1, // ← Номер подмодуля в модуле
+                      index + 1,
                     );
                   },
                 ),
@@ -261,6 +261,7 @@ class _CourseEditModulesTabState extends State<CourseEditModulesTab> {
     int submoduleNumber,
   ) {
     final tests = _tests[submodule.id] ?? [];
+    final practicalTasks = _practicalTasks[submodule.id] ?? []; // ← ДОБАВЛЕНО
 
     return Column(
       children: [
@@ -287,7 +288,6 @@ class _CourseEditModulesTabState extends State<CourseEditModulesTab> {
             ),
             child: Row(
               children: [
-                // ← НОВОЕ: Нумерация (1.1, 1.2 и т.д.)
                 Container(
                   width: 40,
                   height: 40,
@@ -315,11 +315,7 @@ class _CourseEditModulesTabState extends State<CourseEditModulesTab> {
                     borderRadius: BorderRadius.circular(6),
                   ),
                   child: Center(
-                    child: Icon(
-                      Icons.play_circle_outline,
-                      color: Theme.of(context).primaryColor,
-                      size: 18,
-                    ),
+                    child: Icon(Icons.play_circle_outline, color: Theme.of(context).primaryColor, size: 18),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -327,21 +323,11 @@ class _CourseEditModulesTabState extends State<CourseEditModulesTab> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        submodule.name ?? 'Без названия',
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w600,
-                          fontSize: 14,
-                        ),
-                      ),
+                      Text(submodule.name ?? 'Без названия',
+                          style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
                       if (submodule.leadTime != null)
-                        Text(
-                          '${submodule.leadTime} мин',
-                          style: TextStyle(
-                            color: Colors.grey[600],
-                            fontSize: 12,
-                          ),
-                        ),
+                        Text('${submodule.leadTime} мин',
+                            style: TextStyle(color: Colors.grey[600], fontSize: 12)),
                     ],
                   ),
                 ),
@@ -353,6 +339,8 @@ class _CourseEditModulesTabState extends State<CourseEditModulesTab> {
                         _deleteSubmodule(submodule.id, moduleId);
                       } else if (value == 'add_test') {
                         _showAddTestDialog(submodule.id);
+                      } else if (value == 'add_practice') {
+                        _showAddPracticeDialog(submodule.id); // ← ДОБАВЛЕНО
                       }
                     },
                     itemBuilder: (ctx) => [
@@ -363,6 +351,17 @@ class _CourseEditModulesTabState extends State<CourseEditModulesTab> {
                             Icon(Icons.quiz, size: 18),
                             SizedBox(width: 8),
                             Text('Добавить тест'),
+                          ],
+                        ),
+                      ),
+                      // ← ДОБАВЛЕНО
+                      const PopupMenuItem(
+                        value: 'add_practice',
+                        child: Row(
+                          children: [
+                            Icon(Icons.code, size: 18),
+                            SizedBox(width: 8),
+                            Text('Добавить практику'),
                           ],
                         ),
                       ),
@@ -382,85 +381,125 @@ class _CourseEditModulesTabState extends State<CourseEditModulesTab> {
             ),
           ),
         ),
+        // Тесты
         if (tests.isNotEmpty)
           Container(
             margin: const EdgeInsets.only(left: 40, top: 8, bottom: 8),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  'Тесты (${tests.length})',
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.grey[600],
-                  ),
-                ),
+                Text('Тесты (${tests.length})',
+                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.grey[600])),
                 const SizedBox(height: 8),
-                ...tests.map(
-                  (test) => GestureDetector(
-                    onTap: widget.readOnly ? null : () => _showEditTestDialog(
-                      test,
-                      submodule.id,
-                    ), // ← НОВОЕ: редактирование
-                    child: Container(
-                      padding: const EdgeInsets.all(8),
-                      margin: const EdgeInsets.only(bottom: 6),
-                      decoration: BoxDecoration(
-                        color: Colors.blue.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(6),
-                        border: Border.all(color: Colors.blue.withOpacity(0.3)),
-                      ),
-                      child: Row(
-                        children: [
-                          const Icon(Icons.quiz, size: 16, color: Colors.blue),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  test.question ?? 'Вопрос',
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                                Text(
-                                  'Ответ: ${test.rightAnswer}',
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    color: Colors.grey[600],
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          if (!widget.readOnly)
-                            PopupMenuButton(
-                              itemBuilder: (ctx) => [
-                                PopupMenuItem(
-                                  child: const Text('Удалить'),
-                                  onTap: () => _deleteTest(test.id, submodule.id),
-                                ),
-                              ],
-                              icon: const Icon(Icons.more_vert, size: 16),
-                            ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
+                ...tests.map((test) => _buildTestItem(test, submodule.id)),
+              ],
+            ),
+          ),
+        // ← ДОБАВЛЕНО: Практические задания
+        if (practicalTasks.isNotEmpty)
+          Container(
+            margin: const EdgeInsets.only(left: 40, top: 8, bottom: 8),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Практика (${practicalTasks.length})',
+                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.grey[600])),
+                const SizedBox(height: 8),
+                ...practicalTasks.map((task) => _buildPracticalTaskItem(task, submodule.id)),
               ],
             ),
           ),
       ],
     );
   }
+
+  Widget _buildTestItem(db_models.Test test, int submoduleId) {
+    return GestureDetector(
+      onTap: widget.readOnly ? null : () => _showEditTestDialog(test, submoduleId),
+      child: Container(
+        padding: const EdgeInsets.all(8),
+        margin: const EdgeInsets.only(bottom: 6),
+        decoration: BoxDecoration(
+          color: Colors.blue.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(6),
+          border: Border.all(color: Colors.blue.withOpacity(0.3)),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.quiz, size: 16, color: Colors.blue),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(test.question ?? 'Вопрос',
+                      maxLines: 2, overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
+                  Text('Ответ: ${test.rightAnswer}',
+                      maxLines: 1, overflow: TextOverflow.ellipsis,
+                      style: TextStyle(fontSize: 11, color: Colors.grey[600])),
+                ],
+              ),
+            ),
+            if (!widget.readOnly)
+              PopupMenuButton(
+                itemBuilder: (ctx) => [
+                  PopupMenuItem(
+                    child: const Text('Удалить'),
+                    onTap: () => _deleteTest(test.id, submoduleId),
+                  ),
+                ],
+                icon: const Icon(Icons.more_vert, size: 16),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ← ДОБАВЛЕНО: Виджет для отображения практического задания
+  Widget _buildPracticalTaskItem(Map<String, dynamic> task, int submoduleId) {
+    return Container(
+      padding: const EdgeInsets.all(8),
+      margin: const EdgeInsets.only(bottom: 6),
+      decoration: BoxDecoration(
+        color: Colors.orange.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: Colors.orange.withOpacity(0.3)),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.code, size: 16, color: Colors.orange),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(task['name'] ?? 'Практика',
+                    maxLines: 2, overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
+                Text('Язык: ${task['language'] ?? 'dart'}',
+                    maxLines: 1, overflow: TextOverflow.ellipsis,
+                    style: TextStyle(fontSize: 11, color: Colors.grey[600])),
+              ],
+            ),
+          ),
+          if (!widget.readOnly)
+            PopupMenuButton(
+              itemBuilder: (ctx) => [
+                PopupMenuItem(
+                  child: const Text('Удалить'),
+                  onTap: () => _deletePracticalTask(task['id'], submoduleId),
+                ),
+              ],
+              icon: const Icon(Icons.more_vert, size: 16),
+            ),
+        ],
+      ),
+    );
+  }
+
+  // ==================== ДИАЛОГИ ====================
 
   void _showAddModuleDialog() {
     final nameController = TextEditingController();
@@ -481,16 +520,12 @@ class _CourseEditModulesTabState extends State<CourseEditModulesTab> {
                 border: OutlineInputBorder(),
                 prefixIcon: Icon(Icons.book),
               ),
-              validator: (value) =>
-                  value?.isEmpty == true ? 'Введите название' : null,
+              validator: (value) => value?.isEmpty == true ? 'Введите название' : null,
             ),
           ),
         ),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Отмена'),
-          ),
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Отмена')),
           ElevatedButton(
             onPressed: () async {
               if (formKey.currentState!.validate()) {
@@ -534,65 +569,37 @@ class _CourseEditModulesTabState extends State<CourseEditModulesTab> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text(
-                            'Markdown документ',
-                            style: TextStyle(
-                              fontWeight: FontWeight.w600,
-                              fontSize: 14,
-                            ),
-                          ),
+                          const Text('Markdown документ',
+                              style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
                           const SizedBox(height: 8),
                           if (selectedFilePath != null)
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Container(
-                                  padding: const EdgeInsets.all(8),
-                                  decoration: BoxDecoration(
-                                    color: Colors.green.withOpacity(0.1),
-                                    borderRadius: BorderRadius.circular(6),
+                            Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: Colors.green.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Row(
+                                children: [
+                                  const Icon(Icons.check_circle, color: Colors.green, size: 18),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(selectedFilePath!.split('/').last,
+                                        maxLines: 1, overflow: TextOverflow.ellipsis,
+                                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
                                   ),
-                                  child: Row(
-                                    children: [
-                                      const Icon(
-                                        Icons.check_circle,
-                                        color: Colors.green,
-                                        size: 18,
-                                      ),
-                                      const SizedBox(width: 8),
-                                      Expanded(
-                                        child: Text(
-                                          selectedFilePath!.split('/').last,
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                          style: const TextStyle(
-                                            fontSize: 12,
-                                            fontWeight: FontWeight.w500,
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                const SizedBox(height: 8),
-                              ],
+                                ],
+                              ),
                             ),
+                          const SizedBox(height: 8),
                           ElevatedButton.icon(
                             onPressed: () async {
-                              final result = await FilePicker.platform
-                                  .pickFiles(
-                                    type: FileType.custom,
-                                    allowedExtensions: [
-                                      'md',
-                                      'markdown',
-                                      'txt',
-                                    ],
-                                  );
-
+                              final result = await FilePicker.platform.pickFiles(
+                                type: FileType.custom,
+                                allowedExtensions: ['md', 'markdown', 'txt'],
+                              );
                               if (result != null) {
-                                setState(() {
-                                  selectedFilePath = result.files.single.path;
-                                });
+                                setState(() => selectedFilePath = result.files.single.path);
                               }
                             },
                             icon: const Icon(Icons.upload_file, size: 18),
@@ -609,8 +616,7 @@ class _CourseEditModulesTabState extends State<CourseEditModulesTab> {
                         border: OutlineInputBorder(),
                         prefixIcon: Icon(Icons.title),
                       ),
-                      validator: (value) =>
-                          value?.isEmpty == true ? 'Введите название' : null,
+                      validator: (value) => value?.isEmpty == true ? 'Введите название' : null,
                     ),
                     const SizedBox(height: 16),
                     TextFormField(
@@ -623,12 +629,8 @@ class _CourseEditModulesTabState extends State<CourseEditModulesTab> {
                         hintText: 'Например: 15',
                       ),
                       validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Введите время';
-                        }
-                        if (int.tryParse(value) == null) {
-                          return 'Можно вводить только цифры';
-                        }
+                        if (value == null || value.isEmpty) return 'Введите время';
+                        if (int.tryParse(value) == null) return 'Можно вводить только цифры';
                         return null;
                       },
                     ),
@@ -646,8 +648,7 @@ class _CourseEditModulesTabState extends State<CourseEditModulesTab> {
               onPressed: _isUploading
                   ? null
                   : () async {
-                      if (formKey.currentState!.validate() &&
-                          selectedFilePath != null) {
+                      if (formKey.currentState!.validate() && selectedFilePath != null) {
                         setState(() => _isUploading = true);
                         await _addSubmodule(
                           moduleId,
@@ -655,23 +656,164 @@ class _CourseEditModulesTabState extends State<CourseEditModulesTab> {
                           int.parse(leadTimeController.text),
                           selectedFilePath!,
                         );
-                        if (mounted) {
-                          Navigator.pop(context);
-                        }
+                        if (mounted) Navigator.pop(context);
                       } else if (selectedFilePath == null) {
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Выберите markdown файл'),
-                          ),
+                          const SnackBar(content: Text('Выберите markdown файл')),
                         );
                       }
                     },
               child: _isUploading
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
+                  ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                  : const Text('Добавить'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ← ДОБАВЛЕНО: Диалог добавления практического задания
+  void _showAddPracticeDialog(int submoduleId) {
+    final formKey = GlobalKey<FormState>();
+    final nameController = TextEditingController();
+    final descriptionController = TextEditingController();
+    final contentController = TextEditingController();
+    final starterCodeController = TextEditingController();
+    final testCasesController = TextEditingController(
+      text: '[\n  {"input": "", "expected_output": "", "description": "Тест 1"}\n]',
+    );
+
+    String selectedLanguage = 'dart';
+    bool isLoading = false;
+
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          title: const Row(
+            children: [
+              Icon(Icons.code, color: Colors.orange),
+              SizedBox(width: 12),
+              Text('Практическое задание'),
+            ],
+          ),
+          content: SizedBox(
+            width: 650,
+            height: 550,
+            child: Form(
+              key: formKey,
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('Название', style: TextStyle(fontWeight: FontWeight.w600)),
+                    const SizedBox(height: 6),
+                    TextFormField(
+                      controller: nameController,
+                      decoration: const InputDecoration(
+                        hintText: 'Например: Сумма двух чисел',
+                        border: OutlineInputBorder(),
+                      ),
+                      validator: (v) => v?.isEmpty == true ? 'Обязательно' : null,
+                    ),
+                    const SizedBox(height: 14),
+                    const Text('Язык программирования', style: TextStyle(fontWeight: FontWeight.w600)),
+                    const SizedBox(height: 6),
+                    DropdownButtonFormField<String>(
+                      value: selectedLanguage,
+                      items: ['dart', 'python', 'javascript', 'cpp', 'csharp', 'java']
+                          .map((e) => DropdownMenuItem(value: e, child: Text(e.toUpperCase())))
+                          .toList(),
+                      onChanged: (v) => setState(() => selectedLanguage = v ?? 'dart'),
+                      decoration: const InputDecoration(border: OutlineInputBorder()),
+                    ),
+                    const SizedBox(height: 14),
+                    const Text('Краткое описание', style: TextStyle(fontWeight: FontWeight.w600)),
+                    const SizedBox(height: 6),
+                    TextFormField(
+                      controller: descriptionController,
+                      maxLines: 2,
+                      decoration: const InputDecoration(
+                        hintText: 'Что нужно сделать?',
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                    const Text('Условие задачи (Markdown)', style: TextStyle(fontWeight: FontWeight.w600)),
+                    const SizedBox(height: 6),
+                    TextFormField(
+                      controller: contentController,
+                      maxLines: 4,
+                      style: const TextStyle(fontSize: 13),
+                      decoration: const InputDecoration(
+                        hintText: '## Задача\nНапишите функцию...',
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                    const Text('Стартовый код', style: TextStyle(fontWeight: FontWeight.w600)),
+                    const SizedBox(height: 6),
+                    TextFormField(
+                      controller: starterCodeController,
+                      maxLines: 4,
+                      style: const TextStyle(fontFamily: 'monospace', fontSize: 13),
+                      decoration: const InputDecoration(
+                        hintText: 'void main() {\n  // Ваш код\n}',
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                    const Text('Тестовые кейсы (JSON)', style: TextStyle(fontWeight: FontWeight.w600)),
+                    const SizedBox(height: 6),
+                    TextFormField(
+                      controller: testCasesController,
+                      maxLines: 4,
+                      style: const TextStyle(fontFamily: 'monospace', fontSize: 12),
+                      decoration: const InputDecoration(
+                        hintText: '[{"input": "5 3", "expected_output": "8", "description": "Тест"}]',
+                        border: OutlineInputBorder(),
+                      ),
+                      validator: (v) {
+                        if (v == null || v.isEmpty) return 'Обязательно';
+                        try {
+                          jsonDecode(v);
+                          return null;
+                        } catch (e) {
+                          return 'Неверный JSON';
+                        }
+                      },
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: isLoading ? null : () => Navigator.pop(context),
+              child: const Text('Отмена'),
+            ),
+            ElevatedButton(
+              onPressed: isLoading
+                  ? null
+                  : () async {
+                      if (!formKey.currentState!.validate()) return;
+                      setState(() => isLoading = true);
+                      await _addPracticalTask(
+                        submoduleId,
+                        nameController.text,
+                        descriptionController.text,
+                        contentController.text,
+                        selectedLanguage,
+                        starterCodeController.text,
+                        testCasesController.text,
+                      );
+                      if (mounted) Navigator.pop(context);
+                    },
+              child: isLoading
+                  ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
                   : const Text('Добавить'),
             ),
           ],
@@ -717,8 +859,7 @@ class _CourseEditModulesTabState extends State<CourseEditModulesTab> {
                         prefixIcon: Icon(Icons.help_outline),
                       ),
                       maxLines: 3,
-                      validator: (value) =>
-                          value?.isEmpty == true ? 'Введите вопрос' : null,
+                      validator: (value) => value?.isEmpty == true ? 'Введите вопрос' : null,
                     ),
                     const SizedBox(height: 16),
                     TextFormField(
@@ -732,10 +873,8 @@ class _CourseEditModulesTabState extends State<CourseEditModulesTab> {
                       ),
                     ),
                     const SizedBox(height: 20),
-                    Text(
-                      'Выберите один правильный ответ',
-                      style: Theme.of(context).textTheme.titleMedium,
-                    ),
+                    Text('Выберите один правильный ответ',
+                        style: Theme.of(context).textTheme.titleMedium),
                     const SizedBox(height: 12),
                     ...List.generate(4, (index) {
                       return Padding(
@@ -745,9 +884,7 @@ class _CourseEditModulesTabState extends State<CourseEditModulesTab> {
                             Radio<int>(
                               value: index,
                               groupValue: selectedCorrectAnswer,
-                              onChanged: (value) {
-                                setState(() => selectedCorrectAnswer = value);
-                              },
+                              onChanged: (value) => setState(() => selectedCorrectAnswer = value),
                             ),
                             Expanded(
                               child: TextFormField(
@@ -757,9 +894,8 @@ class _CourseEditModulesTabState extends State<CourseEditModulesTab> {
                                   border: const OutlineInputBorder(),
                                   isDense: true,
                                 ),
-                                validator: (value) => value?.isEmpty == true
-                                    ? 'Введите ответ'
-                                    : null,
+                                validator: (value) =>
+                                    value?.isEmpty == true ? 'Введите ответ' : null,
                               ),
                             ),
                           ],
@@ -783,13 +919,10 @@ class _CourseEditModulesTabState extends State<CourseEditModulesTab> {
                       if (!formKey.currentState!.validate()) return;
                       if (selectedCorrectAnswer == null) {
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Выберите правильный ответ'),
-                          ),
+                          const SnackBar(content: Text('Выберите правильный ответ')),
                         );
                         return;
                       }
-
                       setState(() => isLoading = true);
                       await _addTest(
                         submoduleId,
@@ -801,11 +934,7 @@ class _CourseEditModulesTabState extends State<CourseEditModulesTab> {
                       if (mounted) Navigator.pop(context);
                     },
               child: isLoading
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
+                  ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
                   : const Text('Добавить'),
             ),
           ],
@@ -814,13 +943,10 @@ class _CourseEditModulesTabState extends State<CourseEditModulesTab> {
     );
   }
 
-  // ← НОВОЕ: Редактирование теста
   void _showEditTestDialog(db_models.Test test, int submoduleId) {
     final formKey = GlobalKey<FormState>();
     final questionController = TextEditingController(text: test.question);
-    final difficultyController = TextEditingController(
-      text: test.difficulty?.toString() ?? '1',
-    );
+    final difficultyController = TextEditingController(text: test.difficulty?.toString() ?? '1');
 
     final List<TextEditingController> answerControllers = [
       TextEditingController(text: test.rightAnswer),
@@ -829,7 +955,7 @@ class _CourseEditModulesTabState extends State<CourseEditModulesTab> {
       TextEditingController(text: test.wrongAnswer3),
     ];
 
-    int? selectedCorrectAnswer = 0; // По умолчанию правильный ответ первый
+    int? selectedCorrectAnswer = 0;
     bool isLoading = false;
 
     showDialog(
@@ -854,8 +980,7 @@ class _CourseEditModulesTabState extends State<CourseEditModulesTab> {
                         prefixIcon: Icon(Icons.help_outline),
                       ),
                       maxLines: 3,
-                      validator: (value) =>
-                          value?.isEmpty == true ? 'Введите вопрос' : null,
+                      validator: (value) => value?.isEmpty == true ? 'Введите вопрос' : null,
                     ),
                     const SizedBox(height: 16),
                     TextFormField(
@@ -869,10 +994,8 @@ class _CourseEditModulesTabState extends State<CourseEditModulesTab> {
                       ),
                     ),
                     const SizedBox(height: 20),
-                    Text(
-                      'Выберите один правильный ответ',
-                      style: Theme.of(context).textTheme.titleMedium,
-                    ),
+                    Text('Выберите один правильный ответ',
+                        style: Theme.of(context).textTheme.titleMedium),
                     const SizedBox(height: 12),
                     ...List.generate(4, (index) {
                       return Padding(
@@ -882,9 +1005,7 @@ class _CourseEditModulesTabState extends State<CourseEditModulesTab> {
                             Radio<int>(
                               value: index,
                               groupValue: selectedCorrectAnswer,
-                              onChanged: (value) {
-                                setState(() => selectedCorrectAnswer = value);
-                              },
+                              onChanged: (value) => setState(() => selectedCorrectAnswer = value),
                             ),
                             Expanded(
                               child: TextFormField(
@@ -894,9 +1015,8 @@ class _CourseEditModulesTabState extends State<CourseEditModulesTab> {
                                   border: const OutlineInputBorder(),
                                   isDense: true,
                                 ),
-                                validator: (value) => value?.isEmpty == true
-                                    ? 'Введите ответ'
-                                    : null,
+                                validator: (value) =>
+                                    value?.isEmpty == true ? 'Введите ответ' : null,
                               ),
                             ),
                           ],
@@ -920,13 +1040,10 @@ class _CourseEditModulesTabState extends State<CourseEditModulesTab> {
                       if (!formKey.currentState!.validate()) return;
                       if (selectedCorrectAnswer == null) {
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Выберите правильный ответ'),
-                          ),
+                          const SnackBar(content: Text('Выберите правильный ответ')),
                         );
                         return;
                       }
-
                       setState(() => isLoading = true);
                       await _updateTest(
                         test.id,
@@ -938,11 +1055,7 @@ class _CourseEditModulesTabState extends State<CourseEditModulesTab> {
                       if (mounted) Navigator.pop(context);
                     },
               child: isLoading
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
+                  ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
                   : const Text('Сохранить'),
             ),
           ],
@@ -951,14 +1064,13 @@ class _CourseEditModulesTabState extends State<CourseEditModulesTab> {
     );
   }
 
+  // ==================== CRUD ОПЕРАЦИИ ====================
+
   Future<void> _addModule(String name) async {
     try {
       final nextOrder = _modules.isEmpty
           ? 1
-          : (_modules
-                    .map((m) => m.orderModule ?? 0)
-                    .reduce((a, b) => a > b ? a : b)) +
-                1;
+          : (_modules.map((m) => m.orderModule ?? 0).reduce((a, b) => a > b ? a : b)) + 1;
 
       await SupabaseService.client.from('module').insert({
         'id_courses': widget.courseId,
@@ -969,25 +1081,17 @@ class _CourseEditModulesTabState extends State<CourseEditModulesTab> {
 
       if (mounted) {
         _loadModules();
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Модуль "$name" добавлен')));
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Модуль "$name" добавлен')));
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Ошибка: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Ошибка: $e')));
       }
     }
   }
 
-  Future<void> _addSubmodule(
-    int moduleId,
-    String name,
-    int leadTime,
-    String filePath,
-  ) async {
+  Future<void> _addSubmodule(int moduleId, String name, int leadTime, String filePath) async {
     try {
       final moduleData = await SupabaseService.client
           .from('module')
@@ -1001,12 +1105,8 @@ class _CourseEditModulesTabState extends State<CourseEditModulesTab> {
       final fileExtension = file.path.split('.').last;
       final fileBytes = await file.readAsBytes();
 
-      final safeFileName =
-          'submodule_${DateTime.now().millisecondsSinceEpoch}.$fileExtension';
-      final storagePath =
-          'c${widget.courseId}/module$orderModule/$safeFileName';
-
-      print('📤 Загружаем файл: $storagePath');
+      final safeFileName = 'submodule_${DateTime.now().millisecondsSinceEpoch}.$fileExtension';
+      final storagePath = 'c${widget.courseId}/module$orderModule/$safeFileName';
 
       await SupabaseService.client.storage
           .from('course-files')
@@ -1016,15 +1116,10 @@ class _CourseEditModulesTabState extends State<CourseEditModulesTab> {
           .from('course-files')
           .createSignedUrl(storagePath, 5256000);
 
-      print('✅ URL готов: $signedUrl');
-
       final submodules = _submodules[moduleId] ?? [];
       final nextOrder = submodules.isEmpty
           ? 1
-          : (submodules
-                    .map((s) => s.orderSubmodule ?? 0)
-                    .reduce((a, b) => a > b ? a : b)) +
-                1;
+          : (submodules.map((s) => s.orderSubmodule ?? 0).reduce((a, b) => a > b ? a : b)) + 1;
 
       await SupabaseService.client.from('submodule').insert({
         'id_module': moduleId,
@@ -1037,16 +1132,12 @@ class _CourseEditModulesTabState extends State<CourseEditModulesTab> {
 
       if (mounted) {
         _loadModules();
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Подмодуль "$name" добавлен')));
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Подмодуль "$name" добавлен')));
       }
     } catch (e) {
-      print('❌ Ошибка: $e');
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Ошибка: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Ошибка: $e')));
       }
     }
   }
@@ -1066,60 +1157,91 @@ class _CourseEditModulesTabState extends State<CourseEditModulesTab> {
           .order('order_test', ascending: false)
           .limit(1);
 
-      int nextOrder = 1;
-      if (existingTests.isNotEmpty) {
-        nextOrder = (existingTests[0]['order_test'] as int? ?? 0) + 1;
-      }
+      int nextOrder = existingTests.isNotEmpty
+          ? (existingTests[0]['order_test'] as int? ?? 0) + 1
+          : 1;
 
-      // ← ИСПРАВЛЕНО: Правильное распределение ответов
       String rightAnswer = answerControllers[correctAnswerIndex].text;
-
-      // Собираем неправильные ответы в правильном порядке
       List<String> wrongAnswers = [];
       for (int i = 0; i < 4; i++) {
-        if (i != correctAnswerIndex) {
-          wrongAnswers.add(answerControllers[i].text);
-        }
+        if (i != correctAnswerIndex) wrongAnswers.add(answerControllers[i].text);
       }
 
-      final testResponse = await SupabaseService.client
-          .from('test')
-          .insert({
-            'question': question,
-            'right_answer': rightAnswer,
-            'wrong_answer1': wrongAnswers[0],
-            'wrong_answer2': wrongAnswers[1],
-            'wrong_answer3': wrongAnswers[2],
-            'difficulty': difficulty,
-            'status': true,
-          })
-          .select()
-          .single();
-
-      final testId = testResponse['id'];
+      final testResponse = await SupabaseService.client.from('test').insert({
+        'question': question,
+        'right_answer': rightAnswer,
+        'wrong_answer1': wrongAnswers[0],
+        'wrong_answer2': wrongAnswers[1],
+        'wrong_answer3': wrongAnswers[2],
+        'difficulty': difficulty,
+        'status': true,
+      }).select().single();
 
       await SupabaseService.client.from('submodule_test').insert({
         'id_submodule': submoduleId,
-        'id_test': testId,
+        'id_test': testResponse['id'],
         'order_test': nextOrder,
       });
 
       if (mounted) {
         _loadModules();
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('Тест добавлен')));
+        ScaffoldMessenger.of(context)
+            .showSnackBar(const SnackBar(content: Text('Тест добавлен')));
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Ошибка: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Ошибка: $e')));
       }
     }
   }
 
-  // ← НОВОЕ: Обновление теста
+  // ← ДОБАВЛЕНО: Добавление практического задания
+  Future<void> _addPracticalTask(
+    int submoduleId,
+    String name,
+    String description,
+    String content,
+    String language,
+    String starterCode,
+    String testCases,
+  ) async {
+    try {
+      final existingTasks = await SupabaseService.client
+          .from('practical_task')
+          .select('order_task')
+          .eq('id_submodule', submoduleId)
+          .order('order_task', ascending: false)
+          .limit(1);
+
+      int nextOrder = existingTasks.isNotEmpty
+          ? (existingTasks[0]['order_task'] as int? ?? 0) + 1
+          : 1;
+
+      await SupabaseService.client.from('practical_task').insert({
+        'id_submodule': submoduleId,
+        'name': name,
+        'description': description,
+        'content': content,
+        'language': language,
+        'starter_code': starterCode,
+        'test_cases': testCases,
+        'order_task': nextOrder,
+        'difficulty': 1,
+        'status': true,
+      });
+
+      if (mounted) {
+        _loadModules();
+        ScaffoldMessenger.of(context)
+            .showSnackBar(const SnackBar(content: Text('Практическое задание добавлено')));
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Ошибка: $e')));
+      }
+    }
+  }
+
   Future<void> _updateTest(
     int testId,
     String question,
@@ -1128,40 +1250,29 @@ class _CourseEditModulesTabState extends State<CourseEditModulesTab> {
     int correctAnswerIndex,
   ) async {
     try {
-      // ← ИСПРАВЛЕНО: Правильное распределение ответов
       String rightAnswer = answerControllers[correctAnswerIndex].text;
-
-      // Собираем неправильные ответы в правильном порядке
       List<String> wrongAnswers = [];
       for (int i = 0; i < 4; i++) {
-        if (i != correctAnswerIndex) {
-          wrongAnswers.add(answerControllers[i].text);
-        }
+        if (i != correctAnswerIndex) wrongAnswers.add(answerControllers[i].text);
       }
 
-      await SupabaseService.client
-          .from('test')
-          .update({
-            'question': question,
-            'right_answer': rightAnswer,
-            'wrong_answer1': wrongAnswers[0],
-            'wrong_answer2': wrongAnswers[1],
-            'wrong_answer3': wrongAnswers[2],
-            'difficulty': difficulty,
-          })
-          .eq('id', testId);
+      await SupabaseService.client.from('test').update({
+        'question': question,
+        'right_answer': rightAnswer,
+        'wrong_answer1': wrongAnswers[0],
+        'wrong_answer2': wrongAnswers[1],
+        'wrong_answer3': wrongAnswers[2],
+        'difficulty': difficulty,
+      }).eq('id', testId);
 
       if (mounted) {
         _loadModules();
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('Тест обновлен')));
+        ScaffoldMessenger.of(context)
+            .showSnackBar(const SnackBar(content: Text('Тест обновлен')));
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Ошибка: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Ошибка: $e')));
       }
     }
   }
@@ -1169,18 +1280,14 @@ class _CourseEditModulesTabState extends State<CourseEditModulesTab> {
   Future<void> _deleteModule(int moduleId) async {
     try {
       await SupabaseService.client.from('module').delete().eq('id', moduleId);
-
       if (mounted) {
         _loadModules();
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('Модуль удален')));
+        ScaffoldMessenger.of(context)
+            .showSnackBar(const SnackBar(content: Text('Модуль удален')));
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Ошибка: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Ошибка: $e')));
       }
     }
   }
@@ -1188,69 +1295,56 @@ class _CourseEditModulesTabState extends State<CourseEditModulesTab> {
   Future<void> _deleteSubmodule(int submoduleId, int moduleId) async {
     try {
       final client = SupabaseService.client;
-
-      await client
-          .from('user_submodule_progress')
-          .delete()
-          .eq('id_submodule', submoduleId);
-
-      await client
-          .from('student_test_result')
-          .delete()
-          .eq('id_submodule', submoduleId);
-
-      await client
-          .from('student_practical_result')
-          .delete()
-          .eq('id_submodule', submoduleId);
-
-      await client
-          .from('submodule_test')
-          .delete()
-          .eq('id_submodule', submoduleId);
-
-      await client
-          .from('practical_task')
-          .delete()
-          .eq('id_submodule', submoduleId);
-
+      await client.from('user_submodule_progress').delete().eq('id_submodule', submoduleId);
+      await client.from('student_test_result').delete().eq('id_submodule', submoduleId);
+      await client.from('student_practical_result').delete().eq('id_submodule', submoduleId);
+      await client.from('submodule_test').delete().eq('id_submodule', submoduleId);
+      await client.from('practical_task').delete().eq('id_submodule', submoduleId);
       await client.from('submodule').delete().eq('id', submoduleId);
 
       if (mounted) {
         _loadModules();
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('Подмодуль удален')));
+        ScaffoldMessenger.of(context)
+            .showSnackBar(const SnackBar(content: Text('Подмодуль удален')));
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Ошибка: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Ошибка: $e')));
       }
     }
   }
 
   Future<void> _deleteTest(int testId, int submoduleId) async {
     try {
-      await SupabaseService.client
-          .from('submodule_test')
-          .delete()
-          .eq('id_test', testId);
-
+      await SupabaseService.client.from('submodule_test').delete().eq('id_test', testId);
       await SupabaseService.client.from('test').delete().eq('id', testId);
 
       if (mounted) {
         _loadModules();
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('Тест удален')));
+        ScaffoldMessenger.of(context)
+            .showSnackBar(const SnackBar(content: Text('Тест удален')));
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Ошибка: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Ошибка: $e')));
+      }
+    }
+  }
+
+  // ← ДОБАВЛЕНО: Удаление практического задания
+  Future<void> _deletePracticalTask(int taskId, int submoduleId) async {
+    try {
+      await SupabaseService.client.from('student_practical_result').delete().eq('id_task', taskId);
+      await SupabaseService.client.from('practical_task').delete().eq('id', taskId);
+
+      if (mounted) {
+        _loadModules();
+        ScaffoldMessenger.of(context)
+            .showSnackBar(const SnackBar(content: Text('Практическое задание удалено')));
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Ошибка: $e')));
       }
     }
   }
