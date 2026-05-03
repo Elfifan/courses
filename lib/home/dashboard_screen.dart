@@ -6,6 +6,8 @@ import '../courses/courses_screen.dart';
 import '../students/students_screen.dart';
 import '../achievements/achievements_screen.dart';
 import '../repositories/course_repository.dart';
+import '../courses/author_chats_screen.dart';
+
 
 class DashboardScreen extends StatefulWidget {
   final VoidCallback onThemeToggle;
@@ -37,11 +39,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
   bool get _isAuthor => widget.userRole?.toLowerCase() == 'автор';
 
   List<String> get _menuItems => _isAuthor
-      ? ['Курсы']
+      ? ['Курсы', 'Чаты']
       : ['Статистика', 'Курсы', 'Пользователь', 'Достижения'];
 
   List<IconData> get _menuIcons => _isAuthor
-      ? [Icons.school_rounded]
+      ? [Icons.school_rounded, Icons.message_rounded]
       : [
           Icons.dashboard_rounded,
           Icons.school_rounded,
@@ -52,7 +54,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.white, // Используем белый из палитры[cite: 1]
+      backgroundColor: AppColors.white, 
       body: Row(
         children: [
           SidePanel(
@@ -106,6 +108,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Widget _buildContent() {
     if (_isAuthor) {
+      if (_selectedIndex == 1) {
+      return AuthorChatsScreen(authorId: widget.userId!);
+    }
       return CoursesScreen(
         isDarkMode: widget.isDarkMode,
         authorId: widget.userId,
