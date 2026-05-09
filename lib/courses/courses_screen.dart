@@ -40,14 +40,23 @@ class _CoursesScreenState extends State<CoursesScreen> {
     _loadCourses();
   }
 
+  bool _isPerformingLoad = false;
+
   Future<void> _loadCourses() async {
-    if (!mounted) return;
-    setState(() => _isLoading = true);
+    if (!mounted || _isPerformingLoad) return;
+    setState(() {
+      _isLoading = true;
+      _isPerformingLoad = true;
+    });
+    
     try {
-      final query = SupabaseService.client.from('courses').select();
-      final data = await (widget.authorId != null
-          ? query.eq('id_employee', widget.authorId!).order('date_create', ascending: false)
-          : query.order('date_create', ascending: false));
+      final data = await SupabaseService.safeDbCall(() async {
+        final query = SupabaseService.client.from('courses').select();
+        return await (widget.authorId != null
+            ? query.eq('id_employee', widget.authorId!).order('date_create', ascending: false)
+            : query.order('date_create', ascending: false))
+            .timeout(const Duration(seconds: 5));
+      });
       
       if (mounted) {
         setState(() {
@@ -58,12 +67,23 @@ class _CoursesScreenState extends State<CoursesScreen> {
         });
       }
     } catch (e) {
+      debugPrint('Ошибка загрузки списка курсов: $e');
       if (mounted) {
         setState(() => _isLoading = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Ошибка загрузки: $e')),
+          SnackBar(
+            content: Text('Не удалось загрузить курсы: $e'),
+            backgroundColor: Colors.red,
+            action: SnackBarAction(
+              label: 'Повторить', 
+              textColor: Colors.white,
+              onPressed: _loadCourses
+            ),
+          ),
         );
       }
+    } finally {
+      _isPerformingLoad = false;
     }
   }
 

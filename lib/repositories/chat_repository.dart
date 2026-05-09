@@ -1,7 +1,8 @@
 import 'dart:async';
 import 'package:supabase_flutter/supabase_flutter.dart' hide User;
-import '../models/database_models.dart';
+import 'package:flutter/foundation.dart';
 import '../models/message_model.dart';
+import '../services/supabase_service.dart';
 
 class ChatThread {
   final String chatId;
@@ -109,72 +110,74 @@ class ChatRepository {
     return MessageModel.fromJson(Map<String, dynamic>.from(result as Map));
   }
 
-  /// Загрузка списка чатов для автора
+  /// Загрузка списка чатов для автора (оптимизировано)
   Future<List<ChatThread>> loadAuthorThreads(String authorId) async {
     final authorIdInt = int.tryParse(authorId);
     if (authorIdInt == null) return [];
 
-    // Получаем все комнаты для курсов этого автора
-    final roomsResult = await supabase
-        .from('chat_rooms')
-        .select('''
-          id,
-          id_user,
-          id_courses,
-          created_at,
-          courses!inner(id, id_employee, name)
-        ''')
-        .eq('courses.id_employee', authorIdInt)
-        .order('created_at', ascending: false);
+    try {
+      // Получаем все комнаты, курсы и данные пользователей одним запросом
+      final roomsResult = await SupabaseService.safeDbCall(() => supabase
+          .from('chat_rooms')
+          .select('''
+            id,
+            id_user,
+            id_courses,
+            created_at,
+            courses!inner(id, id_employee, name),
+            users!id_user(id, name, email)
+          ''')
+          .eq('courses.id_employee', authorIdInt)
+          .order('created_at', ascending: false));
 
-    final rooms = roomsResult as List;
-    if (rooms.isEmpty) return [];
+      final rooms = roomsResult as List;
+      if (rooms.isEmpty) return [];
 
-    final List<ChatThread> threads = [];
+      final List<ChatThread> threads = [];
 
-    for (final room in rooms) {
-      final roomId = room['id'] as int;
-      final userId = room['id_user'] as int;
-      final courseData = room['courses'] as Map<String, dynamic>;
-      final courseName = courseData['name']?.toString() ?? 'Курс';
+      for (final room in rooms) {
+        final roomId = room['id'] as int;
+        final userId = room['id_user'] as int;
+        final courseData = room['courses'] as Map<String, dynamic>;
+        final userData = room['users'] as Map<String, dynamic>?;
+        
+        final courseName = courseData['name']?.toString() ?? 'Курс';
+        final userName = userData?['name']?.toString() ?? 
+                         userData?['email']?.toString() ?? 
+                         'Пользователь $userId';
 
-      // Получаем последнее сообщение
-      final lastMsgResult = await supabase
-          .from('chat_messages')
-          .select('message, created_at, sender_type')
-          .eq('id_room', roomId)
-          .order('created_at', ascending: false)
-          .limit(1)
-          .maybeSingle();
+        // Для последнего сообщения пока оставим отдельный запрос, 
+        // но обернем в safeDbCall для надежности.
+        // В идеале это тоже можно оптимизировать через RPC или сложные вью.
+        final lastMsgResult = await SupabaseService.safeDbCall(() => supabase
+            .from('chat_messages')
+            .select('message, created_at')
+            .eq('id_room', roomId)
+            .order('created_at', ascending: false)
+            .limit(1)
+            .maybeSingle());
 
-      final lastMessage = lastMsgResult?['message']?.toString() ?? 'Нет сообщений';
-      final lastUpdated = lastMsgResult?['created_at'] != null
-          ? DateTime.tryParse(lastMsgResult!['created_at'].toString()) ?? DateTime.now()
-          : DateTime.now();
+        final lastMessage = lastMsgResult?['message']?.toString() ?? 'Нет сообщений';
+        final lastUpdated = lastMsgResult?['created_at'] != null
+            ? DateTime.tryParse(lastMsgResult!['created_at'].toString()) ?? DateTime.now()
+            : DateTime.now();
 
-      // Получаем данные пользователя
-      final userResult = await supabase
-          .from('users')
-          .select('id, name, email')
-          .eq('id', userId)
-          .maybeSingle();
+        threads.add(ChatThread(
+          chatId: roomId.toString(),
+          otherUserId: userId.toString(),
+          displayName: '$userName ($courseName)',
+          lastMessage: lastMessage,
+          lastUpdated: lastUpdated,
+          courseId: courseData['id'] as int?,
+        ));
+      }
 
-      final userName = userResult?['name']?.toString() ?? 
-                       userResult?['email']?.toString() ?? 
-                       'Пользователь $userId';
-
-      threads.add(ChatThread(
-        chatId: roomId.toString(),
-        otherUserId: userId.toString(),
-        displayName: '$userName ($courseName)',
-        lastMessage: lastMessage,
-        lastUpdated: lastUpdated,
-        courseId: courseData['id'] as int?,
-      ));
+      threads.sort((a, b) => b.lastUpdated.compareTo(a.lastUpdated));
+      return threads;
+    } catch (e) {
+      debugPrint('Error loading author threads: $e');
+      rethrow;
     }
-
-    threads.sort((a, b) => b.lastUpdated.compareTo(a.lastUpdated));
-    return threads;
   }
 
   /// Realtime подписка
@@ -211,6 +214,33 @@ class ChatRepository {
     );
 
     channel.subscribe();
+
+    return controller.stream;
+  }
+
+  /// Подписка на изменения в списке комнат автора
+  Stream<void> watchAuthorRooms(String authorId) {
+    final controller = StreamController<void>();
+    
+    final channel = supabase
+        .channel('public:chat_rooms')
+        .onPostgresChanges(
+          event: PostgresChangeEvent.all,
+          schema: 'public',
+          table: 'chat_rooms',
+          callback: (payload) {
+            if (!controller.isClosed) {
+              controller.add(null);
+            }
+          },
+        );
+        
+    channel.subscribe();
+
+    controller.onCancel = () {
+      channel.unsubscribe();
+      controller.close();
+    };
 
     return controller.stream;
   }

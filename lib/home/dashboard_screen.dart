@@ -53,6 +53,40 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Список экранов для IndexedStack, чтобы они не пересоздавались каждый раз
+    final List<Widget> screens = _isAuthor 
+      ? [
+          CoursesScreen(
+            isDarkMode: widget.isDarkMode,
+            authorId: widget.userId,
+            userRole: widget.userRole,
+            userId: widget.userId,
+          ),
+          AuthorChatsScreen(authorId: widget.userId!),
+        ]
+      : [
+          _buildDashboard(),
+          CoursesScreen(
+            isDarkMode: widget.isDarkMode,
+            authorId: null,
+            userRole: widget.userRole,
+            userId: widget.userId,
+          ),
+          StudentsScreen(
+            selectedFilter: _selectedStudentFilter,
+            onFilterChanged: (filter) {
+              setState(() {
+                _selectedStudentFilter = filter;
+              });
+            },
+            isDarkMode: widget.isDarkMode,
+          ),
+          AchievementsScreen(
+            key: _achievementsKey,
+            isDarkMode: widget.isDarkMode,
+          ),
+        ];
+
     return Scaffold(
       backgroundColor: AppColors.white, 
       body: Row(
@@ -91,10 +125,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 ),
                 Expanded(
                   child: Container(
-                    color: AppColors.bgLight, // Светлый фон подложки[cite: 1]
+                    color: AppColors.bgLight, 
                     child: Padding(
                       padding: const EdgeInsets.all(32),
-                      child: _buildContent(),
+                      child: IndexedStack(
+                        index: _selectedIndex,
+                        children: screens,
+                      ),
                     ),
                   ),
                 ),
@@ -106,65 +143,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  Widget _buildContent() {
-    if (_isAuthor) {
-      if (_selectedIndex == 1) {
-      return AuthorChatsScreen(authorId: widget.userId!);
-    }
-      return CoursesScreen(
-        isDarkMode: widget.isDarkMode,
-        authorId: widget.userId,
-        userRole: widget.userRole,
-        userId: widget.userId,
-      );
-    }
-
-    switch (_selectedIndex) {
-      case 0:
-        return _buildDashboard();
-      case 1:
-        return CoursesScreen(
-          isDarkMode: widget.isDarkMode,
-          authorId: null,
-          userRole: widget.userRole,
-          userId: widget.userId,
-        );
-      case 2:
-        return StudentsScreen(
-          selectedFilter: _selectedStudentFilter,
-          onFilterChanged: (filter) {
-            setState(() {
-              _selectedStudentFilter = filter;
-            });
-          },
-          isDarkMode: widget.isDarkMode,
-        );
-      case 3:
-        return AchievementsScreen(
-          key: _achievementsKey,
-          isDarkMode: widget.isDarkMode,
-        );
-      default:
-        return Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                _menuIcons[_selectedIndex],
-                size: 64,
-                color: AppColors.textGrey.withValues(alpha: 0.3), // Серый из палитры[cite: 1]
-              ),
-              const SizedBox(height: 16),
-              Text(
-                'Раздел "${_menuItems[_selectedIndex]}" в разработке',
-                style: AppStyles.body.copyWith(color: AppColors.textGrey), // Roboto[cite: 1]
-              ),
-            ],
-          ),
-        );
-    }
-  }
-
+  // _buildContent больше не нужен, так как используется IndexedStack
+  
   Widget _buildDashboard() {
     return Column(
       children: [

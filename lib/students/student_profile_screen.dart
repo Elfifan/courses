@@ -103,7 +103,7 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               gradient: AppColors.primaryGradient,
-              boxShadow: [BoxShadow(color: AppColors.primaryPurple.withOpacity(0.3), blurRadius: 15)],
+              boxShadow: [BoxShadow(color: AppColors.primaryPurple.withValues(alpha: 0.3), blurRadius: 15)],
             ),
             child: Center(
               child: Text(student['avatar']!, style: const TextStyle(fontSize: 36, color: Colors.white, fontWeight: FontWeight.bold)),
@@ -241,7 +241,7 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(vertical: 10),
-      decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(12)),
+      decoration: BoxDecoration(color: color.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(12)),
       child: Center(
         child: Text(_isBlocked ? 'Заблокирован' : 'Активен', style: AppStyles.label.copyWith(color: color, fontWeight: FontWeight.bold)),
       ),

@@ -113,7 +113,7 @@ class CourseService {
                     Text('Уровень сложности', style: AppStyles.label.copyWith(fontWeight: FontWeight.w700)),
                     const SizedBox(height: 8),
                     DropdownButtonFormField<int>(
-                      value: selectedComplexity,
+                      initialValue: selectedComplexity,
                       decoration: KodixComponents.textFieldDecoration(hintText: 'Выберите уровень сложности', prefixIcon: Icons.bar_chart_outlined),
                       items: complexityLevels.entries.map((entry) {
                         return DropdownMenuItem<int>(

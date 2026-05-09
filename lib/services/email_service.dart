@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'dart:math';
 import 'package:mailer/mailer.dart';
 import 'package:mailer/smtp_server.dart';
@@ -78,11 +79,11 @@ class EmailService {
         ''';
 
       final sendReport = await send(message, _smtpServer);
-      print('Email sent: ${sendReport.toString()}');
+      debugPrint('Email sent: ${sendReport.toString()}');
 
       return recoveryCode;
     } catch (e) {
-      print('Error sending email: $e');
+      debugPrint('Error sending email: $e');
       return null;
     }
   }

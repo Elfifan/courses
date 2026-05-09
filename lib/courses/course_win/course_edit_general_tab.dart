@@ -18,10 +18,13 @@ class CourseEditGeneralTab extends StatefulWidget {
   });
 
   @override
-  _CourseEditGeneralTabState createState() => _CourseEditGeneralTabState();
+  State<CourseEditGeneralTab> createState() => _CourseEditGeneralTabState();
 }
 
-class _CourseEditGeneralTabState extends State<CourseEditGeneralTab> {
+class _CourseEditGeneralTabState extends State<CourseEditGeneralTab> with AutomaticKeepAliveClientMixin {
+  @override
+  bool get wantKeepAlive => true;
+
   late TextEditingController _titleController;
   late TextEditingController _descriptionController;
   late TextEditingController _priceController;
@@ -76,7 +79,7 @@ class _CourseEditGeneralTabState extends State<CourseEditGeneralTab> {
     try {
       final price = double.tryParse(_priceController.text) ?? 0;
 
-      await SupabaseService.client
+      await SupabaseService.safeDbCall(() => SupabaseService.client
           .from('courses')
           .update({
             'name': _titleController.text,
@@ -84,7 +87,7 @@ class _CourseEditGeneralTabState extends State<CourseEditGeneralTab> {
             'price': price,
             'complexity': _selectedComplexity,
           })
-          .eq('id', widget.course.id);
+          .eq('id', widget.course.id));
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -113,6 +116,7 @@ class _CourseEditGeneralTabState extends State<CourseEditGeneralTab> {
 
   @override
   Widget build(BuildContext context) {
+    super.build(context);
     return Padding(
       padding: const EdgeInsets.all(20),
       child: SingleChildScrollView(
@@ -158,7 +162,7 @@ class _CourseEditGeneralTabState extends State<CourseEditGeneralTab> {
               Text('Уровень сложности', style: AppStyles.label.copyWith(fontWeight: FontWeight.w700)),
               const SizedBox(height: 8),
               DropdownButtonFormField<int>(
-                value: _selectedComplexity,
+                initialValue: _selectedComplexity,
                 decoration: KodixComponents.textFieldDecoration(hintText: 'Выберите уровень сложности', prefixIcon: Icons.trending_up),
                 items: _complexityLevels.entries.map((entry) {
                   return DropdownMenuItem<int>(

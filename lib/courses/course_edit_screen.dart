@@ -40,15 +40,22 @@ class _CourseEditScreenState extends State<CourseEditScreen>
     _loadCourse();
   }
 
+  bool _isPerformingLoad = false;
+
   Future<void> _loadCourse() async {
-    if (!mounted) return;
-    setState(() => _isLoading = true);
+    if (!mounted || _isPerformingLoad) return;
+    setState(() {
+      _isLoading = true;
+      _isPerformingLoad = true;
+    });
+
     try {
-      final data = await SupabaseService.client
+      final data = await SupabaseService.safeDbCall(() => SupabaseService.client
           .from('courses')
           .select()
           .eq('id', widget.courseId)
-          .single();
+          .single()
+          .timeout(const Duration(seconds: 5)));
       
       if (mounted) {
         setState(() {
@@ -57,12 +64,23 @@ class _CourseEditScreenState extends State<CourseEditScreen>
         });
       }
     } catch (e) {
+      debugPrint('Ошибка загрузки данных курса: $e');
       if (mounted) {
         setState(() => _isLoading = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Ошибка загрузки курса: $e')),
+          SnackBar(
+            content: Text('Не удалось загрузить данные курса: $e'),
+            backgroundColor: Colors.red,
+            action: SnackBarAction(
+              label: 'Повторить', 
+              textColor: Colors.white,
+              onPressed: _loadCourse
+            ),
+          ),
         );
       }
+    } finally {
+      _isPerformingLoad = false;
     }
   }
 
@@ -156,11 +174,11 @@ class _CourseEditScreenState extends State<CourseEditScreen>
   Future<void> _refreshCourse() async {
     if (!mounted) return;
     try {
-      final data = await SupabaseService.client
+      final data = await SupabaseService.safeDbCall(() => SupabaseService.client
           .from('courses')
           .select()
           .eq('id', widget.courseId)
-          .single();
+          .single());
       if (mounted) {
         setState(() {
           _course = Course.fromJson(data);

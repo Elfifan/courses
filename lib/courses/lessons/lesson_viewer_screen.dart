@@ -14,11 +14,11 @@ class LessonViewerScreen extends StatefulWidget {
 
 
   const LessonViewerScreen({
-    Key? key,
+    super.key,
     required this.submoduleId,
     required this.courseName,
     required this.courseIcon,
-  }) : super(key: key);
+  });
 
 
 
@@ -76,7 +76,7 @@ class _LessonViewerScreenState extends State<LessonViewerScreen>
           mode: LaunchMode.externalApplication,
         );
       } else {
-        print('Невозможно открыть $url');
+        debugPrint('Невозможно открыть $url');
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text('Не удалось открыть ссылку')),
@@ -84,7 +84,7 @@ class _LessonViewerScreenState extends State<LessonViewerScreen>
         }
       }
     } catch (e) {
-      print('Ошибка при открытии ссылки: $e');
+      debugPrint('Ошибка при открытии ссылки: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Ошибка при открытии ссылки')),
@@ -105,7 +105,7 @@ class _LessonViewerScreenState extends State<LessonViewerScreen>
 
 
 
-      print('Начинаем загрузку подмодуля ${widget.submoduleId}');
+      debugPrint('Начинаем загрузку подмодуля ${widget.submoduleId}');
 
 
 
@@ -113,7 +113,7 @@ class _LessonViewerScreenState extends State<LessonViewerScreen>
           .timeout(
             Duration(seconds: 15),
             onTimeout: () {
-              print('Timeout при загрузке подмодуля');
+              debugPrint('Timeout при загрузке подмодуля');
               return null;
             },
           );
@@ -140,7 +140,7 @@ class _LessonViewerScreenState extends State<LessonViewerScreen>
           loadedSubmodule.content!.isNotEmpty) {
         final contentUrl = loadedSubmodule.content!;
         if (_isValidUrl(contentUrl)) {
-          print('Загружаем контент с URL: $contentUrl');
+          debugPrint('Загружаем контент с URL: $contentUrl');
 
 
 
@@ -148,7 +148,7 @@ class _LessonViewerScreenState extends State<LessonViewerScreen>
               .timeout(
                 Duration(seconds: 30),
                 onTimeout: () {
-                  print('Timeout при загрузке контента');
+                  debugPrint('Timeout при загрузке контента');
                   return '<p>Ошибка: время ожидания</p>';
                 },
               );
@@ -156,7 +156,7 @@ class _LessonViewerScreenState extends State<LessonViewerScreen>
 
 
           if (htmlContent != null && !_isValidHtml(htmlContent)) {
-            print('Получен некорректный контент');
+            debugPrint('Получен некорректный контент');
             htmlContent = '<p>Контент поврежден</p>';
           }
         }
@@ -176,9 +176,9 @@ class _LessonViewerScreenState extends State<LessonViewerScreen>
 
 
 
-      print('Загрузка завершена');
+      debugPrint('Загрузка завершена');
     } catch (e) {
-      print('Ошибка загрузки теории: $e');
+      debugPrint('Ошибка загрузки теории: $e');
       if (!mounted) return;
       setState(() {
         isLoading = false;
@@ -289,7 +289,7 @@ class _LessonViewerScreenState extends State<LessonViewerScreen>
 
 
       if (imageUrl.isNotEmpty) {
-        print('✓ Отображаем изображение: $imageUrl (размер: $sizeStr)');
+        debugPrint('✓ Отображаем изображение: $imageUrl (размер: $sizeStr)');
         
         double imageHeight = _getImageHeight(sizeStr);
 
@@ -304,7 +304,7 @@ class _LessonViewerScreenState extends State<LessonViewerScreen>
                 borderRadius: BorderRadius.circular(12),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.1),
+                    color: Colors.black.withValues(alpha: 0.1),
                     blurRadius: 8,
                     offset: Offset(0, 2),
                   ),
@@ -316,7 +316,7 @@ class _LessonViewerScreenState extends State<LessonViewerScreen>
                   imageUrl,
                   fit: BoxFit.cover,
                   errorBuilder: (context, error, stackTrace) {
-                    print('❌ Ошибка загрузки изображения: $error');
+                    debugPrint('❌ Ошибка загрузки изображения: $error');
                     return Container(
                       color: Colors.grey[300],
                       child: Center(
@@ -425,28 +425,28 @@ class _LessonViewerScreenState extends State<LessonViewerScreen>
         fontSize: FontSize(15),
         lineHeight: LineHeight(1.5),
         margin: Margins.symmetric(vertical: 12),
-        color: Theme.of(context).colorScheme.onBackground,
+        color: Theme.of(context).colorScheme.onSurface,
       ),
       'h1': Style(
         fontSize: FontSize(24),
         fontWeight: FontWeight.bold,
         margin: Margins.only(top: 20, bottom: 12),
         padding: HtmlPaddings.zero,
-        color: Theme.of(context).colorScheme.onBackground,
+        color: Theme.of(context).colorScheme.onSurface,
       ),
       'h2': Style(
         fontSize: FontSize(20),
         fontWeight: FontWeight.bold,
         margin: Margins.only(top: 20, bottom: 12),
         padding: HtmlPaddings.zero,
-        color: Theme.of(context).colorScheme.onBackground,
+        color: Theme.of(context).colorScheme.onSurface,
       ),
       'h3': Style(
         fontSize: FontSize(18),
         fontWeight: FontWeight.bold,
         margin: Margins.only(top: 20, bottom: 12),
         padding: HtmlPaddings.zero,
-        color: Theme.of(context).colorScheme.onBackground,
+        color: Theme.of(context).colorScheme.onSurface,
       ),
       'ul': Style(
         margin: Margins.symmetric(vertical: 12),
@@ -468,7 +468,7 @@ class _LessonViewerScreenState extends State<LessonViewerScreen>
       'b': Style(fontWeight: FontWeight.bold),
       'em': Style(fontStyle: FontStyle.italic),
       'code': Style(
-        backgroundColor: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+        backgroundColor: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
         fontFamily: 'Courier New',
         fontSize: FontSize(13),
         padding: HtmlPaddings.symmetric(horizontal: 4, vertical: 2),

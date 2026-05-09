@@ -46,11 +46,10 @@ class PasswordRecoveryRepository {
 class _RecoveryData {
   final String code;
   final DateTime expiresAt;
-  bool used;
+  bool used = false;
 
   _RecoveryData({
     required this.code,
     required this.expiresAt,
-    this.used = false,
   });
 }

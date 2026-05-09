@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../core/theme/app_components.dart';
@@ -19,18 +20,37 @@ class _AuthorChatsScreenState extends State<AuthorChatsScreen> {
   bool _isLoading = true;
   String? _errorMessage;
   List<ChatThread> _threads = [];
+  StreamSubscription? _roomSubscription;
 
   @override
   void initState() {
     super.initState();
     _loadThreads();
+    _setupRealtime();
   }
 
-  Future<void> _loadThreads() async {
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
+  void _setupRealtime() {
+    _roomSubscription = _chatService.watchAuthorRooms(widget.authorId.toString()).listen((_) {
+      // Обновляем список в фоновом режиме при любом изменении в комнатах
+      _loadThreads(isBackground: true);
     });
+  }
+
+  @override
+  void dispose() {
+    _roomSubscription?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _loadThreads({bool isBackground = false}) async {
+    if (!isBackground) {
+      if (mounted) {
+        setState(() {
+          _isLoading = true;
+          _errorMessage = null;
+        });
+      }
+    }
 
     try {
       final threads = await _chatService.loadAuthorThreads(widget.authorId.toString());
@@ -63,12 +83,12 @@ class _AuthorChatsScreenState extends State<AuthorChatsScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.error_outline, size: 48, color: AppColors.textGrey.withOpacity(0.5)),
+            Icon(Icons.error_outline, size: 48, color: AppColors.textGrey.withValues(alpha: 0.5)),
             const SizedBox(height: 16),
             Text(_errorMessage!, style: AppStyles.label),
             const SizedBox(height: 16),
             TextButton(
-              onPressed: _loadThreads,
+              onPressed: () => _loadThreads(),
               child: const Text('Повторить'),
             ),
           ],
@@ -85,13 +105,13 @@ class _AuthorChatsScreenState extends State<AuthorChatsScreen> {
               width: 80,
               height: 80,
               decoration: BoxDecoration(
-                color: AppColors.primaryPurple.withOpacity(0.1),
+                color: AppColors.primaryPurple.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(24),
               ),
               child: Icon(
                 Icons.chat_bubble_outline_rounded,
                 size: 40,
-                color: AppColors.primaryPurple.withOpacity(0.5),
+                color: AppColors.primaryPurple.withValues(alpha: 0.5),
               ),
             ),
             const SizedBox(height: 24),
@@ -111,7 +131,7 @@ class _AuthorChatsScreenState extends State<AuthorChatsScreen> {
     }
 
     return RefreshIndicator(
-      onRefresh: _loadThreads,
+      onRefresh: () => _loadThreads(),
       color: AppColors.primaryPurple,
       child: ListView.builder(
         padding: const EdgeInsets.all(0),
@@ -132,7 +152,7 @@ class _AuthorChatsScreenState extends State<AuthorChatsScreen> {
         borderRadius: AppStyles.mainRadius,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
+            color: Colors.black.withValues(alpha: 0.04),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -214,7 +234,7 @@ class _AuthorChatsScreenState extends State<AuthorChatsScreen> {
                     const SizedBox(height: 6),
                     Icon(
                       Icons.chevron_right_rounded,
-                      color: AppColors.textGrey.withOpacity(0.5),
+                      color: AppColors.textGrey.withValues(alpha: 0.5),
                       size: 20,
                     ),
                   ],

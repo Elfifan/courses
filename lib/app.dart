@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'home/dashboard_screen.dart';
 
 // Светлая тема
 final ThemeData lightTheme = ThemeData(
@@ -10,8 +9,7 @@ final ThemeData lightTheme = ThemeData(
     primaryContainer: Color(0xFFE0E7FF),
     secondary: Color(0xFF8B5CF6),
     secondaryContainer: Color(0xFFF4F6F8),
-    surface: Color(0xFFFFFFFF),       // белый для карточек и панелей
-    background: Color.fromARGB(255, 239, 240, 241),
+    surface: Color(0xFFFFFFFF),
     error: Color(0xFFEF4444),
     onPrimary: Colors.white,
     onSecondary: Colors.white,
@@ -72,7 +70,6 @@ final ThemeData darkTheme = ThemeData(
     secondary: Color(0xFF03DAC6), // стандартный teal
     secondaryContainer: Color(0xFF1E1E1E),
     surface: Color(0xFF1E1E1E),
-    background: Color(0xFF121212),
     error: Color(0xFFCF6679),
     onPrimary: Colors.white,
     onSecondary: Colors.black,
@@ -124,19 +121,21 @@ final ThemeData darkTheme = ThemeData(
 
 // Расширение для тем
 extension CustomColors on ThemeData {
-  Color get sidePanelColor => this.colorScheme.secondaryContainer;
-  Color get sidePanelTextColor => this.brightness == Brightness.dark 
+  Color get sidePanelColor => colorScheme.secondaryContainer;
+  Color get sidePanelTextColor => brightness == Brightness.dark 
     ? Colors.white
     : Color(0xFF1E293B);
-  Color get sidePanelTextSecondaryColor => this.brightness == Brightness.dark 
+  Color get sidePanelTextSecondaryColor => brightness == Brightness.dark 
     ? Color(0xFF9E9E9E) 
     : Color(0xFF64748B);
 }
 
 // Основное приложение
 class AdminCoursesApp extends StatefulWidget {
+  const AdminCoursesApp({super.key});
+
   @override
-  _AdminCoursesAppState createState() => _AdminCoursesAppState();
+  State<AdminCoursesApp> createState() => _AdminCoursesAppState();
 }
 
 class _AdminCoursesAppState extends State<AdminCoursesApp> {

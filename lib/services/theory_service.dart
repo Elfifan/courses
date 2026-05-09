@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert' as convert;
@@ -15,7 +16,7 @@ class TheoryService {
 
       return response;
     } catch (e) {
-      print('Ошибка при загрузке подмодуля: $e');
+      debugPrint('Ошибка при загрузке подмодуля: $e');
       return null;
     }
   }
@@ -23,44 +24,44 @@ class TheoryService {
   static Future<String?> loadMarkdownFromStorage(String storageUrl) async {
     try {
       if (storageUrl.isEmpty) {
-        print('URL пустой');
+        debugPrint('URL пустой');
         return null;
       }
 
-      print('=== НАЧАЛО ЗАГРУЗКИ MARKDOWN ===');
-      print('URL: $storageUrl');
+      debugPrint('=== НАЧАЛО ЗАГРУЗКИ MARKDOWN ===');
+      debugPrint('URL: $storageUrl');
 
       final response = await http
           .get(Uri.parse(storageUrl))
           .timeout(
             Duration(seconds: 30),
             onTimeout: () {
-              print('❌ Timeout при загрузке контента');
+              debugPrint('❌ Timeout при загрузке контента');
               throw Exception('Timeout при загрузке контента');
             },
           );
 
       if (response.statusCode == 200) {
-        print('✓ Ответ получен: ${response.statusCode}');
+        debugPrint('✓ Ответ получен: ${response.statusCode}');
 
         String content = convert.utf8.decode(response.bodyBytes);
-        print('✓ Markdown декодирован, размер: ${content.length} символов');
+        debugPrint('✓ Markdown декодирован, размер: ${content.length} символов');
 
         if (_isValidContent(content)) {
-          print('✓ Контент валиден');
+          debugPrint('✓ Контент валиден');
           final htmlContent = _markdownToHtml(content);
-          print('=== ЗАГРУЗКА УСПЕШНА ===');
+          debugPrint('=== ЗАГРУЗКА УСПЕШНА ===');
           return htmlContent;
         } else {
-          print('❌ Контент невалиден');
+          debugPrint('❌ Контент невалиден');
           return '<p>Контент поврежден</p>';
         }
       } else {
-        print('❌ Ошибка загрузки: ${response.statusCode}');
+        debugPrint('❌ Ошибка загрузки: ${response.statusCode}');
         return '<p>Ошибка загрузки контента</p>';
       }
     } catch (e) {
-      print('❌ Исключение: $e');
+      debugPrint('❌ Исключение: $e');
       return '<p>Ошибка при загрузке: $e</p>';
     }
   }
@@ -107,7 +108,7 @@ class TheoryService {
         }
 
         if (imageUrl.isNotEmpty) {
-          print('✓ Найдено изображение: $imageUrl (размер: $size)');
+          debugPrint('✓ Найдено изображение: $imageUrl (размер: $size)');
           result.write(
             '<img-container src="$imageUrl" size="$size"></img-container>\n',
           );
@@ -215,10 +216,10 @@ class TheoryService {
           .update({'content': contentUrl})
           .eq('id', submoduleId);
 
-      print('✓ Контент обновлен');
+      debugPrint('✓ Контент обновлен');
       return true;
     } catch (e) {
-      print('❌ Ошибка: $e');
+      debugPrint('❌ Ошибка: $e');
       return false;
     }
   }
@@ -230,10 +231,10 @@ class TheoryService {
           .update({'content': null})
           .eq('id', submoduleId);
 
-      print('✓ Контент удален');
+      debugPrint('✓ Контент удален');
       return true;
     } catch (e) {
-      print('❌ Ошибка: $e');
+      debugPrint('❌ Ошибка: $e');
       return false;
     }
   }

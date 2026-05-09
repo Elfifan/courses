@@ -38,7 +38,7 @@ class _SearchRowState extends State<SearchRow> {
 
   @override
   Widget build(BuildContext context) {
-    final borderColor = Theme.of(context).colorScheme.primary.withOpacity(0.06);
+    final borderColor = Theme.of(context).colorScheme.primary.withValues(alpha: 0.06);
     return Row(
       children: [
         Expanded(

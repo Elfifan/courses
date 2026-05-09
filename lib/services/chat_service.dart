@@ -31,4 +31,7 @@ class ChatService {
 
   Stream<MessageModel> subscribe(String chatId) =>
       repo.subscribeToMessages(chatId);
+
+  Stream<void> watchAuthorRooms(String authorId) =>
+      repo.watchAuthorRooms(authorId);
 }

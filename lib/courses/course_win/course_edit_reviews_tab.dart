@@ -12,12 +12,15 @@ class CourseEditReviewsTab extends StatefulWidget {
   State<CourseEditReviewsTab> createState() => _CourseEditReviewsTabState();
 }
 
-class _CourseEditReviewsTabState extends State<CourseEditReviewsTab> {
+class _CourseEditReviewsTabState extends State<CourseEditReviewsTab> with AutomaticKeepAliveClientMixin {
+  @override
+  bool get wantKeepAlive => true;
+
   String _search = '';
   List<db_models.Feedback> _feedbacks = [];
   Map<int, db_models.ResponseFeedback?> _responses = {};
-  Map<int, bool> _expandedReply = {}; // Отслеживаем открытое поле ввода
-  Map<int, TextEditingController> _replyControllers = {}; // Контроллеры для каждого отзыва
+  final Map<int, bool> _expandedReply = {}; // Отслеживаем открытое поле ввода
+  final Map<int, TextEditingController> _replyControllers = {}; // Контроллеры для каждого отзыва
   bool _isLoading = true;
 
   @override
@@ -30,49 +33,37 @@ class _CourseEditReviewsTabState extends State<CourseEditReviewsTab> {
     if (!mounted) return;
     setState(() => _isLoading = true);
     try {
-      final feedbackData = await SupabaseService.client
+      // Оптимизированный запрос: получаем отзыв и ответ одним махом
+      final feedbackData = await SupabaseService.safeDbCall(() => SupabaseService.client
           .from('feedback')
           .select('''
-            id,
-            estimation,
-            description,
-            status,
-            id_user,
-            users(name)
+            *,
+            users(name),
+            response_feedback(*)
           ''')
           .eq('id_courses', widget.courseId)
           .eq('status', true)
-          .order('id', ascending: false);
+          .order('id', ascending: false));
 
       Map<int, db_models.ResponseFeedback?> responses = {};
       
-      for (var feedback in feedbackData) {
-        final responseData = await SupabaseService.client
-            .from('response_feedback')
-            .select()
-            .eq('id_feedback', feedback['id'])
-            .maybeSingle();
+      for (var item in (feedbackData as List)) {
+        final feedbackId = item['id'] as int;
+        final responseList = item['response_feedback'] as List?;
         
-        if (responseData != null) {
-          responses[feedback['id']] = db_models.ResponseFeedback.fromJson(responseData);
+        if (responseList != null && responseList.isNotEmpty) {
+          responses[feedbackId] = db_models.ResponseFeedback.fromJson(responseList.first);
         }
 
         // Инициализируем контроллеры и состояние
-        _expandedReply[feedback['id']] = false;
-        _replyControllers[feedback['id']] = TextEditingController();
+        _expandedReply[feedbackId] = _expandedReply[feedbackId] ?? false;
+        _replyControllers[feedbackId] = _replyControllers[feedbackId] ?? TextEditingController();
       }
 
       if (mounted) {
         setState(() {
-          _feedbacks = (feedbackData as List).map((item) {
-            return db_models.Feedback(
-              id: item['id'] as int,
-              idUser: item['id_user'] as int?,
-              idCourses: widget.courseId,
-              estimation: (item['estimation'] as num?)?.toDouble(),
-              description: item['description'] as String?,
-              status: true,
-            );
+          _feedbacks = (feedbackData).map((item) {
+            return db_models.Feedback.fromJson(item as Map<String, dynamic>);
           }).toList();
           _responses = responses;
           _isLoading = false;
@@ -90,10 +81,10 @@ class _CourseEditReviewsTabState extends State<CourseEditReviewsTab> {
 
   void _deleteReview(db_models.Feedback feedback, {bool block = false}) async {
     try {
-      await SupabaseService.client
+      await SupabaseService.safeDbCall(() => SupabaseService.client
           .from('feedback')
           .update({'status': false})
-          .eq('id', feedback.id);
+          .eq('id', feedback.id));
 
       if (mounted) {
         setState(() {
@@ -135,13 +126,13 @@ class _CourseEditReviewsTabState extends State<CourseEditReviewsTab> {
     }
 
     try {
-      await SupabaseService.client
+      await SupabaseService.safeDbCall(() => SupabaseService.client
           .from('response_feedback')
           .insert({
             'id_feedback': feedback.id,
             'id_employee': 1,
             'answer': text,
-          });
+          }));
 
       if (mounted) {
         setState(() {
@@ -181,9 +172,10 @@ class _CourseEditReviewsTabState extends State<CourseEditReviewsTab> {
 
   @override
   Widget build(BuildContext context) {
+    super.build(context);
     final theme = Theme.of(context);
     final textColor = theme.colorScheme.onSurface;
-    final textSecondary = theme.colorScheme.onSurface.withOpacity(0.7);
+    final textSecondary = theme.colorScheme.onSurface.withValues(alpha: 0.7);
     final filtered = _getFilteredFeedbacks();
 
     return Padding(
@@ -206,7 +198,7 @@ class _CourseEditReviewsTabState extends State<CourseEditReviewsTab> {
               Container(
                 padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 12),
                 decoration: BoxDecoration(
-                  color: theme.primaryColor.withOpacity(0.09),
+                  color: theme.primaryColor.withValues(alpha: 0.09),
                   borderRadius: BorderRadius.circular(16),
                 ),
                 child: Text(
@@ -333,7 +325,7 @@ class _CourseEditReviewsTabState extends State<CourseEditReviewsTab> {
                       size: 18,
                       color: i < rating
                           ? Colors.amber
-                          : Colors.grey.withOpacity(0.3),
+                          : Colors.grey.withValues(alpha: 0.3),
                     ),
                   ),
                 ),
@@ -390,7 +382,7 @@ class _CourseEditReviewsTabState extends State<CourseEditReviewsTab> {
                 margin: const EdgeInsets.only(top: 6, left: 2),
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 decoration: BoxDecoration(
-                  color: theme.primaryColor.withOpacity(0.07),
+                  color: theme.primaryColor.withValues(alpha: 0.07),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Row(
@@ -432,10 +424,10 @@ class _CourseEditReviewsTabState extends State<CourseEditReviewsTab> {
                 AnimatedContainer(
                   duration: const Duration(milliseconds: 300),
                   decoration: BoxDecoration(
-                    color: theme.colorScheme.background.withOpacity(0.5),
+                    color: theme.colorScheme.surface.withValues(alpha: 0.5),
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(
-                      color: theme.primaryColor.withOpacity(0.3),
+                      color: theme.primaryColor.withValues(alpha: 0.3),
                     ),
                   ),
                   padding: const EdgeInsets.all(12),

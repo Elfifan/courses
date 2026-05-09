@@ -115,7 +115,7 @@ class _StudentsScreenState extends State<StudentsScreen> {
               color: AppColors.white,
               borderRadius: AppStyles.cardRadius, // 24px
               boxShadow: [
-                BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 15, offset: const Offset(0, 8))
+                BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 15, offset: const Offset(0, 8))
               ],
             ),
             child: Column(
@@ -124,7 +124,7 @@ class _StudentsScreenState extends State<StudentsScreen> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 18),
                   decoration: BoxDecoration(
-                    color: AppColors.bgLight.withOpacity(0.5),
+                    color: AppColors.bgLight.withValues(alpha: 0.5),
                     borderRadius: const BorderRadius.only(
                       topLeft: Radius.circular(24),
                       topRight: Radius.circular(24),
@@ -168,7 +168,7 @@ class _StudentsScreenState extends State<StudentsScreen> {
                                 child: Container(
                                   padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
                                   decoration: BoxDecoration(
-                                    color: hovered ? AppColors.bgLight.withOpacity(0.3) : Colors.transparent,
+                                    color: hovered ? AppColors.bgLight.withValues(alpha: 0.3) : Colors.transparent,
                                     border: Border(bottom: BorderSide(color: borderColor)),
                                   ),
                                   child: Row(
@@ -178,7 +178,7 @@ class _StudentsScreenState extends State<StudentsScreen> {
                                         flex: 1,
                                         child: CircleAvatar(
                                           radius: 18,
-                                          backgroundColor: AppColors.primaryPurple.withOpacity(0.1),
+                                          backgroundColor: AppColors.primaryPurple.withValues(alpha: 0.1),
                                           child: Text(avatarLetter, style: const TextStyle(color: AppColors.primaryPurple, fontWeight: FontWeight.bold, fontSize: 14)),
                                         ),
                                       ),
@@ -234,7 +234,7 @@ class _StudentsScreenState extends State<StudentsScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Text(

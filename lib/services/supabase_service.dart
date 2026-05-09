@@ -8,6 +8,22 @@ class SupabaseService {
   // Getter для доступа к клиенту
   static SupabaseClient get client => _supabase;
 
+  /// Выполняет запрос к БД с автоматическими повторами при сетевых ошибках
+  static Future<T> safeDbCall<T>(Future<T> Function() call, {int retries = 3}) async {
+    int attempts = 0;
+    while (attempts < retries) {
+      try {
+        return await call();
+      } catch (e) {
+        attempts++;
+        if (attempts >= retries) rethrow;
+        // Задержка перед повтором (экспоненциальная или фиксированная)
+        await Future.delayed(Duration(milliseconds: 500 * attempts));
+      }
+    }
+    throw Exception('Непредвиденная ошибка при выполнении запроса');
+  }
+
   // ============ USERS ============
 
   static Future<List<User>> getUsers() async {

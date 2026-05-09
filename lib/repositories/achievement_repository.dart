@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'dart:io';
 import 'package:uuid/uuid.dart';
 import '../models/database_models.dart';
@@ -25,7 +26,7 @@ class AchievementRepository {
           .getPublicUrl(imagePath);
       return url;
     } catch (e) {
-      print('Error getting image URL: $e');
+      debugPrint('Error getting image URL: $e');
       return null;
     }
   }
@@ -40,23 +41,23 @@ class AchievementRepository {
   }
 
   // =========================================================================
-  // ПОЛУЧЕНИЕ ВСЕХ АКТИВНЫХ ДОСТИЖЕНИЙ (с кэшированием)
+  // ПОЛУЧЕНИЕ ВСЕХ АКТИВНЫХ ДОСТИЖЕНИЙ (с кэшированием и safeDbCall)
   // =========================================================================
   static Future<List<Achievement>> getAllAchievements({bool forceRefresh = false}) async {
-    try {
-      // Используем кэш, если он свежий и не требуется принудительное обновление
-      if (!forceRefresh && 
-          _cachedActive != null && 
-          _lastFetchTime != null &&
-          DateTime.now().difference(_lastFetchTime!) < _cacheDuration) {
-        return _cachedActive!;
-      }
+    // Используем кэш, если он свежий и не требуется принудительное обновление
+    if (!forceRefresh && 
+        _cachedActive != null && 
+        _lastFetchTime != null &&
+        DateTime.now().difference(_lastFetchTime!) < _cacheDuration) {
+      return _cachedActive!;
+    }
 
-      final data = await SupabaseService.client
+    try {
+      final data = await SupabaseService.safeDbCall(() => SupabaseService.client
           .from('achievement')
           .select()
           .eq('status', true)
-          .order('created_at', ascending: false);
+          .order('created_at', ascending: false));
 
       _cachedActive = (data as List)
           .map((item) => Achievement.fromJson(item as Map<String, dynamic>))
@@ -65,30 +66,29 @@ class AchievementRepository {
       _lastFetchTime = DateTime.now();
       return _cachedActive!;
     } catch (e) {
-      print('Error loading achievements: $e');
-      // Возвращаем кэшированные данные в случае ошибки
-      if (_cachedActive != null) return _cachedActive!;
-      throw Exception('Ошибка загрузки достижений: $e');
+      debugPrint('Error loading achievements: $e');
+      // В случае ошибки не возвращаем кэш молча, а даем UI узнать о проблеме
+      rethrow;
     }
   }
 
   // =========================================================================
-  // ПОЛУЧЕНИЕ АРХИВНЫХ ДОСТИЖЕНИЙ (с кэшированием)
+  // ПОЛУЧЕНИЕ АРХИВНЫХ ДОСТИЖЕНИЙ (с кэшированием и safeDbCall)
   // =========================================================================
   static Future<List<Achievement>> getArchivedAchievements({bool forceRefresh = false}) async {
-    try {
-      if (!forceRefresh && 
-          _cachedArchived != null && 
-          _lastFetchTime != null &&
-          DateTime.now().difference(_lastFetchTime!) < _cacheDuration) {
-        return _cachedArchived!;
-      }
+    if (!forceRefresh && 
+        _cachedArchived != null && 
+        _lastFetchTime != null &&
+        DateTime.now().difference(_lastFetchTime!) < _cacheDuration) {
+      return _cachedArchived!;
+    }
 
-      final data = await SupabaseService.client
+    try {
+      final data = await SupabaseService.safeDbCall(() => SupabaseService.client
           .from('achievement')
           .select()
           .eq('status', false)
-          .order('created_at', ascending: false);
+          .order('created_at', ascending: false));
 
       _cachedArchived = (data as List)
           .map((item) => Achievement.fromJson(item as Map<String, dynamic>))
@@ -97,9 +97,8 @@ class AchievementRepository {
       _lastFetchTime = DateTime.now();
       return _cachedArchived!;
     } catch (e) {
-      print('Error loading archived achievements: $e');
-      if (_cachedArchived != null) return _cachedArchived!;
-      throw Exception('Ошибка загрузки архивированных достижений: $e');
+      debugPrint('Error loading archived achievements: $e');
+      rethrow;
     }
   }
 
@@ -119,7 +118,7 @@ class AchievementRepository {
 
       return filePath;
     } catch (e) {
-      print('Error uploading image: $e');
+      debugPrint('Error uploading image: $e');
       throw Exception('Ошибка загрузки изображения: $e');
     }
   }
@@ -150,13 +149,13 @@ class AchievementRepository {
         insertData['image'] = imagePath;
       }
 
-      final data = await SupabaseService.client
+      final data = await SupabaseService.safeDbCall(() => SupabaseService.client
           .from('achievement')
           .insert(insertData)
           .select()
-          .single();
+          .single());
 
-      final achievement = Achievement.fromJson(data as Map<String, dynamic>);
+      final achievement = Achievement.fromJson(data);
       
       // Добавляем в кэш активных достижений
       if (_cachedActive != null) {
@@ -165,8 +164,8 @@ class AchievementRepository {
       
       return achievement;
     } catch (e) {
-      print('Error creating achievement: $e');
-      throw Exception('Ошибка создания достижения: $e');
+      debugPrint('Error creating achievement: $e');
+      rethrow;
     }
   }
 
@@ -190,22 +189,22 @@ class AchievementRepository {
         updateData['image'] = newImagePath;
       }
 
-      final data = await SupabaseService.client
+      final data = await SupabaseService.safeDbCall(() => SupabaseService.client
           .from('achievement')
           .update(updateData)
           .eq('id', id)
           .select()
-          .single();
+          .single());
 
-      final updatedAchievement = Achievement.fromJson(data as Map<String, dynamic>);
+      final updatedAchievement = Achievement.fromJson(data);
       
       // Обновляем в кэше
       _updateAchievementInCache(updatedAchievement);
       
       return updatedAchievement;
     } catch (e) {
-      print('Error updating achievement: $e');
-      throw Exception('Ошибка обновления достижения: $e');
+      debugPrint('Error updating achievement: $e');
+      rethrow;
     }
   }
 
@@ -229,7 +228,7 @@ class AchievementRepository {
       }
     }
     
-    // Обновляем в архивном кэше
+    // Обновляем в архивный кэше
     if (_cachedArchived != null) {
       final index = _cachedArchived!.indexWhere((a) => a.id == updated.id);
       if (index != -1) {
@@ -251,10 +250,10 @@ class AchievementRepository {
   // =========================================================================
   static Future<void> archiveAchievement(int id) async {
     try {
-      await SupabaseService.client
+      await SupabaseService.safeDbCall(() => SupabaseService.client
           .from('achievement')
           .update({'status': false})
-          .eq('id', id);
+          .eq('id', id));
       
       // Перемещаем из активного в архивный кэш
       if (_cachedActive != null) {
@@ -271,8 +270,8 @@ class AchievementRepository {
         _cachedArchived?.insert(0, archived);
       }
     } catch (e) {
-      print('Error archiving achievement: $e');
-      throw Exception('Ошибка архивирования достижения: $e');
+      debugPrint('Error archiving achievement: $e');
+      rethrow;
     }
   }
 
@@ -281,10 +280,10 @@ class AchievementRepository {
   // =========================================================================
   static Future<void> restoreAchievement(int id) async {
     try {
-      await SupabaseService.client
+      await SupabaseService.safeDbCall(() => SupabaseService.client
           .from('achievement')
           .update({'status': true})
-          .eq('id', id);
+          .eq('id', id));
       
       // Перемещаем из архивного в активный кэш
       if (_cachedArchived != null) {
@@ -301,8 +300,8 @@ class AchievementRepository {
         _cachedActive?.insert(0, restored);
       }
     } catch (e) {
-      print('Error restoring achievement: $e');
-      throw Exception('Ошибка восстановления достижения: $e');
+      debugPrint('Error restoring achievement: $e');
+      rethrow;
     }
   }
 
@@ -311,17 +310,17 @@ class AchievementRepository {
   // =========================================================================
   static Future<void> deleteAchievement(int id) async {
     try {
-      await SupabaseService.client
+      await SupabaseService.safeDbCall(() => SupabaseService.client
           .from('achievement')
           .delete()
-          .eq('id', id);
+          .eq('id', id));
       
       // Удаляем из кэша
       _cachedActive?.removeWhere((a) => a.id == id);
       _cachedArchived?.removeWhere((a) => a.id == id);
     } catch (e) {
-      print('Error deleting achievement: $e');
-      throw Exception('Ошибка удаления достижения: $e');
+      debugPrint('Error deleting achievement: $e');
+      rethrow;
     }
   }
 }

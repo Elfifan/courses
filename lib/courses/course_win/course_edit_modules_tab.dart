@@ -24,7 +24,10 @@ class CourseEditModulesTab extends StatefulWidget {
   State<CourseEditModulesTab> createState() => _CourseEditModulesTabState();
 }
 
-class _CourseEditModulesTabState extends State<CourseEditModulesTab> {
+class _CourseEditModulesTabState extends State<CourseEditModulesTab> with AutomaticKeepAliveClientMixin {
+  @override
+  bool get wantKeepAlive => true;
+
   List<db_models.Module> _modules = [];
   Map<int, List<db_models.Submodule>> _submodules = {};
   Map<int, List<db_models.Test>> _tests = {};
@@ -38,85 +41,120 @@ class _CourseEditModulesTabState extends State<CourseEditModulesTab> {
     _loadModules();
   }
 
+  bool _isPerformingLoad = false;
+
   Future<void> _loadModules() async {
-    if (!mounted) return;
-    setState(() => _isLoading = true);
+    if (!mounted || _isPerformingLoad) return;
+    
+    setState(() {
+      _isLoading = true;
+      _isPerformingLoad = true;
+    });
+
     try {
-      final modulesData = await SupabaseService.client
+      // Добавляем принудительный тайм-аут на уровне Future, 
+      // чтобы запрос не висел вечно при проблемах с сетью
+      final data = await SupabaseService.safeDbCall(() => SupabaseService.client
           .from('module')
-          .select()
+          .select('''
+            *,
+            submodule (
+              *,
+              submodule_test (
+                order_test,
+                test (*)
+              ),
+              practical_task (*)
+            )
+          ''')
           .eq('id_courses', widget.courseId)
-          .order('order_module', ascending: true);
+          .timeout(const Duration(seconds: 5))
+      );
+
+      if (data == null) throw 'Нет ответа от сервера (Timeout)';
 
       Map<int, List<db_models.Submodule>> submodulesMap = {};
       Map<int, List<db_models.Test>> testsMap = {};
-      Map<int, List<Map<String, dynamic>>> tasksMap = {}; // ← ДОБАВЛЕНО
+      Map<int, List<Map<String, dynamic>>> tasksMap = {};
       Map<int, bool> expandedMap = {};
+      List<db_models.Module> modulesList = [];
 
-      for (var moduleData in modulesData) {
+      for (var moduleData in (data as List)) {
         final moduleId = moduleData['id'];
         expandedMap[moduleId] = _expandedModules[moduleId] ?? true;
+        
+        modulesList.add(db_models.Module.fromJson(moduleData));
 
-        final submodulesData = await SupabaseService.client
-            .from('submodule')
-            .select()
-            .eq('id_module', moduleId)
-            .order('order_submodule', ascending: true);
+        final submodulesRaw = moduleData['submodule'] as List? ?? [];
+        final submodulesList = List<Map<String, dynamic>>.from(submodulesRaw);
+        
+        submodulesList.sort((a, b) => (a['order_submodule'] ?? 0).compareTo(b['order_submodule'] ?? 0));
 
-        submodulesMap[moduleId] = (submodulesData as List)
+        submodulesMap[moduleId] = submodulesList
             .map((item) => db_models.Submodule.fromJson(item))
             .toList();
 
-        for (var submoduleData in submodulesData) {
-          final submoduleId = submoduleData['id'];
+        for (var subData in submodulesList) {
+          final subId = subData['id'];
           
-          // Тесты
-          final testsData = await SupabaseService.client
-              .from('submodule_test')
-              .select('id_test, test(*)')
-              .eq('id_submodule', submoduleId)
-              .order('order_test', ascending: true);
-
-          testsMap[submoduleId] = (testsData as List).map((item) {
-            final testData = item['test'] as Map<String, dynamic>;
-            return db_models.Test.fromJson(testData);
-          }).toList();
-
-          // ← ДОБАВЛЕНО: Практические задания
-          final tasksData = await SupabaseService.client
-              .from('practical_task')
-              .select('*')
-              .eq('id_submodule', submoduleId)
-              .eq('status', true)
-              .order('order_task', ascending: true);
-
-          tasksMap[submoduleId] = List<Map<String, dynamic>>.from(tasksData);
+          final testsRaw = subData['submodule_test'] as List? ?? [];
+          final testsData = testsRaw
+              .where((t) => t['test'] != null)
+              .map((t) => db_models.Test.fromJson(t['test'] as Map<String, dynamic>))
+              .toList();
+          
+          testsData.sort((a, b) => a.id.compareTo(b.id));
+          testsMap[subId] = testsData;
+          
+          final tasksRaw = subData['practical_task'] as List? ?? [];
+          final tasksData = tasksRaw
+              .where((t) => t['status'] == true)
+              .map((t) => t as Map<String, dynamic>)
+              .toList();
+          
+          tasksData.sort((a, b) => (a['order_task'] ?? 0).compareTo(b['order_task'] ?? 0));
+          tasksMap[subId] = tasksData;
         }
       }
 
+      modulesList.sort((a, b) => (a.orderModule ?? 0).compareTo(b.orderModule ?? 0));
+
       if (mounted) {
         setState(() {
-          _modules = (modulesData as List)
-              .map((item) => db_models.Module.fromJson(item))
-              .toList();
+          _modules = modulesList;
           _submodules = submodulesMap;
           _tests = testsMap;
-          _practicalTasks = tasksMap; // ← ДОБАВЛЕНО
+          _practicalTasks = tasksMap;
           _expandedModules = expandedMap;
           _isLoading = false;
         });
       }
     } catch (e) {
+      debugPrint('Ошибка загрузки модулей: $e');
       if (mounted) {
-        setState(() => _isLoading = false);
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('Ошибка загрузки модулей: $e')));
+        setState(() {
+          _isLoading = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Ошибка сети или тайм-аут: $e'),
+            backgroundColor: Colors.red,
+            action: SnackBarAction(
+              label: 'Повторить', 
+              textColor: Colors.white,
+              onPressed: _loadModules
+            ),
+          ),
+        );
       }
+    } finally {
+      _isPerformingLoad = false;
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    super.build(context);
     return Padding(
       padding: const EdgeInsets.all(20),
       child: Column(
@@ -282,9 +320,9 @@ class _CourseEditModulesTabState extends State<CourseEditModulesTab> {
             margin: const EdgeInsets.symmetric(vertical: 8),
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.background,
+              color: Theme.of(context).colorScheme.surface,
               borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: Colors.grey.withOpacity(0.2)),
+              border: Border.all(color: Colors.grey.withValues(alpha: 0.2)),
             ),
             child: Row(
               children: [
@@ -292,7 +330,7 @@ class _CourseEditModulesTabState extends State<CourseEditModulesTab> {
                   width: 40,
                   height: 40,
                   decoration: BoxDecoration(
-                    color: Theme.of(context).primaryColor.withOpacity(0.2),
+                    color: Theme.of(context).primaryColor.withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(6),
                   ),
                   child: Center(
@@ -311,7 +349,7 @@ class _CourseEditModulesTabState extends State<CourseEditModulesTab> {
                   width: 32,
                   height: 32,
                   decoration: BoxDecoration(
-                    color: Theme.of(context).primaryColor.withOpacity(0.2),
+                    color: Theme.of(context).primaryColor.withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(6),
                   ),
                   child: Center(
@@ -420,9 +458,9 @@ class _CourseEditModulesTabState extends State<CourseEditModulesTab> {
         padding: const EdgeInsets.all(8),
         margin: const EdgeInsets.only(bottom: 6),
         decoration: BoxDecoration(
-          color: Colors.blue.withOpacity(0.1),
+          color: Colors.blue.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(6),
-          border: Border.all(color: Colors.blue.withOpacity(0.3)),
+          border: Border.all(color: Colors.blue.withValues(alpha: 0.3)),
         ),
         child: Row(
           children: [
@@ -463,9 +501,9 @@ class _CourseEditModulesTabState extends State<CourseEditModulesTab> {
       padding: const EdgeInsets.all(8),
       margin: const EdgeInsets.only(bottom: 6),
       decoration: BoxDecoration(
-        color: Colors.orange.withOpacity(0.1),
+        color: Colors.orange.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: Colors.orange.withOpacity(0.3)),
+        border: Border.all(color: Colors.orange.withValues(alpha: 0.3)),
       ),
       child: Row(
         children: [
@@ -530,7 +568,7 @@ class _CourseEditModulesTabState extends State<CourseEditModulesTab> {
             onPressed: () async {
               if (formKey.currentState!.validate()) {
                 await _addModule(nameController.text);
-                if (mounted) Navigator.pop(context);
+                if (context.mounted) Navigator.pop(context);
               }
             },
             child: const Text('Добавить'),
@@ -545,7 +583,7 @@ class _CourseEditModulesTabState extends State<CourseEditModulesTab> {
     final nameController = TextEditingController();
     final leadTimeController = TextEditingController();
     final formKey = GlobalKey<FormState>();
-    bool _isUploading = false;
+    bool isUploading = false;
 
     showDialog(
       context: context,
@@ -563,7 +601,7 @@ class _CourseEditModulesTabState extends State<CourseEditModulesTab> {
                     Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        border: Border.all(color: Colors.grey.withOpacity(0.3)),
+                        border: Border.all(color: Colors.grey.withValues(alpha: 0.3)),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Column(
@@ -576,7 +614,7 @@ class _CourseEditModulesTabState extends State<CourseEditModulesTab> {
                             Container(
                               padding: const EdgeInsets.all(8),
                               decoration: BoxDecoration(
-                                color: Colors.green.withOpacity(0.1),
+                                color: Colors.green.withValues(alpha: 0.1),
                                 borderRadius: BorderRadius.circular(6),
                               ),
                               child: Row(
@@ -641,29 +679,29 @@ class _CourseEditModulesTabState extends State<CourseEditModulesTab> {
           ),
           actions: [
             TextButton(
-              onPressed: _isUploading ? null : () => Navigator.pop(context),
+              onPressed: isUploading ? null : () => Navigator.pop(context),
               child: const Text('Отмена'),
             ),
             ElevatedButton(
-              onPressed: _isUploading
+              onPressed: isUploading
                   ? null
                   : () async {
                       if (formKey.currentState!.validate() && selectedFilePath != null) {
-                        setState(() => _isUploading = true);
+                        setState(() => isUploading = true);
                         await _addSubmodule(
                           moduleId,
                           nameController.text,
                           int.parse(leadTimeController.text),
                           selectedFilePath!,
                         );
-                        if (mounted) Navigator.pop(context);
+                        if (context.mounted) Navigator.pop(context);
                       } else if (selectedFilePath == null) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(content: Text('Выберите markdown файл')),
                         );
                       }
                     },
-              child: _isUploading
+              child: isUploading
                   ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
                   : const Text('Добавить'),
             ),
@@ -722,7 +760,7 @@ class _CourseEditModulesTabState extends State<CourseEditModulesTab> {
                     const Text('Язык программирования', style: TextStyle(fontWeight: FontWeight.w600)),
                     const SizedBox(height: 6),
                     DropdownButtonFormField<String>(
-                      value: selectedLanguage,
+                      initialValue: selectedLanguage,
                       items: ['dart', 'python', 'javascript', 'cpp', 'csharp', 'java']
                           .map((e) => DropdownMenuItem(value: e, child: Text(e.toUpperCase())))
                           .toList(),
@@ -810,7 +848,7 @@ class _CourseEditModulesTabState extends State<CourseEditModulesTab> {
                         starterCodeController.text,
                         testCasesController.text,
                       );
-                      if (mounted) Navigator.pop(context);
+                      if (context.mounted) Navigator.pop(context);
                     },
               child: isLoading
                   ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
@@ -876,32 +914,37 @@ class _CourseEditModulesTabState extends State<CourseEditModulesTab> {
                     Text('Выберите один правильный ответ',
                         style: Theme.of(context).textTheme.titleMedium),
                     const SizedBox(height: 12),
-                    ...List.generate(4, (index) {
-                      return Padding(
-                        padding: const EdgeInsets.only(bottom: 12),
-                        child: Row(
-                          children: [
-                            Radio<int>(
-                              value: index,
-                              groupValue: selectedCorrectAnswer,
-                              onChanged: (value) => setState(() => selectedCorrectAnswer = value),
-                            ),
-                            Expanded(
-                              child: TextFormField(
-                                controller: answerControllers[index],
-                                decoration: InputDecoration(
-                                  labelText: 'Вариант ${index + 1}',
-                                  border: const OutlineInputBorder(),
-                                  isDense: true,
+                    RadioGroup<int>(
+                      groupValue: selectedCorrectAnswer,
+                      onChanged: (value) => setState(() => selectedCorrectAnswer = value),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: List.generate(4, (index) {
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 12),
+                            child: Row(
+                              children: [
+                                Radio<int>(
+                                  value: index,
                                 ),
-                                validator: (value) =>
-                                    value?.isEmpty == true ? 'Введите ответ' : null,
-                              ),
+                                Expanded(
+                                  child: TextFormField(
+                                    controller: answerControllers[index],
+                                    decoration: InputDecoration(
+                                      labelText: 'Вариант ${index + 1}',
+                                      border: const OutlineInputBorder(),
+                                      isDense: true,
+                                    ),
+                                    validator: (value) =>
+                                        value?.isEmpty == true ? 'Введите ответ' : null,
+                                  ),
+                                ),
+                              ],
                             ),
-                          ],
-                        ),
-                      );
-                    }),
+                          );
+                        }),
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -931,7 +974,7 @@ class _CourseEditModulesTabState extends State<CourseEditModulesTab> {
                         answerControllers,
                         selectedCorrectAnswer!,
                       );
-                      if (mounted) Navigator.pop(context);
+                      if (context.mounted) Navigator.pop(context);
                     },
               child: isLoading
                   ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
@@ -997,32 +1040,37 @@ class _CourseEditModulesTabState extends State<CourseEditModulesTab> {
                     Text('Выберите один правильный ответ',
                         style: Theme.of(context).textTheme.titleMedium),
                     const SizedBox(height: 12),
-                    ...List.generate(4, (index) {
-                      return Padding(
-                        padding: const EdgeInsets.only(bottom: 12),
-                        child: Row(
-                          children: [
-                            Radio<int>(
-                              value: index,
-                              groupValue: selectedCorrectAnswer,
-                              onChanged: (value) => setState(() => selectedCorrectAnswer = value),
-                            ),
-                            Expanded(
-                              child: TextFormField(
-                                controller: answerControllers[index],
-                                decoration: InputDecoration(
-                                  labelText: 'Вариант ${index + 1}',
-                                  border: const OutlineInputBorder(),
-                                  isDense: true,
+                    RadioGroup<int>(
+                      groupValue: selectedCorrectAnswer,
+                      onChanged: (value) => setState(() => selectedCorrectAnswer = value),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: List.generate(4, (index) {
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 12),
+                            child: Row(
+                              children: [
+                                Radio<int>(
+                                  value: index,
                                 ),
-                                validator: (value) =>
-                                    value?.isEmpty == true ? 'Введите ответ' : null,
-                              ),
+                                Expanded(
+                                  child: TextFormField(
+                                    controller: answerControllers[index],
+                                    decoration: InputDecoration(
+                                      labelText: 'Вариант ${index + 1}',
+                                      border: const OutlineInputBorder(),
+                                      isDense: true,
+                                    ),
+                                    validator: (value) =>
+                                        value?.isEmpty == true ? 'Введите ответ' : null,
+                                  ),
+                                ),
+                              ],
                             ),
-                          ],
-                        ),
-                      );
-                    }),
+                          );
+                        }),
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -1052,7 +1100,7 @@ class _CourseEditModulesTabState extends State<CourseEditModulesTab> {
                         answerControllers,
                         selectedCorrectAnswer!,
                       );
-                      if (mounted) Navigator.pop(context);
+                      if (context.mounted) Navigator.pop(context);
                     },
               child: isLoading
                   ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))

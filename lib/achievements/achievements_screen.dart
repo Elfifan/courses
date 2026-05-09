@@ -10,7 +10,7 @@ class AchievementsScreen extends StatefulWidget {
   final bool isDarkMode;
   const AchievementsScreen({super.key, required this.isDarkMode});
   @override
-  _AchievementsScreenState createState() => _AchievementsScreenState();
+  State<AchievementsScreen> createState() => _AchievementsScreenState();
 }
 
 class _AchievementsScreenState extends State<AchievementsScreen>
@@ -242,7 +242,7 @@ void _showForm({Achievement? achievement}) async {
     try {
       if (isEdit) {
         await AchievementRepository.updateAchievement(
-          achievement!.id,
+          achievement.id,
           name: result['name'],
           description: result['description'].isEmpty ? null : result['description'],
           imageFile: result['selectedFile'],
@@ -308,14 +308,16 @@ void _showForm({Achievement? achievement}) async {
         }
       });
       
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            achievement.status ? 'Достижение архивировано' : 'Достижение восстановлено',
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              achievement.status ? 'Достижение архивировано' : 'Достижение восстановлено',
+            ),
+            backgroundColor: Colors.green,
           ),
-          backgroundColor: Colors.green,
-        ),
-      );
+        );
+      }
     } catch (e) {
       debugPrint('Ошибка смены статуса: $e');
       if (mounted) {
@@ -389,7 +391,7 @@ void _showForm({Achievement? achievement}) async {
           borderRadius: BorderRadius.circular(12),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.05),
+              color: Colors.black.withValues(alpha: 0.05),
               blurRadius: 10,
               offset: const Offset(0, 4),
             ),

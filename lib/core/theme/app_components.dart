@@ -59,7 +59,7 @@ class KodixComponents {
           borderRadius: AppStyles.mainRadius,
           boxShadow: [
             BoxShadow(
-              color: AppColors.primaryPurple.withOpacity(0.3),
+              color: AppColors.primaryPurple.withValues(alpha: 0.3),
               blurRadius: 12,
               offset: const Offset(0, 4),
             ),
@@ -89,7 +89,7 @@ class KodixComponents {
         decoration: BoxDecoration(
           color: AppColors.bgLight,
           borderRadius: AppStyles.mainRadius,
-          border: Border.all(color: AppColors.primaryPurple.withOpacity(0.2)),
+          border: Border.all(color: AppColors.primaryPurple.withValues(alpha: 0.2)),
         ),
         child: Container(
           width: double.infinity,
@@ -146,7 +146,7 @@ class KodixComponents {
         borderRadius: AppStyles.cardRadius,
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF000000).withOpacity(0.06),
+            color: const Color(0xFF000000).withValues(alpha: 0.06),
             blurRadius: 20,
             offset: const Offset(0, 10),
           ),

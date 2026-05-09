@@ -197,7 +197,7 @@ class _ChatPageBodyState extends State<_ChatPageBody> {
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Icon(Icons.error_outline, size: 48, color: AppColors.textGrey.withOpacity(0.5)),
+                            Icon(Icons.error_outline, size: 48, color: AppColors.textGrey.withValues(alpha: 0.5)),
                             const SizedBox(height: 16),
                             Text(controller.errorMessage!, style: AppStyles.label),
                           ],
@@ -212,13 +212,13 @@ class _ChatPageBodyState extends State<_ChatPageBody> {
                                   width: 80,
                                   height: 80,
                                   decoration: BoxDecoration(
-                                    color: AppColors.primaryPurple.withOpacity(0.1),
+                                    color: AppColors.primaryPurple.withValues(alpha: 0.1),
                                     borderRadius: BorderRadius.circular(24),
                                   ),
                                   child: Icon(
                                     Icons.chat_bubble_outline_rounded,
                                     size: 40,
-                                    color: AppColors.primaryPurple.withOpacity(0.5),
+                                    color: AppColors.primaryPurple.withValues(alpha: 0.5),
                                   ),
                                 ),
                                 const SizedBox(height: 24),
@@ -288,7 +288,7 @@ class _ChatPageBodyState extends State<_ChatPageBody> {
                       borderRadius: BorderRadius.circular(14),
                       boxShadow: [
                         BoxShadow(
-                          color: AppColors.primaryPurple.withOpacity(0.3),
+                          color: AppColors.primaryPurple.withValues(alpha: 0.3),
                           blurRadius: 8,
                           offset: const Offset(0, 4),
                         ),
@@ -328,8 +328,8 @@ class _ChatPageBodyState extends State<_ChatPageBody> {
           boxShadow: [
             BoxShadow(
               color: isMe
-                  ? AppColors.primaryPurple.withOpacity(0.2)
-                  : Colors.black.withOpacity(0.04),
+                  ? AppColors.primaryPurple.withValues(alpha: 0.2)
+                  : Colors.black.withValues(alpha: 0.04),
               blurRadius: 8,
               offset: const Offset(0, 2),
             ),
@@ -351,7 +351,7 @@ class _ChatPageBodyState extends State<_ChatPageBody> {
             Text(
               time,
               style: TextStyle(
-                color: isMe ? Colors.white.withOpacity(0.7) : AppColors.textGrey,
+                color: isMe ? Colors.white.withValues(alpha: 0.7) : AppColors.textGrey,
                 fontSize: 11,
               ),
             ),
