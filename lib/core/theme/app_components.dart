@@ -49,6 +49,7 @@ class KodixComponents {
     required Widget child,
     VoidCallback? onPressed,
     double height = 56,
+    double? width,
   }) {
     return InkWell(
       onTap: onPressed,
@@ -66,8 +67,9 @@ class KodixComponents {
           ],
         ),
         child: Container(
-          width: double.infinity,
+          width: width,
           height: height,
+          padding: width == null ? const EdgeInsets.symmetric(horizontal: 24) : null,
           alignment: Alignment.center,
           child: child,
         ),
@@ -81,6 +83,7 @@ class KodixComponents {
     VoidCallback? onPressed,
     IconData? icon,
     double height = 56,
+    double? width,
   }) {
     return InkWell(
       onTap: onPressed,
@@ -92,8 +95,9 @@ class KodixComponents {
           border: Border.all(color: AppColors.primaryPurple.withValues(alpha: 0.2)),
         ),
         child: Container(
-          width: double.infinity,
+          width: width,
           height: height,
+          padding: width == null ? const EdgeInsets.symmetric(horizontal: 24) : null,
           alignment: Alignment.center,
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,

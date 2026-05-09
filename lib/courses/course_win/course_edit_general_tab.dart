@@ -32,7 +32,7 @@ class _CourseEditGeneralTabState extends State<CourseEditGeneralTab> with Automa
   int? _selectedComplexity;
   bool _isSaving = false;
 
-  final Map<int, String> _complexityLevels = {
+  static const Map<int, String> _complexityLevels = {
     1: 'Начальный уровень',
     2: 'Средний уровень',
     3: 'Продвинутый уровень',
@@ -118,71 +118,122 @@ class _CourseEditGeneralTabState extends State<CourseEditGeneralTab> with Automa
   Widget build(BuildContext context) {
     super.build(context);
     return Padding(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(24),
       child: SingleChildScrollView(
-        child: Form(
-          key: widget.formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Название
-              Text('Название курса', style: AppStyles.label.copyWith(fontWeight: FontWeight.w700)),
-              const SizedBox(height: 8),
-              TextFormField(
-                controller: _titleController,
-                enabled: !widget.readOnly,
-                decoration: KodixComponents.textFieldDecoration(hintText: 'Введите название курса', prefixIcon: Icons.book),
-                validator: (val) => val?.isEmpty == true ? 'Поле обязательно' : null,
+        child: Container(
+          padding: const EdgeInsets.all(32),
+          decoration: BoxDecoration(
+            color: AppColors.white,
+            borderRadius: AppStyles.mainRadius,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.05),
+                blurRadius: 20,
+                offset: const Offset(0, 10),
               ),
-              const SizedBox(height: 20),
+            ],
+          ),
+          child: Form(
+            key: widget.formKey,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Основная информация', 
+                  style: AppStyles.h1.copyWith(fontSize: 20)
+                ),
+                const SizedBox(height: 24),
+                
+                // Название
+                Text('Название курса', style: AppStyles.label.copyWith(fontWeight: FontWeight.w700)),
+                const SizedBox(height: 8),
+                TextFormField(
+                  controller: _titleController,
+                  enabled: !widget.readOnly,
+                  decoration: KodixComponents.textFieldDecoration(
+                    hintText: 'Введите название курса', 
+                    prefixIcon: Icons.book_rounded
+                  ),
+                  style: AppStyles.body,
+                  validator: (val) => val?.isEmpty == true ? 'Поле обязательно' : null,
+                ),
+                const SizedBox(height: 24),
 
-              // Описание
-              Text('Описание', style: AppStyles.label.copyWith(fontWeight: FontWeight.w700)),
-              const SizedBox(height: 8),
-              TextFormField(
-                controller: _descriptionController,
-                enabled: !widget.readOnly,
-                maxLines: 5,
-                decoration: KodixComponents.textFieldDecoration(hintText: 'Введите описание курса', prefixIcon: Icons.description),
-              ),
-              const SizedBox(height: 20),
+                // Описание
+                Text('Описание', style: AppStyles.label.copyWith(fontWeight: FontWeight.w700)),
+                const SizedBox(height: 8),
+                TextFormField(
+                  controller: _descriptionController,
+                  enabled: !widget.readOnly,
+                  maxLines: 5,
+                  decoration: KodixComponents.textFieldDecoration(
+                    hintText: 'Введите подробное описание курса', 
+                    prefixIcon: Icons.description_rounded
+                  ),
+                  style: AppStyles.body,
+                ),
+                const SizedBox(height: 24),
 
-              // Цена
-              Text('Цена', style: AppStyles.label.copyWith(fontWeight: FontWeight.w700)),
-              const SizedBox(height: 8),
-              TextFormField(
-                controller: _priceController,
-                enabled: !widget.readOnly,
-                keyboardType: TextInputType.number,
-                decoration: KodixComponents.textFieldDecoration(hintText: 'Введите цену', prefixIcon: Icons.attach_money),
-              ),
-              const SizedBox(height: 20),
+                Row(
+                  children: [
+                    // Цена
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Цена (₽)', style: AppStyles.label.copyWith(fontWeight: FontWeight.w700)),
+                          const SizedBox(height: 8),
+                          TextFormField(
+                            controller: _priceController,
+                            enabled: !widget.readOnly,
+                            keyboardType: TextInputType.number,
+                            decoration: KodixComponents.textFieldDecoration(
+                              hintText: '0', 
+                              prefixIcon: Icons.payments_rounded
+                            ),
+                            style: AppStyles.body,
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 20),
+                    // Сложность
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Сложность', style: AppStyles.label.copyWith(fontWeight: FontWeight.w700)),
+                          const SizedBox(height: 8),
+                          DropdownButtonFormField<int>(
+                            key: ValueKey(_selectedComplexity),
+                            initialValue: _selectedComplexity,
+                            decoration: KodixComponents.textFieldDecoration(
+                              hintText: 'Выберите уровень', 
+                              prefixIcon: Icons.bar_chart_rounded
+                            ),
+                            items: _complexityLevels.entries.map((entry) {
+                              return DropdownMenuItem<int>(
+                                value: entry.key,
+                                child: Text(entry.value, style: AppStyles.body),
+                              );
+                            }).toList(),
+                            onChanged: widget.readOnly ? null : (value) {
+                              if (value != null) {
+                                setState(() => _selectedComplexity = value);
+                              }
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 40),
 
-              // Сложность
-              Text('Уровень сложности', style: AppStyles.label.copyWith(fontWeight: FontWeight.w700)),
-              const SizedBox(height: 8),
-              DropdownButtonFormField<int>(
-                initialValue: _selectedComplexity,
-                decoration: KodixComponents.textFieldDecoration(hintText: 'Выберите уровень сложности', prefixIcon: Icons.trending_up),
-                items: _complexityLevels.entries.map((entry) {
-                  return DropdownMenuItem<int>(
-                    value: entry.key,
-                    child: Text(entry.value),
-                  );
-                }).toList(),
-                onChanged: widget.readOnly ? null : (value) {
-                  if (value != null) {
-                    setState(() => _selectedComplexity = value);
-                  }
-                },
-              ),
-              const SizedBox(height: 30),
-
-              // Кнопка сохранения
-              if (!widget.readOnly)
-                SizedBox(
-                  width: double.infinity,
-                  child: KodixComponents.primaryButton(
+                // Кнопка сохранения
+                if (!widget.readOnly)
+                  KodixComponents.primaryButton(
+                    width: double.infinity,
                     onPressed: _isSaving ? null : _saveCourse,
                     child: _isSaving
                         ? const SizedBox(
@@ -190,10 +241,11 @@ class _CourseEditGeneralTabState extends State<CourseEditGeneralTab> with Automa
                             height: 20,
                             child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                           )
-                        : const Text('Сохранить'),
+                        : const Text('Сохранить изменения', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                   ),
-                ),
-            ],
+                const SizedBox(height: 80),
+              ],
+            ),
           ),
         ),
       ),

@@ -93,197 +93,196 @@ class _AchievementsScreenState extends State<AchievementsScreen>
   }
 
   /// ФОРМА СОЗДАНИЯ / РЕДАКТИРОВАНИЯ
-/// ФОРМА СОЗДАНИЯ / РЕДАКТИРОВАНИЯ
-void _showForm({Achievement? achievement}) async {
-  final isEdit = achievement != null;
-  final titleController = TextEditingController(text: achievement?.name ?? '');
-  final descController = TextEditingController(text: achievement?.description ?? '');
-  
-  File? selectedFile;
-  final String? currentImageUrl = achievement?.imageUrl;
+  void _showForm({Achievement? achievement}) async {
+    final isEdit = achievement != null;
+    final titleController = TextEditingController(text: achievement?.name ?? '');
+    final descController = TextEditingController(text: achievement?.description ?? '');
+    
+    File? selectedFile;
+    final String? currentImageUrl = achievement?.imageUrl;
 
-  // Показываем диалог и ждем результат
-  final result = await showDialog<Map<String, dynamic>>(
-    context: context,
-    barrierDismissible: false,
-    builder: (dialogContext) => StatefulBuilder(
-      builder: (context, setDialogState) => AlertDialog(
-        backgroundColor: AppColors.white,
-        shape: RoundedRectangleBorder(borderRadius: AppStyles.cardRadius),
-        title: Text(isEdit ? 'Редактировать' : 'Новая награда', style: AppStyles.h1),
-        content: SizedBox(
-          width: 450,
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Обложка достижения', style: AppStyles.label),
-                const SizedBox(height: 10),
-                GestureDetector(
-                  onTap: () async {
-                    try {
-                      final XFile? file = await _picker.pickImage(
-                        source: ImageSource.gallery,
-                        imageQuality: 85,
-                      );
-                      if (file != null) {
-                        setDialogState(() => selectedFile = File(file.path));
+    // Показываем диалог и ждем результат
+    final result = await showDialog<Map<String, dynamic>>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          backgroundColor: AppColors.white,
+          shape: RoundedRectangleBorder(borderRadius: AppStyles.cardRadius),
+          title: Text(isEdit ? 'Редактировать' : 'Новая награда', style: AppStyles.h1),
+          content: SizedBox(
+            width: 450,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Обложка достижения', style: AppStyles.label),
+                  const SizedBox(height: 10),
+                  GestureDetector(
+                    onTap: () async {
+                      try {
+                        final XFile? file = await _picker.pickImage(
+                          source: ImageSource.gallery,
+                          imageQuality: 85,
+                        );
+                        if (file != null) {
+                          setDialogState(() => selectedFile = File(file.path));
+                        }
+                      } catch (e) {
+                        debugPrint('Ошибка выбора изображения: $e');
                       }
-                    } catch (e) {
-                      debugPrint('Ошибка выбора изображения: $e');
-                    }
-                  },
-                  child: Container(
-                    height: 180,
-                    width: double.infinity,
-                    decoration: BoxDecoration(
-                      color: AppColors.bgLight,
-                      borderRadius: AppStyles.mainRadius,
-                      image: selectedFile != null
-                          ? DecorationImage(
-                              image: FileImage(selectedFile!),
-                              fit: BoxFit.cover,
-                            )
-                          : currentImageUrl != null
-                              ? DecorationImage(
-                                  image: NetworkImage(currentImageUrl),
-                                  fit: BoxFit.cover,
-                                  onError: (exception, stackTrace) {},
-                                )
-                              : null,
+                    },
+                    child: Container(
+                      height: 180,
+                      width: double.infinity,
+                      decoration: BoxDecoration(
+                        color: AppColors.bgLight,
+                        borderRadius: AppStyles.mainRadius,
+                        image: selectedFile != null
+                            ? DecorationImage(
+                                image: FileImage(selectedFile!),
+                                fit: BoxFit.cover,
+                              )
+                            : currentImageUrl != null
+                                ? DecorationImage(
+                                    image: NetworkImage(currentImageUrl),
+                                    fit: BoxFit.cover,
+                                    onError: (exception, stackTrace) {},
+                                  )
+                                : null,
+                      ),
+                      child: (selectedFile == null && currentImageUrl == null)
+                          ? const Icon(Icons.add_photo_alternate_outlined,
+                              color: AppColors.primaryPurple, size: 40)
+                          : null,
                     ),
-                    child: (selectedFile == null && currentImageUrl == null)
-                        ? const Icon(Icons.add_photo_alternate_outlined,
-                            color: AppColors.primaryPurple, size: 40)
-                        : null,
                   ),
-                ),
-                const SizedBox(height: 24),
-                Text('Название', style: AppStyles.label),
-                const SizedBox(height: 8),
-                TextField(
-                  controller: titleController,
-                  style: AppStyles.body,
-                  decoration: KodixComponents.textFieldDecoration(hintText: 'Введите название...'),
-                ),
-                const SizedBox(height: 20),
-                Text('Описание', style: AppStyles.label),
-                const SizedBox(height: 8),
-                TextField(
-                  controller: descController,
-                  maxLines: 3,
-                  style: AppStyles.body,
-                  decoration: KodixComponents.textFieldDecoration(hintText: 'За какие заслуги выдается?'),
-                ),
-              ],
-            ),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext), // Закрыть без сохранения
-            child: Text('Отмена', style: AppStyles.label.copyWith(color: AppColors.textGrey)),
-          ),
-          SizedBox(
-            width: 140,
-            child: KodixComponents.primaryButton(
-              onPressed: () {
-                // Валидация
-                if (titleController.text.trim().isEmpty) {
-                  ScaffoldMessenger.of(dialogContext).showSnackBar(
-                    const SnackBar(
-                      content: Text('Введите название достижения'),
-                      backgroundColor: Colors.orange,
-                    ),
-                  );
-                  return;
-                }
-                
-                // Закрываем диалог и передаем данные для сохранения
-                Navigator.pop(dialogContext, {
-                  'name': titleController.text.trim(),
-                  'description': descController.text.trim(),
-                  'selectedFile': selectedFile,
-                });
-              },
-              child: const Text('Сохранить'),
-            ),
-          ),
-        ],
-      ),
-    ),
-  );
-
-  // Если результат не null - значит нажали "Сохранить"
-  if (result != null && mounted) {
-    // Показываем индикатор сохранения на основном экране
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Row(
-          children: [
-            SizedBox(
-              width: 20,
-              height: 20,
-              child: CircularProgressIndicator(
-                strokeWidth: 2,
-                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                  const SizedBox(height: 24),
+                  Text('Название', style: AppStyles.label),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: titleController,
+                    style: AppStyles.body,
+                    decoration: KodixComponents.textFieldDecoration(hintText: 'Введите название...'),
+                  ),
+                  const SizedBox(height: 20),
+                  Text('Описание', style: AppStyles.label),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: descController,
+                    maxLines: 3,
+                    style: AppStyles.body,
+                    decoration: KodixComponents.textFieldDecoration(hintText: 'За какие заслуги выдается?'),
+                  ),
+                ],
               ),
             ),
-            SizedBox(width: 12),
-            Text('Сохранение...'),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext), // Закрыть без сохранения
+              child: Text('Отмена', style: AppStyles.label.copyWith(color: AppColors.textGrey)),
+            ),
+            SizedBox(
+              width: 140,
+              child: KodixComponents.primaryButton(
+                onPressed: () {
+                  // Валидация
+                  if (titleController.text.trim().isEmpty) {
+                    ScaffoldMessenger.of(dialogContext).showSnackBar(
+                      const SnackBar(
+                        content: Text('Введите название достижения'),
+                        backgroundColor: Colors.orange,
+                      ),
+                    );
+                    return;
+                  }
+                  
+                  // Закрываем диалог и передаем данные для сохранения
+                  Navigator.pop(dialogContext, {
+                    'name': titleController.text.trim(),
+                    'description': descController.text.trim(),
+                    'selectedFile': selectedFile,
+                  });
+                },
+                child: const Text('Сохранить'),
+              ),
+            ),
           ],
         ),
-        backgroundColor: AppColors.primaryPurple,
-        duration: Duration(seconds: 1),
       ),
     );
 
-    try {
-      if (isEdit) {
-        await AchievementRepository.updateAchievement(
-          achievement.id,
-          name: result['name'],
-          description: result['description'].isEmpty ? null : result['description'],
-          imageFile: result['selectedFile'],
-        );
-      } else {
-        await AchievementRepository.createAchievement(
-          name: result['name'],
-          description: result['description'].isEmpty ? null : result['description'],
-          imageFile: result['selectedFile'],
-        );
-      }
-      
-      // Обновляем данные
-      await _loadData(forceRefresh: true);
-      
-      // Показываем успешное уведомление
-      if (mounted) {
-        ScaffoldMessenger.of(context).hideCurrentSnackBar();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(isEdit ? 'Достижение обновлено' : 'Достижение создано'),
-            backgroundColor: Colors.green,
-            duration: const Duration(seconds: 2),
+    // Если результат не null - значит нажали "Сохранить"
+    if (result != null && mounted) {
+      // Показываем индикатор сохранения на основном экране
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Row(
+            children: [
+              SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                ),
+              ),
+              SizedBox(width: 12),
+              Text('Сохранение...'),
+            ],
           ),
-        );
-      }
-    } catch (e) {
-      debugPrint('Ошибка сохранения: $e');
-      if (mounted) {
-        ScaffoldMessenger.of(context).hideCurrentSnackBar();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Ошибка сохранения: $e'),
-            backgroundColor: Colors.red,
-            duration: const Duration(seconds: 3),
-          ),
-        );
+          backgroundColor: AppColors.primaryPurple,
+          duration: Duration(seconds: 1),
+        ),
+      );
+
+      try {
+        if (isEdit) {
+          await AchievementRepository.updateAchievement(
+            achievement.id,
+            name: result['name'],
+            description: result['description'].isEmpty ? null : result['description'],
+            imageFile: result['selectedFile'],
+          );
+        } else {
+          await AchievementRepository.createAchievement(
+            name: result['name'],
+            description: result['description'].isEmpty ? null : result['description'],
+            imageFile: result['selectedFile'],
+          );
+        }
+        
+        // Обновляем данные
+        await _loadData(forceRefresh: true);
+        
+        // Показываем успешное уведомление
+        if (mounted) {
+          ScaffoldMessenger.of(context).hideCurrentSnackBar();
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(isEdit ? 'Достижение обновлено' : 'Достижение создано'),
+              backgroundColor: Colors.green,
+              duration: const Duration(seconds: 2),
+            ),
+          );
+        }
+      } catch (e) {
+        debugPrint('Ошибка сохранения: $e');
+        if (mounted) {
+          ScaffoldMessenger.of(context).hideCurrentSnackBar();
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Ошибка сохранения: $e'),
+              backgroundColor: Colors.red,
+              duration: const Duration(seconds: 3),
+            ),
+          );
+        }
       }
     }
   }
-}
   /// Мгновенное архивирование/восстановление
   Future<void> _toggleArchiveStatus(Achievement achievement) async {
     try {

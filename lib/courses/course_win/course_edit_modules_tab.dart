@@ -5,6 +5,8 @@ import 'dart:convert';
 import '../../models/database_models.dart' as db_models;
 import '../../services/supabase_service.dart';
 import '../lessons/lesson_viewer_screen.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../core/theme/app_components.dart';
 
 class CourseEditModulesTab extends StatefulWidget {
   final int courseId;
@@ -24,14 +26,15 @@ class CourseEditModulesTab extends StatefulWidget {
   State<CourseEditModulesTab> createState() => _CourseEditModulesTabState();
 }
 
-class _CourseEditModulesTabState extends State<CourseEditModulesTab> with AutomaticKeepAliveClientMixin {
+class _CourseEditModulesTabState extends State<CourseEditModulesTab>
+    with AutomaticKeepAliveClientMixin {
   @override
   bool get wantKeepAlive => true;
 
   List<db_models.Module> _modules = [];
   Map<int, List<db_models.Submodule>> _submodules = {};
   Map<int, List<db_models.Test>> _tests = {};
-  Map<int, List<Map<String, dynamic>>> _practicalTasks = {}; // ← ДОБАВЛЕНО
+  Map<int, List<Map<String, dynamic>>> _practicalTasks = {};
   Map<int, bool> _expandedModules = {};
   bool _isLoading = true;
 
@@ -45,18 +48,17 @@ class _CourseEditModulesTabState extends State<CourseEditModulesTab> with Automa
 
   Future<void> _loadModules() async {
     if (!mounted || _isPerformingLoad) return;
-    
+
     setState(() {
       _isLoading = true;
       _isPerformingLoad = true;
     });
 
     try {
-      // Добавляем принудительный тайм-аут на уровне Future, 
-      // чтобы запрос не висел вечно при проблемах с сетью
-      final data = await SupabaseService.safeDbCall(() => SupabaseService.client
-          .from('module')
-          .select('''
+      final data = await SupabaseService.safeDbCall(
+        () => SupabaseService.client
+            .from('module')
+            .select('''
             *,
             submodule (
               *,
@@ -67,8 +69,8 @@ class _CourseEditModulesTabState extends State<CourseEditModulesTab> with Automa
               practical_task (*)
             )
           ''')
-          .eq('id_courses', widget.courseId)
-          .timeout(const Duration(seconds: 5))
+            .eq('id_courses', widget.courseId)
+            .timeout(const Duration(seconds: 5)),
       );
 
       if (data == null) throw 'Нет ответа от сервера (Timeout)';
@@ -82,13 +84,16 @@ class _CourseEditModulesTabState extends State<CourseEditModulesTab> with Automa
       for (var moduleData in (data as List)) {
         final moduleId = moduleData['id'];
         expandedMap[moduleId] = _expandedModules[moduleId] ?? true;
-        
+
         modulesList.add(db_models.Module.fromJson(moduleData));
 
         final submodulesRaw = moduleData['submodule'] as List? ?? [];
         final submodulesList = List<Map<String, dynamic>>.from(submodulesRaw);
-        
-        submodulesList.sort((a, b) => (a['order_submodule'] ?? 0).compareTo(b['order_submodule'] ?? 0));
+
+        submodulesList.sort(
+          (a, b) =>
+              (a['order_submodule'] ?? 0).compareTo(b['order_submodule'] ?? 0),
+        );
 
         submodulesMap[moduleId] = submodulesList
             .map((item) => db_models.Submodule.fromJson(item))
@@ -96,28 +101,35 @@ class _CourseEditModulesTabState extends State<CourseEditModulesTab> with Automa
 
         for (var subData in submodulesList) {
           final subId = subData['id'];
-          
+
           final testsRaw = subData['submodule_test'] as List? ?? [];
           final testsData = testsRaw
               .where((t) => t['test'] != null)
-              .map((t) => db_models.Test.fromJson(t['test'] as Map<String, dynamic>))
+              .map(
+                (t) =>
+                    db_models.Test.fromJson(t['test'] as Map<String, dynamic>),
+              )
               .toList();
-          
+
           testsData.sort((a, b) => a.id.compareTo(b.id));
           testsMap[subId] = testsData;
-          
+
           final tasksRaw = subData['practical_task'] as List? ?? [];
           final tasksData = tasksRaw
               .where((t) => t['status'] == true)
               .map((t) => t as Map<String, dynamic>)
               .toList();
-          
-          tasksData.sort((a, b) => (a['order_task'] ?? 0).compareTo(b['order_task'] ?? 0));
+
+          tasksData.sort(
+            (a, b) => (a['order_task'] ?? 0).compareTo(b['order_task'] ?? 0),
+          );
           tasksMap[subId] = tasksData;
         }
       }
 
-      modulesList.sort((a, b) => (a.orderModule ?? 0).compareTo(b.orderModule ?? 0));
+      modulesList.sort(
+        (a, b) => (a.orderModule ?? 0).compareTo(b.orderModule ?? 0),
+      );
 
       if (mounted) {
         setState(() {
@@ -132,20 +144,7 @@ class _CourseEditModulesTabState extends State<CourseEditModulesTab> with Automa
     } catch (e) {
       debugPrint('Ошибка загрузки модулей: $e');
       if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Ошибка сети или тайм-аут: $e'),
-            backgroundColor: Colors.red,
-            action: SnackBarAction(
-              label: 'Повторить', 
-              textColor: Colors.white,
-              onPressed: _loadModules
-            ),
-          ),
-        );
+        setState(() => _isLoading = false);
       }
     } finally {
       _isPerformingLoad = false;
@@ -156,41 +155,73 @@ class _CourseEditModulesTabState extends State<CourseEditModulesTab> with Automa
   Widget build(BuildContext context) {
     super.build(context);
     return Padding(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Expanded(
-                child: Text(
-                  'Модули курса',
-                  style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-                ),
-              ),
-              const SizedBox(width: 16),
+              Expanded(child: Text('Программа обучения', style: AppStyles.h1)),
               if (!widget.readOnly)
-                ElevatedButton.icon(
+                KodixComponents.primaryButton(
+                  width: 200,
+                  height: 48,
                   onPressed: () => _showAddModuleDialog(),
-                  icon: const Icon(Icons.add),
-                  label: const Text('Добавить модуль'),
+                  child: const Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.add_circle_outline,
+                        color: Colors.white,
+                        size: 20,
+                      ),
+                      SizedBox(width: 8),
+                      Text(
+                        'Добавить модуль',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
             ],
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 32),
           Expanded(
             child: _isLoading
-                ? const Center(child: CircularProgressIndicator())
+                ? const Center(
+                    child: CircularProgressIndicator(
+                      color: AppColors.primaryPurple,
+                    ),
+                  )
                 : _modules.isEmpty
-                    ? const Center(child: Text('Модулей нет'))
-                    : ListView.builder(
-                        itemCount: _modules.length,
-                        itemBuilder: (context, index) {
-                          final module = _modules[index];
-                          final submodules = _submodules[module.id] ?? [];
-                          return _buildModuleCard(module, submodules, index);
-                        },
-                      ),
+                ? Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.layers_clear_rounded,
+                          size: 64,
+                          color: Colors.grey[300],
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          'В этом курсе еще нет модулей',
+                          style: AppStyles.label,
+                        ),
+                      ],
+                    ),
+                  )
+                : ListView.builder(
+                    itemCount: _modules.length,
+                    itemBuilder: (context, index) {
+                      final module = _modules[index];
+                      final submodules = _submodules[module.id] ?? [];
+                      return _buildModuleCard(module, submodules, index);
+                    },
+                  ),
           ),
         ],
       ),
@@ -204,88 +235,75 @@ class _CourseEditModulesTabState extends State<CourseEditModulesTab> with Automa
   ) {
     final isExpanded = _expandedModules[module.id] ?? true;
 
-    return Card(
-      margin: const EdgeInsets.only(bottom: 16),
-      elevation: 0,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+    return Container(
+      margin: const EdgeInsets.only(bottom: 24),
+      decoration: BoxDecoration(
+        color: AppColors.white,
+        borderRadius: AppStyles.cardRadius,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 15,
+            offset: const Offset(0, 5),
+          ),
+        ],
+      ),
+      child: Theme(
+        data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+        child: ExpansionTile(
+          initiallyExpanded: isExpanded,
+          onExpansionChanged: (val) =>
+              setState(() => _expandedModules[module.id] = val),
+          title: Text(
+            'Модуль ${module.orderModule}: ${module.name ?? 'Без названия'}',
+            style: AppStyles.h1,
+          ),
+          trailing: widget.readOnly
+              ? null
+              : IconButton(
+                  icon: const Icon(
+                    Icons.delete_outline,
+                    color: Colors.redAccent,
+                  ),
+                  onPressed: () => _deleteModule(module.id),
+                ),
+          childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
           children: [
-            Row(
-              children: [
-                IconButton(
-                  icon: Icon(
-                    isExpanded ? Icons.expand_less : Icons.expand_more,
-                    size: 28,
-                  ),
-                  onPressed: () {
-                    setState(() {
-                      _expandedModules[module.id] = !isExpanded;
-                    });
-                  },
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    '${module.orderModule}. ${module.name ?? 'Без названия'}',
-                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                  ),
-                ),
-                if (!widget.readOnly)
-                  PopupMenuButton<String>(
-                    onSelected: (value) {
-                      if (value == 'delete') _deleteModule(module.id);
-                    },
-                    itemBuilder: (ctx) => [
-                      const PopupMenuItem(
-                        value: 'delete',
-                        child: Row(
-                          children: [
-                            Icon(Icons.delete, color: Colors.red, size: 18),
-                            SizedBox(width: 8),
-                            Text('Удалить', style: TextStyle(color: Colors.red)),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-              ],
-            ),
-            if (isExpanded) ...[
-              const SizedBox(height: 12),
-              if (!widget.readOnly)
-                Row(
-                  children: [
-                    OutlinedButton.icon(
-                      onPressed: () => _showAddTheoryDialog(module.id),
-                      icon: const Icon(Icons.menu_book, size: 18),
-                      label: const Text('Добавить теорию'),
+            if (!widget.readOnly) ...[
+              const Divider(height: 1, color: AppColors.bgLight),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  KodixComponents.secondaryButton(
+                    onPressed: () => _showAddTheoryDialog(module.id),
+                    icon: Icons.menu_book_rounded,
+                    height: 40,
+                    child: const Text(
+                      'Добавить теорию',
+                      style: TextStyle(fontSize: 13),
                     ),
-                  ],
-                ),
-              const SizedBox(height: 12),
-              if (submodules.isEmpty)
-                Text('Нет подмодулей', style: TextStyle(color: Colors.grey[600], fontSize: 14))
-              else
-                ListView.builder(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  itemCount: submodules.length,
-                  itemBuilder: (context, index) {
-                    final submodule = submodules[index];
-                    return _buildSubmoduleItem(
-                      submodule,
-                      module.id,
-                      module.orderModule ?? 1,
-                      index + 1,
-                    );
-                  },
-                ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
             ],
+            if (submodules.isEmpty)
+              Padding(
+                padding: const EdgeInsets.all(20),
+                child: Text(
+                  'Подмодули еще не добавлены',
+                  style: AppStyles.label,
+                ),
+              )
+            else
+              ...submodules.asMap().entries.map((entry) {
+                return _buildSubmoduleItem(
+                  entry.value,
+                  module.id,
+                  module.orderModule ?? 1,
+                  entry.key + 1,
+                );
+              }),
           ],
         ),
       ),
@@ -299,245 +317,192 @@ class _CourseEditModulesTabState extends State<CourseEditModulesTab> with Automa
     int submoduleNumber,
   ) {
     final tests = _tests[submodule.id] ?? [];
-    final practicalTasks = _practicalTasks[submodule.id] ?? []; // ← ДОБАВЛЕНО
+    final practicalTasks = _practicalTasks[submodule.id] ?? [];
 
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        GestureDetector(
-          onTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => LessonViewerScreen(
-                  submoduleId: submodule.id,
-                  courseName: widget.courseName,
-                  courseIcon: widget.courseIcon,
-                ),
-              ),
-            );
-          },
-          child: Container(
-            margin: const EdgeInsets.symmetric(vertical: 8),
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.surface,
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: Colors.grey.withValues(alpha: 0.2)),
-            ),
-            child: Row(
-              children: [
-                Container(
-                  width: 40,
-                  height: 40,
+        Container(
+          margin: const EdgeInsets.only(bottom: 12),
+          decoration: BoxDecoration(
+            color: AppColors.bgLight.withValues(alpha: 0.5),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: AppColors.bgLight),
+          ),
+          child: Column(
+            children: [
+              ListTile(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => LessonViewerScreen(
+                        submoduleId: submodule.id,
+                        courseName: widget.courseName,
+                        courseIcon: widget.courseIcon,
+                      ),
+                    ),
+                  );
+                },
+                leading: Container(
+                  width: 36,
+                  height: 36,
                   decoration: BoxDecoration(
-                    color: Theme.of(context).primaryColor.withValues(alpha: 0.2),
-                    borderRadius: BorderRadius.circular(6),
+                    color: AppColors.primaryPurple.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(10),
                   ),
                   child: Center(
                     child: Text(
                       '$moduleOrder.$submoduleNumber',
-                      style: TextStyle(
+                      style: const TextStyle(
+                        color: AppColors.primaryPurple,
                         fontWeight: FontWeight.bold,
-                        color: Theme.of(context).primaryColor,
-                        fontSize: 14,
+                        fontSize: 13,
                       ),
                     ),
                   ),
                 ),
-                const SizedBox(width: 12),
-                Container(
-                  width: 32,
-                  height: 32,
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).primaryColor.withValues(alpha: 0.2),
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: Center(
-                    child: Icon(Icons.play_circle_outline, color: Theme.of(context).primaryColor, size: 18),
-                  ),
+                title: Text(
+                  submodule.name ?? 'Без названия',
+                  style: AppStyles.body.copyWith(fontWeight: FontWeight.w600),
                 ),
-                const SizedBox(width: 12),
-                Expanded(
+                subtitle: submodule.leadTime != null
+                    ? Text('${submodule.leadTime} мин', style: AppStyles.label)
+                    : null,
+                trailing: widget.readOnly
+                    ? null
+                    : PopupMenuButton<String>(
+                        icon: const Icon(Icons.more_vert_rounded, size: 20),
+                        onSelected: (val) {
+                          if (val == 'delete')
+                            _deleteSubmodule(submodule.id, moduleId);
+                          else if (val == 'add_test')
+                            _showAddTestDialog(submodule.id);
+                          else if (val == 'add_practice')
+                            _showAddPracticeDialog(submodule.id);
+                        },
+                        itemBuilder: (ctx) => [
+                          const PopupMenuItem(
+                            value: 'add_test',
+                            child: Row(
+                              children: [
+                                Icon(Icons.quiz_outlined, size: 18),
+                                SizedBox(width: 8),
+                                Text('Добавить тест'),
+                              ],
+                            ),
+                          ),
+                          const PopupMenuItem(
+                            value: 'add_practice',
+                            child: Row(
+                              children: [
+                                Icon(Icons.code_rounded, size: 18),
+                                SizedBox(width: 8),
+                                Text('Добавить практику'),
+                              ],
+                            ),
+                          ),
+                          const PopupMenuItem(
+                            value: 'delete',
+                            child: Row(
+                              children: [
+                                Icon(
+                                  Icons.delete_outline,
+                                  color: Colors.red,
+                                  size: 18,
+                                ),
+                                SizedBox(width: 8),
+                                Text(
+                                  'Удалить',
+                                  style: TextStyle(color: Colors.red),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+              ),
+              if (tests.isNotEmpty || practicalTasks.isNotEmpty) ...[
+                const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 16),
+                  child: Divider(height: 1, color: AppColors.bgLight),
+                ),
+                Padding(
+                  padding: const EdgeInsets.all(8),
                   child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(submodule.name ?? 'Без названия',
-                          style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
-                      if (submodule.leadTime != null)
-                        Text('${submodule.leadTime} мин',
-                            style: TextStyle(color: Colors.grey[600], fontSize: 12)),
+                      ...tests.map(
+                        (test) => _buildTestItem(test, submodule.id),
+                      ),
+                      ...practicalTasks.map(
+                        (task) => _buildPracticalTaskItem(task, submodule.id),
+                      ),
                     ],
                   ),
                 ),
-                if (!widget.readOnly)
-                  PopupMenuButton<String>(
-                    icon: const Icon(Icons.more_vert, size: 20),
-                    onSelected: (value) {
-                      if (value == 'delete') {
-                        _deleteSubmodule(submodule.id, moduleId);
-                      } else if (value == 'add_test') {
-                        _showAddTestDialog(submodule.id);
-                      } else if (value == 'add_practice') {
-                        _showAddPracticeDialog(submodule.id); // ← ДОБАВЛЕНО
-                      }
-                    },
-                    itemBuilder: (ctx) => [
-                      const PopupMenuItem(
-                        value: 'add_test',
-                        child: Row(
-                          children: [
-                            Icon(Icons.quiz, size: 18),
-                            SizedBox(width: 8),
-                            Text('Добавить тест'),
-                          ],
-                        ),
-                      ),
-                      // ← ДОБАВЛЕНО
-                      const PopupMenuItem(
-                        value: 'add_practice',
-                        child: Row(
-                          children: [
-                            Icon(Icons.code, size: 18),
-                            SizedBox(width: 8),
-                            Text('Добавить практику'),
-                          ],
-                        ),
-                      ),
-                      const PopupMenuItem(
-                        value: 'delete',
-                        child: Row(
-                          children: [
-                            Icon(Icons.delete, color: Colors.red, size: 18),
-                            SizedBox(width: 8),
-                            Text('Удалить', style: TextStyle(color: Colors.red)),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
               ],
-            ),
+            ],
           ),
         ),
-        // Тесты
-        if (tests.isNotEmpty)
-          Container(
-            margin: const EdgeInsets.only(left: 40, top: 8, bottom: 8),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Тесты (${tests.length})',
-                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.grey[600])),
-                const SizedBox(height: 8),
-                ...tests.map((test) => _buildTestItem(test, submodule.id)),
-              ],
-            ),
-          ),
-        // ← ДОБАВЛЕНО: Практические задания
-        if (practicalTasks.isNotEmpty)
-          Container(
-            margin: const EdgeInsets.only(left: 40, top: 8, bottom: 8),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Практика (${practicalTasks.length})',
-                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.grey[600])),
-                const SizedBox(height: 8),
-                ...practicalTasks.map((task) => _buildPracticalTaskItem(task, submodule.id)),
-              ],
-            ),
-          ),
       ],
     );
   }
 
   Widget _buildTestItem(db_models.Test test, int submoduleId) {
-    return GestureDetector(
-      onTap: widget.readOnly ? null : () => _showEditTestDialog(test, submoduleId),
-      child: Container(
-        padding: const EdgeInsets.all(8),
-        margin: const EdgeInsets.only(bottom: 6),
-        decoration: BoxDecoration(
-          color: Colors.blue.withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(6),
-          border: Border.all(color: Colors.blue.withValues(alpha: 0.3)),
+    return Container(
+      margin: const EdgeInsets.only(left: 48, bottom: 4),
+      decoration: BoxDecoration(
+        color: Colors.blue.withValues(alpha: 0.05),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: ListTile(
+        dense: true,
+        onTap: widget.readOnly
+            ? null
+            : () => _showEditTestDialog(test, submoduleId),
+        leading: const Icon(Icons.quiz_outlined, size: 16, color: Colors.blue),
+        title: Text(
+          test.question ?? 'Вопрос',
+          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
         ),
-        child: Row(
-          children: [
-            const Icon(Icons.quiz, size: 16, color: Colors.blue),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(test.question ?? 'Вопрос',
-                      maxLines: 2, overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
-                  Text('Ответ: ${test.rightAnswer}',
-                      maxLines: 1, overflow: TextOverflow.ellipsis,
-                      style: TextStyle(fontSize: 11, color: Colors.grey[600])),
-                ],
+        trailing: widget.readOnly
+            ? null
+            : IconButton(
+                icon: const Icon(Icons.close, size: 14, color: Colors.grey),
+                onPressed: () => _deleteTest(test.id, submoduleId),
               ),
-            ),
-            if (!widget.readOnly)
-              PopupMenuButton(
-                itemBuilder: (ctx) => [
-                  PopupMenuItem(
-                    child: const Text('Удалить'),
-                    onTap: () => _deleteTest(test.id, submoduleId),
-                  ),
-                ],
-                icon: const Icon(Icons.more_vert, size: 16),
-              ),
-          ],
-        ),
       ),
     );
   }
 
-  // ← ДОБАВЛЕНО: Виджет для отображения практического задания
   Widget _buildPracticalTaskItem(Map<String, dynamic> task, int submoduleId) {
     return Container(
-      padding: const EdgeInsets.all(8),
-      margin: const EdgeInsets.only(bottom: 6),
+      margin: const EdgeInsets.only(left: 48, bottom: 4),
       decoration: BoxDecoration(
-        color: Colors.orange.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: Colors.orange.withValues(alpha: 0.3)),
+        color: Colors.orange.withValues(alpha: 0.05),
+        borderRadius: BorderRadius.circular(10),
       ),
-      child: Row(
-        children: [
-          const Icon(Icons.code, size: 16, color: Colors.orange),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(task['name'] ?? 'Практика',
-                    maxLines: 2, overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
-                Text('Язык: ${task['language'] ?? 'dart'}',
-                    maxLines: 1, overflow: TextOverflow.ellipsis,
-                    style: TextStyle(fontSize: 11, color: Colors.grey[600])),
-              ],
-            ),
-          ),
-          if (!widget.readOnly)
-            PopupMenuButton(
-              itemBuilder: (ctx) => [
-                PopupMenuItem(
-                  child: const Text('Удалить'),
-                  onTap: () => _deletePracticalTask(task['id'], submoduleId),
-                ),
-              ],
-              icon: const Icon(Icons.more_vert, size: 16),
-            ),
-        ],
+      child: ListTile(
+        dense: true,
+        onTap: widget.readOnly
+            ? null
+            : () => _showEditPracticeDialog(task, submoduleId),
+        leading: const Icon(Icons.code_rounded, size: 16, color: Colors.orange),
+        title: Text(
+          task['name'] ?? 'Практика',
+          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+        ),
+        trailing: widget.readOnly
+            ? null
+            : IconButton(
+                icon: const Icon(Icons.close, size: 14, color: Colors.grey),
+                onPressed: () => _deletePracticalTask(task['id'], submoduleId),
+              ),
       ),
     );
   }
 
-  // ==================== ДИАЛОГИ ====================
+  // --- ДИАЛОГИ ---
 
   void _showAddModuleDialog() {
     final nameController = TextEditingController();
@@ -546,32 +511,41 @@ class _CourseEditModulesTabState extends State<CourseEditModulesTab> with Automa
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Добавить модуль'),
-        content: SizedBox(
-          width: 400,
-          child: Form(
-            key: formKey,
-            child: TextFormField(
-              controller: nameController,
-              decoration: const InputDecoration(
-                labelText: 'Название модуля',
-                border: OutlineInputBorder(),
-                prefixIcon: Icon(Icons.book),
-              ),
-              validator: (value) => value?.isEmpty == true ? 'Введите название' : null,
+        backgroundColor: AppColors.white,
+        shape: RoundedRectangleBorder(borderRadius: AppStyles.cardRadius),
+        title: Text('Новый модуль', style: AppStyles.h1),
+        content: Form(
+          key: formKey,
+          child: TextFormField(
+            controller: nameController,
+            decoration: KodixComponents.textFieldDecoration(
+              hintText: 'Название модуля',
+              prefixIcon: Icons.layers_outlined,
             ),
+            validator: (v) => v?.isEmpty == true ? 'Введите название' : null,
           ),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Отмена')),
-          ElevatedButton(
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('Отмена', style: AppStyles.label),
+          ),
+          KodixComponents.primaryButton(
+            width: 120,
+            height: 44,
             onPressed: () async {
               if (formKey.currentState!.validate()) {
                 await _addModule(nameController.text);
                 if (context.mounted) Navigator.pop(context);
               }
             },
-            child: const Text('Добавить'),
+            child: const Text(
+              'Создать',
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ),
+            ),
           ),
         ],
       ),
@@ -589,121 +563,132 @@ class _CourseEditModulesTabState extends State<CourseEditModulesTab> with Automa
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setState) => AlertDialog(
-          title: const Text('Добавить теоретический материал'),
+          backgroundColor: AppColors.white,
+          shape: RoundedRectangleBorder(borderRadius: AppStyles.cardRadius),
+          title: Text('Теория / Видео', style: AppStyles.h1),
           content: SizedBox(
             width: 500,
             child: Form(
               key: formKey,
-              child: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        border: Border.all(color: Colors.grey.withValues(alpha: 0.3)),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text('Markdown документ',
-                              style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
-                          const SizedBox(height: 8),
-                          if (selectedFilePath != null)
-                            Container(
-                              padding: const EdgeInsets.all(8),
-                              decoration: BoxDecoration(
-                                color: Colors.green.withValues(alpha: 0.1),
-                                borderRadius: BorderRadius.circular(6),
-                              ),
-                              child: Row(
-                                children: [
-                                  const Icon(Icons.check_circle, color: Colors.green, size: 18),
-                                  const SizedBox(width: 8),
-                                  Expanded(
-                                    child: Text(selectedFilePath!.split('/').last,
-                                        maxLines: 1, overflow: TextOverflow.ellipsis,
-                                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          const SizedBox(height: 8),
-                          ElevatedButton.icon(
-                            onPressed: () async {
-                              final result = await FilePicker.platform.pickFiles(
-                                type: FileType.custom,
-                                allowedExtensions: ['md', 'markdown', 'txt'],
-                              );
-                              if (result != null) {
-                                setState(() => selectedFilePath = result.files.single.path);
-                              }
-                            },
-                            icon: const Icon(Icons.upload_file, size: 18),
-                            label: const Text('Выбрать файл'),
-                          ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  KodixComponents.secondaryButton(
+                    width: double.infinity,
+                    onPressed: () async {
+                      final result = await FilePicker.platform.pickFiles(
+                        type: FileType.custom,
+                        allowedExtensions: [
+                          'md',
+                          'markdown',
+                          'txt',
+                          'mp4',
+                          'mov',
+                          'avi',
                         ],
+                      );
+                      if (result != null && context.mounted) {
+                        setState(
+                          () => selectedFilePath = result.files.single.path,
+                        );
+                      }
+                    },
+                    icon: Icons.upload_file_rounded,
+                    child: Expanded(
+                      child: Text(
+                        selectedFilePath == null
+                            ? 'Выбрать файл (MD или MP4)'
+                            : selectedFilePath!.split('/').last,
+                        overflow: TextOverflow.ellipsis,
+                        maxLines: 1,
+                        textAlign: TextAlign.center,
                       ),
                     ),
-                    const SizedBox(height: 16),
-                    TextFormField(
-                      controller: nameController,
-                      decoration: const InputDecoration(
-                        labelText: 'Название урока',
-                        border: OutlineInputBorder(),
-                        prefixIcon: Icon(Icons.title),
-                      ),
-                      validator: (value) => value?.isEmpty == true ? 'Введите название' : null,
+                  ),
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    controller: nameController,
+                    decoration: KodixComponents.textFieldDecoration(
+                      hintText: 'Название урока',
+                      prefixIcon: Icons.title_rounded,
                     ),
-                    const SizedBox(height: 16),
-                    TextFormField(
-                      controller: leadTimeController,
-                      keyboardType: TextInputType.number,
-                      decoration: const InputDecoration(
-                        labelText: 'Время изучения (мин)',
-                        border: OutlineInputBorder(),
-                        prefixIcon: Icon(Icons.schedule),
-                        hintText: 'Например: 15',
-                      ),
-                      validator: (value) {
-                        if (value == null || value.isEmpty) return 'Введите время';
-                        if (int.tryParse(value) == null) return 'Можно вводить только цифры';
-                        return null;
-                      },
+                    validator: (v) =>
+                        v?.isEmpty == true ? 'Введите название' : null,
+                  ),
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    controller: leadTimeController,
+                    keyboardType: TextInputType.number,
+                    decoration: KodixComponents.textFieldDecoration(
+                      hintText: 'Время изучения (мин)',
+                      prefixIcon: Icons.timer_rounded,
                     ),
-                  ],
-                ),
+                    validator: (v) =>
+                        int.tryParse(v ?? '') == null ? 'Введите число' : null,
+                  ),
+                ],
               ),
             ),
           ),
           actions: [
             TextButton(
-              onPressed: isUploading ? null : () => Navigator.pop(context),
-              child: const Text('Отмена'),
+              onPressed: () => Navigator.pop(context),
+              child: Text('Отмена', style: AppStyles.label),
             ),
-            ElevatedButton(
+            KodixComponents.primaryButton(
+              width: 140,
+              height: 44,
               onPressed: isUploading
                   ? null
                   : () async {
-                      if (formKey.currentState!.validate() && selectedFilePath != null) {
+                      if (formKey.currentState!.validate() &&
+                          selectedFilePath != null) {
                         setState(() => isUploading = true);
-                        await _addSubmodule(
-                          moduleId,
-                          nameController.text,
-                          int.parse(leadTimeController.text),
-                          selectedFilePath!,
-                        );
-                        if (context.mounted) Navigator.pop(context);
+                        try {
+                          await _addSubmodule(
+                            moduleId,
+                            nameController.text,
+                            int.parse(leadTimeController.text),
+                            selectedFilePath!,
+                          );
+                          if (context.mounted) Navigator.pop(context);
+                        } catch (e) {
+                          if (context.mounted) {
+                            setState(() => isUploading = false);
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  'Ошибка загрузки: ${e.toString()}',
+                                ),
+                                backgroundColor: Colors.red,
+                              ),
+                            );
+                          }
+                        }
                       } else if (selectedFilePath == null) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Выберите markdown файл')),
-                        );
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Выберите файл')),
+                          );
+                        }
                       }
                     },
               child: isUploading
-                  ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
-                  : const Text('Добавить'),
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        color: Colors.white,
+                        strokeWidth: 2,
+                      ),
+                    )
+                  : const Text(
+                      'Добавить',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
             ),
           ],
         ),
@@ -711,114 +696,100 @@ class _CourseEditModulesTabState extends State<CourseEditModulesTab> with Automa
     );
   }
 
-  // ← ДОБАВЛЕНО: Диалог добавления практического задания
   void _showAddPracticeDialog(int submoduleId) {
     final formKey = GlobalKey<FormState>();
     final nameController = TextEditingController();
-    final descriptionController = TextEditingController();
+    final descController = TextEditingController();
     final contentController = TextEditingController();
-    final starterCodeController = TextEditingController();
-    final testCasesController = TextEditingController(
-      text: '[\n  {"input": "", "expected_output": "", "description": "Тест 1"}\n]',
+    final starterController = TextEditingController();
+    final testsController = TextEditingController(
+      text:
+          '[\n  {"input": "5 3", "expected_output": "8", "description": "Тест 1"}\n]',
     );
-
-    String selectedLanguage = 'dart';
+    String lang = 'dart';
     bool isLoading = false;
 
     showDialog(
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setState) => AlertDialog(
-          title: const Row(
-            children: [
-              Icon(Icons.code, color: Colors.orange),
-              SizedBox(width: 12),
-              Text('Практическое задание'),
-            ],
-          ),
+          backgroundColor: AppColors.white,
+          shape: RoundedRectangleBorder(borderRadius: AppStyles.cardRadius),
+          title: Text('Новая практика', style: AppStyles.h1),
           content: SizedBox(
-            width: 650,
-            height: 550,
+            width: 700,
+            height: 600,
             child: Form(
               key: formKey,
               child: SingleChildScrollView(
                 child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('Название', style: TextStyle(fontWeight: FontWeight.w600)),
-                    const SizedBox(height: 6),
                     TextFormField(
                       controller: nameController,
-                      decoration: const InputDecoration(
-                        hintText: 'Например: Сумма двух чисел',
-                        border: OutlineInputBorder(),
+                      decoration: KodixComponents.textFieldDecoration(
+                        hintText: 'Название задачи',
                       ),
-                      validator: (v) => v?.isEmpty == true ? 'Обязательно' : null,
                     ),
-                    const SizedBox(height: 14),
-                    const Text('Язык программирования', style: TextStyle(fontWeight: FontWeight.w600)),
-                    const SizedBox(height: 6),
+                    const SizedBox(height: 16),
                     DropdownButtonFormField<String>(
-                      initialValue: selectedLanguage,
-                      items: ['dart', 'python', 'javascript', 'cpp', 'csharp', 'java']
-                          .map((e) => DropdownMenuItem(value: e, child: Text(e.toUpperCase())))
-                          .toList(),
-                      onChanged: (v) => setState(() => selectedLanguage = v ?? 'dart'),
-                      decoration: const InputDecoration(border: OutlineInputBorder()),
-                    ),
-                    const SizedBox(height: 14),
-                    const Text('Краткое описание', style: TextStyle(fontWeight: FontWeight.w600)),
-                    const SizedBox(height: 6),
-                    TextFormField(
-                      controller: descriptionController,
-                      maxLines: 2,
-                      decoration: const InputDecoration(
-                        hintText: 'Что нужно сделать?',
-                        border: OutlineInputBorder(),
+                      initialValue: lang,
+                      items:
+                          [
+                                'dart',
+                                'python',
+                                'javascript',
+                                'cpp',
+                                'csharp',
+                                'java',
+                              ]
+                              .map(
+                                (e) => DropdownMenuItem(
+                                  value: e,
+                                  child: Text(e.toUpperCase()),
+                                ),
+                              )
+                              .toList(),
+                      onChanged: (v) => setState(() => lang = v ?? 'dart'),
+                      decoration: KodixComponents.textFieldDecoration(
+                        hintText: 'Язык программирования',
                       ),
                     ),
-                    const SizedBox(height: 14),
-                    const Text('Условие задачи (Markdown)', style: TextStyle(fontWeight: FontWeight.w600)),
-                    const SizedBox(height: 6),
+                    const SizedBox(height: 16),
+                    TextFormField(
+                      controller: descController,
+                      maxLines: 2,
+                      decoration: KodixComponents.textFieldDecoration(
+                        hintText: 'Описание',
+                      ),
+                    ),
+                    const SizedBox(height: 16),
                     TextFormField(
                       controller: contentController,
                       maxLines: 4,
-                      style: const TextStyle(fontSize: 13),
-                      decoration: const InputDecoration(
-                        hintText: '## Задача\nНапишите функцию...',
-                        border: OutlineInputBorder(),
+                      decoration: KodixComponents.textFieldDecoration(
+                        hintText: 'Условие (Markdown)',
                       ),
                     ),
-                    const SizedBox(height: 14),
-                    const Text('Стартовый код', style: TextStyle(fontWeight: FontWeight.w600)),
-                    const SizedBox(height: 6),
+                    const SizedBox(height: 16),
                     TextFormField(
-                      controller: starterCodeController,
+                      controller: starterController,
                       maxLines: 4,
-                      style: const TextStyle(fontFamily: 'monospace', fontSize: 13),
-                      decoration: const InputDecoration(
-                        hintText: 'void main() {\n  // Ваш код\n}',
-                        border: OutlineInputBorder(),
+                      decoration: KodixComponents.textFieldDecoration(
+                        hintText: 'Стартовый код',
                       ),
                     ),
-                    const SizedBox(height: 14),
-                    const Text('Тестовые кейсы (JSON)', style: TextStyle(fontWeight: FontWeight.w600)),
-                    const SizedBox(height: 6),
+                    const SizedBox(height: 16),
                     TextFormField(
-                      controller: testCasesController,
+                      controller: testsController,
                       maxLines: 4,
-                      style: const TextStyle(fontFamily: 'monospace', fontSize: 12),
-                      decoration: const InputDecoration(
-                        hintText: '[{"input": "5 3", "expected_output": "8", "description": "Тест"}]',
-                        border: OutlineInputBorder(),
+                      decoration: KodixComponents.textFieldDecoration(
+                        hintText: 'Тестовые кейсы (JSON)',
                       ),
                       validator: (v) {
-                        if (v == null || v.isEmpty) return 'Обязательно';
                         try {
-                          jsonDecode(v);
+                          jsonDecode(v!);
                           return null;
-                        } catch (e) {
+                        } catch (_) {
                           return 'Неверный JSON';
                         }
                       },
@@ -830,29 +801,201 @@ class _CourseEditModulesTabState extends State<CourseEditModulesTab> with Automa
           ),
           actions: [
             TextButton(
-              onPressed: isLoading ? null : () => Navigator.pop(context),
-              child: const Text('Отмена'),
+              onPressed: () => Navigator.pop(context),
+              child: Text('Отмена', style: AppStyles.label),
             ),
-            ElevatedButton(
+            KodixComponents.primaryButton(
+              width: 140,
+              height: 44,
               onPressed: isLoading
                   ? null
                   : () async {
-                      if (!formKey.currentState!.validate()) return;
-                      setState(() => isLoading = true);
-                      await _addPracticalTask(
-                        submoduleId,
-                        nameController.text,
-                        descriptionController.text,
-                        contentController.text,
-                        selectedLanguage,
-                        starterCodeController.text,
-                        testCasesController.text,
-                      );
-                      if (context.mounted) Navigator.pop(context);
+                      if (formKey.currentState!.validate()) {
+                        setState(() => isLoading = true);
+                        try {
+                          await _addPracticalTask(
+                            submoduleId,
+                            nameController.text,
+                            descController.text,
+                            contentController.text,
+                            lang,
+                            starterController.text,
+                            testsController.text,
+                          );
+                          if (context.mounted) Navigator.pop(context);
+                        } catch (e) {
+                          if (context.mounted) {
+                            setState(() => isLoading = false);
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('Ошибка: $e'),
+                                backgroundColor: Colors.red,
+                              ),
+                            );
+                          }
+                        }
+                      }
                     },
-              child: isLoading
-                  ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
-                  : const Text('Добавить'),
+              child: const Text(
+                'Добавить',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showEditPracticeDialog(Map<String, dynamic> task, int submoduleId) {
+    final formKey = GlobalKey<FormState>();
+    final nameController = TextEditingController(text: task['name']);
+    final descController = TextEditingController(text: task['description']);
+    final contentController = TextEditingController(text: task['content']);
+    final starterController = TextEditingController(text: task['starter_code']);
+    final testsController = TextEditingController(
+      text: jsonEncode(task['test_cases'] ?? []),
+    );
+    String lang = task['language'] ?? 'dart';
+    bool isLoading = false;
+
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          backgroundColor: AppColors.white,
+          shape: RoundedRectangleBorder(borderRadius: AppStyles.cardRadius),
+          title: Text('Редактировать практику', style: AppStyles.h1),
+          content: SizedBox(
+            width: 700,
+            height: 600,
+            child: Form(
+              key: formKey,
+              child: SingleChildScrollView(
+                child: Column(
+                  children: [
+                    TextFormField(
+                      controller: nameController,
+                      decoration: KodixComponents.textFieldDecoration(
+                        hintText: 'Название задачи',
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    DropdownButtonFormField<String>(
+                      initialValue: lang,
+                      items:
+                          [
+                                'dart',
+                                'python',
+                                'javascript',
+                                'cpp',
+                                'csharp',
+                                'java',
+                              ]
+                              .map(
+                                (e) => DropdownMenuItem(
+                                  value: e,
+                                  child: Text(e.toUpperCase()),
+                                ),
+                              )
+                              .toList(),
+                      onChanged: (v) => setState(() => lang = v ?? 'dart'),
+                      decoration: KodixComponents.textFieldDecoration(
+                        hintText: 'Язык программирования',
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    TextFormField(
+                      controller: descController,
+                      maxLines: 2,
+                      decoration: KodixComponents.textFieldDecoration(
+                        hintText: 'Описание',
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    TextFormField(
+                      controller: contentController,
+                      maxLines: 4,
+                      decoration: KodixComponents.textFieldDecoration(
+                        hintText: 'Условие (Markdown)',
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    TextFormField(
+                      controller: starterController,
+                      maxLines: 4,
+                      decoration: KodixComponents.textFieldDecoration(
+                        hintText: 'Стартовый код',
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    TextFormField(
+                      controller: testsController,
+                      maxLines: 4,
+                      decoration: KodixComponents.textFieldDecoration(
+                        hintText: 'Тестовые кейсы (JSON)',
+                      ),
+                      validator: (v) {
+                        try {
+                          jsonDecode(v!);
+                          return null;
+                        } catch (_) {
+                          return 'Неверный JSON';
+                        }
+                      },
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text('Отмена', style: AppStyles.label),
+            ),
+            KodixComponents.primaryButton(
+              width: 140,
+              height: 44,
+              onPressed: isLoading
+                  ? null
+                  : () async {
+                      if (formKey.currentState!.validate()) {
+                        setState(() => isLoading = true);
+                        try {
+                          await _updatePracticalTask(
+                            task['id'],
+                            nameController.text,
+                            descController.text,
+                            contentController.text,
+                            lang,
+                            starterController.text,
+                            testsController.text,
+                          );
+                          if (context.mounted) Navigator.pop(context);
+                        } catch (e) {
+                          if (context.mounted) {
+                            setState(() => isLoading = false);
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('Ошибка: $e'),
+                                backgroundColor: Colors.red,
+                              ),
+                            );
+                          }
+                        }
+                      }
+                    },
+              child: const Text(
+                'Сохранить',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
             ),
           ],
         ),
@@ -863,86 +1006,60 @@ class _CourseEditModulesTabState extends State<CourseEditModulesTab> with Automa
   void _showAddTestDialog(int submoduleId) {
     final formKey = GlobalKey<FormState>();
     final questionController = TextEditingController();
-    final difficultyController = TextEditingController();
-
-    final List<TextEditingController> answerControllers = [
-      TextEditingController(),
-      TextEditingController(),
-      TextEditingController(),
-      TextEditingController(),
-    ];
-
-    int? selectedCorrectAnswer;
+    final rightAnswerController = TextEditingController();
+    final wrong1Controller = TextEditingController();
+    final wrong2Controller = TextEditingController();
+    final wrong3Controller = TextEditingController();
     bool isLoading = false;
 
     showDialog(
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setState) => AlertDialog(
-          title: const Text('Добавить тест'),
+          backgroundColor: AppColors.white,
+          shape: RoundedRectangleBorder(borderRadius: AppStyles.cardRadius),
+          title: Text('Новый тест', style: AppStyles.h1),
           content: SizedBox(
-            width: 600,
+            width: 500,
             child: Form(
               key: formKey,
               child: SingleChildScrollView(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     TextFormField(
                       controller: questionController,
-                      decoration: const InputDecoration(
-                        labelText: 'Вопрос',
-                        border: OutlineInputBorder(),
-                        prefixIcon: Icon(Icons.help_outline),
+                      maxLines: 2,
+                      decoration: KodixComponents.textFieldDecoration(
+                        hintText: 'Вопрос',
                       ),
-                      maxLines: 3,
-                      validator: (value) => value?.isEmpty == true ? 'Введите вопрос' : null,
                     ),
                     const SizedBox(height: 16),
                     TextFormField(
-                      controller: difficultyController,
-                      keyboardType: TextInputType.number,
-                      decoration: const InputDecoration(
-                        labelText: 'Сложность (1-5)',
-                        border: OutlineInputBorder(),
-                        prefixIcon: Icon(Icons.star),
-                        hintText: '1',
+                      controller: rightAnswerController,
+                      decoration: KodixComponents.textFieldDecoration(
+                        hintText: 'Правильный ответ',
                       ),
                     ),
-                    const SizedBox(height: 20),
-                    Text('Выберите один правильный ответ',
-                        style: Theme.of(context).textTheme.titleMedium),
-                    const SizedBox(height: 12),
-                    RadioGroup<int>(
-                      groupValue: selectedCorrectAnswer,
-                      onChanged: (value) => setState(() => selectedCorrectAnswer = value),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: List.generate(4, (index) {
-                          return Padding(
-                            padding: const EdgeInsets.only(bottom: 12),
-                            child: Row(
-                              children: [
-                                Radio<int>(
-                                  value: index,
-                                ),
-                                Expanded(
-                                  child: TextFormField(
-                                    controller: answerControllers[index],
-                                    decoration: InputDecoration(
-                                      labelText: 'Вариант ${index + 1}',
-                                      border: const OutlineInputBorder(),
-                                      isDense: true,
-                                    ),
-                                    validator: (value) =>
-                                        value?.isEmpty == true ? 'Введите ответ' : null,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          );
-                        }),
+                    const SizedBox(height: 8),
+                    TextFormField(
+                      controller: wrong1Controller,
+                      decoration: KodixComponents.textFieldDecoration(
+                        hintText: 'Неверный ответ 1',
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    TextFormField(
+                      controller: wrong2Controller,
+                      decoration: KodixComponents.textFieldDecoration(
+                        hintText: 'Неверный ответ 2',
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    TextFormField(
+                      controller: wrong3Controller,
+                      decoration: KodixComponents.textFieldDecoration(
+                        hintText: 'Неверный ответ 3',
                       ),
                     ),
                   ],
@@ -952,33 +1069,37 @@ class _CourseEditModulesTabState extends State<CourseEditModulesTab> with Automa
           ),
           actions: [
             TextButton(
-              onPressed: isLoading ? null : () => Navigator.pop(context),
-              child: const Text('Отмена'),
+              onPressed: () => Navigator.pop(context),
+              child: Text('Отмена', style: AppStyles.label),
             ),
-            ElevatedButton(
+            KodixComponents.primaryButton(
+              width: 140,
+              height: 44,
               onPressed: isLoading
                   ? null
                   : () async {
-                      if (!formKey.currentState!.validate()) return;
-                      if (selectedCorrectAnswer == null) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Выберите правильный ответ')),
+                      if (formKey.currentState!.validate()) {
+                        setState(() => isLoading = true);
+                        await _addTest(
+                          submoduleId,
+                          questionController.text,
+                          rightAnswerController.text,
+                          [
+                            wrong1Controller.text,
+                            wrong2Controller.text,
+                            wrong3Controller.text,
+                          ],
                         );
-                        return;
+                        if (context.mounted) Navigator.pop(context);
                       }
-                      setState(() => isLoading = true);
-                      await _addTest(
-                        submoduleId,
-                        questionController.text,
-                        int.tryParse(difficultyController.text) ?? 1,
-                        answerControllers,
-                        selectedCorrectAnswer!,
-                      );
-                      if (context.mounted) Navigator.pop(context);
                     },
-              child: isLoading
-                  ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
-                  : const Text('Добавить'),
+              child: const Text(
+                'Добавить',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
             ),
           ],
         ),
@@ -989,86 +1110,60 @@ class _CourseEditModulesTabState extends State<CourseEditModulesTab> with Automa
   void _showEditTestDialog(db_models.Test test, int submoduleId) {
     final formKey = GlobalKey<FormState>();
     final questionController = TextEditingController(text: test.question);
-    final difficultyController = TextEditingController(text: test.difficulty?.toString() ?? '1');
-
-    final List<TextEditingController> answerControllers = [
-      TextEditingController(text: test.rightAnswer),
-      TextEditingController(text: test.wrongAnswer1),
-      TextEditingController(text: test.wrongAnswer2),
-      TextEditingController(text: test.wrongAnswer3),
-    ];
-
-    int? selectedCorrectAnswer = 0;
+    final rightAnswerController = TextEditingController(text: test.rightAnswer);
+    final wrong1Controller = TextEditingController(text: test.wrongAnswer1);
+    final wrong2Controller = TextEditingController(text: test.wrongAnswer2);
+    final wrong3Controller = TextEditingController(text: test.wrongAnswer3);
     bool isLoading = false;
 
     showDialog(
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setState) => AlertDialog(
-          title: const Text('Редактировать тест'),
+          backgroundColor: AppColors.white,
+          shape: RoundedRectangleBorder(borderRadius: AppStyles.cardRadius),
+          title: Text('Редактировать тест', style: AppStyles.h1),
           content: SizedBox(
-            width: 600,
+            width: 500,
             child: Form(
               key: formKey,
               child: SingleChildScrollView(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     TextFormField(
                       controller: questionController,
-                      decoration: const InputDecoration(
-                        labelText: 'Вопрос',
-                        border: OutlineInputBorder(),
-                        prefixIcon: Icon(Icons.help_outline),
+                      maxLines: 2,
+                      decoration: KodixComponents.textFieldDecoration(
+                        hintText: 'Вопрос',
                       ),
-                      maxLines: 3,
-                      validator: (value) => value?.isEmpty == true ? 'Введите вопрос' : null,
                     ),
                     const SizedBox(height: 16),
                     TextFormField(
-                      controller: difficultyController,
-                      keyboardType: TextInputType.number,
-                      decoration: const InputDecoration(
-                        labelText: 'Сложность (1-5)',
-                        border: OutlineInputBorder(),
-                        prefixIcon: Icon(Icons.star),
-                        hintText: '1',
+                      controller: rightAnswerController,
+                      decoration: KodixComponents.textFieldDecoration(
+                        hintText: 'Правильный ответ',
                       ),
                     ),
-                    const SizedBox(height: 20),
-                    Text('Выберите один правильный ответ',
-                        style: Theme.of(context).textTheme.titleMedium),
-                    const SizedBox(height: 12),
-                    RadioGroup<int>(
-                      groupValue: selectedCorrectAnswer,
-                      onChanged: (value) => setState(() => selectedCorrectAnswer = value),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: List.generate(4, (index) {
-                          return Padding(
-                            padding: const EdgeInsets.only(bottom: 12),
-                            child: Row(
-                              children: [
-                                Radio<int>(
-                                  value: index,
-                                ),
-                                Expanded(
-                                  child: TextFormField(
-                                    controller: answerControllers[index],
-                                    decoration: InputDecoration(
-                                      labelText: 'Вариант ${index + 1}',
-                                      border: const OutlineInputBorder(),
-                                      isDense: true,
-                                    ),
-                                    validator: (value) =>
-                                        value?.isEmpty == true ? 'Введите ответ' : null,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          );
-                        }),
+                    const SizedBox(height: 8),
+                    TextFormField(
+                      controller: wrong1Controller,
+                      decoration: KodixComponents.textFieldDecoration(
+                        hintText: 'Неверный ответ 1',
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    TextFormField(
+                      controller: wrong2Controller,
+                      decoration: KodixComponents.textFieldDecoration(
+                        hintText: 'Неверный ответ 2',
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    TextFormField(
+                      controller: wrong3Controller,
+                      decoration: KodixComponents.textFieldDecoration(
+                        hintText: 'Неверный ответ 3',
                       ),
                     ),
                   ],
@@ -1078,33 +1173,37 @@ class _CourseEditModulesTabState extends State<CourseEditModulesTab> with Automa
           ),
           actions: [
             TextButton(
-              onPressed: isLoading ? null : () => Navigator.pop(context),
-              child: const Text('Отмена'),
+              onPressed: () => Navigator.pop(context),
+              child: Text('Отмена', style: AppStyles.label),
             ),
-            ElevatedButton(
+            KodixComponents.primaryButton(
+              width: 140,
+              height: 44,
               onPressed: isLoading
                   ? null
                   : () async {
-                      if (!formKey.currentState!.validate()) return;
-                      if (selectedCorrectAnswer == null) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Выберите правильный ответ')),
+                      if (formKey.currentState!.validate()) {
+                        setState(() => isLoading = true);
+                        await _updateTest(
+                          test.id,
+                          questionController.text,
+                          rightAnswerController.text,
+                          [
+                            wrong1Controller.text,
+                            wrong2Controller.text,
+                            wrong3Controller.text,
+                          ],
                         );
-                        return;
+                        if (context.mounted) Navigator.pop(context);
                       }
-                      setState(() => isLoading = true);
-                      await _updateTest(
-                        test.id,
-                        questionController.text,
-                        int.tryParse(difficultyController.text) ?? 1,
-                        answerControllers,
-                        selectedCorrectAnswer!,
-                      );
-                      if (context.mounted) Navigator.pop(context);
                     },
-              child: isLoading
-                  ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
-                  : const Text('Сохранить'),
+              child: const Text(
+                'Сохранить',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
             ),
           ],
         ),
@@ -1112,31 +1211,17 @@ class _CourseEditModulesTabState extends State<CourseEditModulesTab> with Automa
     );
   }
 
-  // ==================== CRUD ОПЕРАЦИИ ====================
+  // --- МЕТОДЫ API ---
 
   Future<void> _addModule(String name) async {
-    try {
-      final nextOrder = _modules.isEmpty
-          ? 1
-          : (_modules.map((m) => m.orderModule ?? 0).reduce((a, b) => a > b ? a : b)) + 1;
-
-      await SupabaseService.client.from('module').insert({
-        'id_courses': widget.courseId,
-        'name': name,
-        'order_module': nextOrder,
-        'status': true,
-      });
-
-      if (mounted) {
-        _loadModules();
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('Модуль "$name" добавлен')));
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Ошибка: $e')));
-      }
-    }
+    final order = _modules.isEmpty ? 1 : (_modules.last.orderModule ?? 0) + 1;
+    await SupabaseService.client.from('module').insert({
+      'id_courses': widget.courseId,
+      'name': name,
+      'order_module': order,
+      'status': true,
+    });
+    _loadModules();
   }
 
   Future<void> _addSubmodule(int moduleId, String name, int leadTime, String filePath) async {
@@ -1190,215 +1275,118 @@ class _CourseEditModulesTabState extends State<CourseEditModulesTab> with Automa
     }
   }
 
-  Future<void> _addTest(
-    int submoduleId,
-    String question,
-    int difficulty,
-    List<TextEditingController> answerControllers,
-    int correctAnswerIndex,
+  Future<void> _addPracticalTask(
+    int subId,
+    String name,
+    String desc,
+    String content,
+    String lang,
+    String starter,
+    String tests,
   ) async {
-    try {
-      final existingTests = await SupabaseService.client
-          .from('submodule_test')
-          .select('order_test')
-          .eq('id_submodule', submoduleId)
-          .order('order_test', ascending: false)
-          .limit(1);
-
-      int nextOrder = existingTests.isNotEmpty
-          ? (existingTests[0]['order_test'] as int? ?? 0) + 1
-          : 1;
-
-      String rightAnswer = answerControllers[correctAnswerIndex].text;
-      List<String> wrongAnswers = [];
-      for (int i = 0; i < 4; i++) {
-        if (i != correctAnswerIndex) wrongAnswers.add(answerControllers[i].text);
-      }
-
-      final testResponse = await SupabaseService.client.from('test').insert({
-        'question': question,
-        'right_answer': rightAnswer,
-        'wrong_answer1': wrongAnswers[0],
-        'wrong_answer2': wrongAnswers[1],
-        'wrong_answer3': wrongAnswers[2],
-        'difficulty': difficulty,
-        'status': true,
-      }).select().single();
-
-      await SupabaseService.client.from('submodule_test').insert({
-        'id_submodule': submoduleId,
-        'id_test': testResponse['id'],
-        'order_test': nextOrder,
-      });
-
-      if (mounted) {
-        _loadModules();
-        ScaffoldMessenger.of(context)
-            .showSnackBar(const SnackBar(content: Text('Тест добавлен')));
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Ошибка: $e')));
-      }
-    }
+    await SupabaseService.client.from('practical_task').insert({
+      'id_submodule': subId,
+      'name': name,
+      'description': desc,
+      'content': content,
+      'language': lang,
+      'starter_code': starter,
+      'test_cases': jsonDecode(tests),
+      'status': true,
+      'order_task': (_practicalTasks[subId]?.length ?? 0) + 1,
+    });
+    _loadModules();
   }
 
-  // ← ДОБАВЛЕНО: Добавление практического задания
-  Future<void> _addPracticalTask(
-    int submoduleId,
+  Future<void> _updatePracticalTask(
+    int taskId,
     String name,
-    String description,
+    String desc,
     String content,
-    String language,
-    String starterCode,
-    String testCases,
+    String lang,
+    String starter,
+    String tests,
   ) async {
-    try {
-      final existingTasks = await SupabaseService.client
-          .from('practical_task')
-          .select('order_task')
-          .eq('id_submodule', submoduleId)
-          .order('order_task', ascending: false)
-          .limit(1);
+    await SupabaseService.client
+        .from('practical_task')
+        .update({
+          'name': name,
+          'description': desc,
+          'content': content,
+          'language': lang,
+          'starter_code': starter,
+          'test_cases': jsonDecode(tests),
+        })
+        .eq('id', taskId);
+    _loadModules();
+  }
 
-      int nextOrder = existingTasks.isNotEmpty
-          ? (existingTasks[0]['order_task'] as int? ?? 0) + 1
-          : 1;
-
-      await SupabaseService.client.from('practical_task').insert({
-        'id_submodule': submoduleId,
-        'name': name,
-        'description': description,
-        'content': content,
-        'language': language,
-        'starter_code': starterCode,
-        'test_cases': testCases,
-        'order_task': nextOrder,
-        'difficulty': 1,
-        'status': true,
-      });
-
-      if (mounted) {
-        _loadModules();
-        ScaffoldMessenger.of(context)
-            .showSnackBar(const SnackBar(content: Text('Практическое задание добавлено')));
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Ошибка: $e')));
-      }
-    }
+  Future<void> _addTest(
+    int subId,
+    String question,
+    String right,
+    List<String> wrongs,
+  ) async {
+    final res = await SupabaseService.client
+        .from('test')
+        .insert({
+          'question': question,
+          'right_answer': right,
+          'wrong_answer1': wrongs[0],
+          'wrong_answer2': wrongs[1],
+          'wrong_answer3': wrongs[2],
+          'status': true,
+        })
+        .select()
+        .single();
+    await SupabaseService.client.from('submodule_test').insert({
+      'id_submodule': subId,
+      'id_test': res['id'],
+      'order_test': (_tests[subId]?.length ?? 0) + 1,
+    });
+    _loadModules();
   }
 
   Future<void> _updateTest(
-    int testId,
+    int tid,
     String question,
-    int difficulty,
-    List<TextEditingController> answerControllers,
-    int correctAnswerIndex,
+    String right,
+    List<String> wrongs,
   ) async {
-    try {
-      String rightAnswer = answerControllers[correctAnswerIndex].text;
-      List<String> wrongAnswers = [];
-      for (int i = 0; i < 4; i++) {
-        if (i != correctAnswerIndex) wrongAnswers.add(answerControllers[i].text);
-      }
-
-      await SupabaseService.client.from('test').update({
-        'question': question,
-        'right_answer': rightAnswer,
-        'wrong_answer1': wrongAnswers[0],
-        'wrong_answer2': wrongAnswers[1],
-        'wrong_answer3': wrongAnswers[2],
-        'difficulty': difficulty,
-      }).eq('id', testId);
-
-      if (mounted) {
-        _loadModules();
-        ScaffoldMessenger.of(context)
-            .showSnackBar(const SnackBar(content: Text('Тест обновлен')));
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Ошибка: $e')));
-      }
-    }
+    await SupabaseService.client
+        .from('test')
+        .update({
+          'question': question,
+          'right_answer': right,
+          'wrong_answer1': wrongs[0],
+          'wrong_answer2': wrongs[1],
+          'wrong_answer3': wrongs[2],
+        })
+        .eq('id', tid);
+    _loadModules();
   }
 
-  Future<void> _deleteModule(int moduleId) async {
-    try {
-      await SupabaseService.client.from('module').delete().eq('id', moduleId);
-      if (mounted) {
-        _loadModules();
-        ScaffoldMessenger.of(context)
-            .showSnackBar(const SnackBar(content: Text('Модуль удален')));
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Ошибка: $e')));
-      }
-    }
+  Future<void> _deleteModule(int id) async {
+    await SupabaseService.client.from('module').delete().eq('id', id);
+    _loadModules();
   }
 
-  Future<void> _deleteSubmodule(int submoduleId, int moduleId) async {
-    try {
-      final client = SupabaseService.client;
-      await client.from('user_submodule_progress').delete().eq('id_submodule', submoduleId);
-      await client.from('student_test_result').delete().eq('id_submodule', submoduleId);
-      await client.from('student_practical_result').delete().eq('id_submodule', submoduleId);
-      await client.from('submodule_test').delete().eq('id_submodule', submoduleId);
-      await client.from('practical_task').delete().eq('id_submodule', submoduleId);
-      await client.from('submodule').delete().eq('id', submoduleId);
-
-      if (mounted) {
-        _loadModules();
-        ScaffoldMessenger.of(context)
-            .showSnackBar(const SnackBar(content: Text('Подмодуль удален')));
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Ошибка: $e')));
-      }
-    }
+  Future<void> _deleteSubmodule(int id, int mid) async {
+    await SupabaseService.client.from('submodule').delete().eq('id', id);
+    _loadModules();
   }
 
-  Future<void> _deleteTest(int testId, int submoduleId) async {
-    try {
-      await SupabaseService.client.from('submodule_test').delete().eq('id_test', testId);
-      await SupabaseService.client.from('test').delete().eq('id', testId);
-
-      if (mounted) {
-        _loadModules();
-        ScaffoldMessenger.of(context)
-            .showSnackBar(const SnackBar(content: Text('Тест удален')));
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Ошибка: $e')));
-      }
-    }
+  Future<void> _deleteTest(int tid, int sid) async {
+    await SupabaseService.client
+        .from('submodule_test')
+        .delete()
+        .eq('id_test', tid);
+    await SupabaseService.client.from('test').delete().eq('id', tid);
+    _loadModules();
   }
 
-  // ← ДОБАВЛЕНО: Удаление практического задания
-  Future<void> _deletePracticalTask(int taskId, int submoduleId) async {
-    try {
-      await SupabaseService.client.from('student_practical_result').delete().eq('id_task', taskId);
-      await SupabaseService.client.from('practical_task').delete().eq('id', taskId);
-
-      if (mounted) {
-        _loadModules();
-        ScaffoldMessenger.of(context)
-            .showSnackBar(const SnackBar(content: Text('Практическое задание удалено')));
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Ошибка: $e')));
-      }
-    }
-  }
-
-  @override
-  void dispose() {
-    super.dispose();
+  Future<void> _deletePracticalTask(int tid, int sid) async {
+    await SupabaseService.client.from('practical_task').delete().eq('id', tid);
+    _loadModules();
   }
 }

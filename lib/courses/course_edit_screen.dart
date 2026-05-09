@@ -21,7 +21,7 @@ class CourseEditScreen extends StatefulWidget {
   });
 
   @override
-  State createState() => _CourseEditScreenState();
+  State<CourseEditScreen> createState() => _CourseEditScreenState();
 }
 
 class _CourseEditScreenState extends State<CourseEditScreen>
@@ -267,7 +267,10 @@ class _CourseEditScreenState extends State<CourseEditScreen>
                   courseIcon: _course!.icon ?? '',
                   readOnly: _isAdmin,
                 ),
-                const CourseEditAnalyticsStudentsTab(),
+                CourseEditAnalyticsStudentsTab(
+                  courseId: _course!.id,
+                  coursePrice: _course!.price ?? 0,
+                ),
                 CourseEditReviewsTab(courseId: _course!.id, readOnly: _isAdmin),
               ],
             ),

@@ -166,6 +166,7 @@ class _AuthScreenState extends State<AuthScreen> {
                         ? const Center(child: CircularProgressIndicator(color: AppColors.primaryPurple))
                         : MouseRegion(
                             child: KodixComponents.primaryButton(
+                              width: double.infinity,
                               onPressed: _tryLogin,
                               child: const Text('Войти'),
                             ),
