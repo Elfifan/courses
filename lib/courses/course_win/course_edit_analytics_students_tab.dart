@@ -272,6 +272,16 @@ class _CourseEditAnalyticsStudentsTabState
         startDate: _startDate!,
         endDate: _endDate!,
       );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Ошибка генерации: $e'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 4),
+          ),
+        );
+      }
     } finally {
       if (mounted) setState(() => _isGeneratingReport = false);
     }
@@ -290,6 +300,16 @@ class _CourseEditAnalyticsStudentsTabState
         startDate: _startDate!,
         endDate: _endDate!,
       );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Ошибка генерации: $e'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 4),
+          ),
+        );
+      }
     } finally {
       if (mounted) setState(() => _isGeneratingReport = false);
     }
@@ -303,6 +323,16 @@ class _CourseEditAnalyticsStudentsTabState
         courseName: widget.courseName,
         averageRating: _averageRating,
       );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Ошибка генерации: $e'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 4),
+          ),
+        );
+      }
     } finally {
       if (mounted) setState(() => _isGeneratingReport = false);
     }

@@ -22,14 +22,16 @@ class StatisticsReportService {
         .select('id')
         .eq('id_courses', courseId)
         .gte('purchase_date', startStr)
-        .lte('purchase_date', endStr);
+        .lte('purchase_date', endStr)
+        .timeout(const Duration(seconds: 15));
 
     final completedRes = await SupabaseService.client
         .from('certificates')
         .select('id')
         .eq('id_courses', courseId)
         .gte('issue_date', startStr)
-        .lte('issue_date', endStr);
+        .lte('issue_date', endStr)
+        .timeout(const Duration(seconds: 15));
 
     final int totalInPeriod = (enrolledRes as List).length;
     final int completedInPeriod = (completedRes as List).length;
@@ -41,10 +43,19 @@ class StatisticsReportService {
         ? (completedInPeriod / totalInPeriod) * 100 
         : 0;
 
+    // Цвета темы Kodix
+    final primaryPurple = PdfColor.fromHex('#A58EFF');
+    final textDark = PdfColor.fromHex('#1E1E2E');
+    final textGrey = PdfColor.fromHex('#9094A6');
+    final bgLight = PdfColor.fromHex('#F8F9FB');
+
     // Генерация PDF
     final pdf = pw.Document();
     final fontRegular = await PdfGoogleFonts.robotoRegular();
     final fontBold = await PdfGoogleFonts.robotoBold();
+
+    final defaultStyle = pw.TextStyle(font: fontRegular, color: textDark);
+
 
     pdf.addPage(
       pw.Page(
@@ -57,46 +68,50 @@ class StatisticsReportService {
               children: [
                 pw.Text(
                   'ОТЧЕТ: СТАТИСТИКА ПРОХОЖДЕНИЯ',
-                  style: pw.TextStyle(font: fontBold, fontSize: 24, color: PdfColor.fromHex('#22C55E')),
+                  style: pw.TextStyle(font: fontBold, fontSize: 24, color: primaryPurple),
                 ),
                 pw.SizedBox(height: 12),
-                pw.Text('Дата отчета: ${DateFormat('dd.MM.yyyy').format(DateTime.now())}', style: pw.TextStyle(font: fontRegular)),
-                pw.Text('Курс: $courseName', style: pw.TextStyle(font: fontRegular)),
-                pw.Text('Период: ${DateFormat('dd.MM.yyyy').format(startDate)} - ${DateFormat('dd.MM.yyyy').format(endDate)}', style: pw.TextStyle(font: fontRegular)),
+                pw.Text('Дата отчета: ${DateFormat('dd.MM.yyyy').format(DateTime.now())}', style: defaultStyle),
+                pw.Text('Курс: $courseName', style: defaultStyle),
+                pw.Text('Период: ${DateFormat('dd.MM.yyyy').format(startDate)} - ${DateFormat('dd.MM.yyyy').format(endDate)}', style: defaultStyle),
                 pw.SizedBox(height: 40),
 
                 pw.Table(
-                  border: const pw.TableBorder(bottom: pw.BorderSide(color: PdfColors.black, width: 1)),
+                  border: pw.TableBorder(
+                    bottom: pw.BorderSide(color: bgLight, width: 2),
+                    horizontalInside: pw.BorderSide(color: bgLight, width: 1),
+                  ),
                   children: [
                     pw.TableRow(
+                      decoration: pw.BoxDecoration(color: bgLight),
                       children: [
                         pw.Padding(
-                          padding: const pw.EdgeInsets.symmetric(vertical: 8),
-                          child: pw.Text('Название курса', style: pw.TextStyle(font: fontBold, fontSize: 14)),
+                          padding: const pw.EdgeInsets.all(12),
+                          child: pw.Text('Название курса', style: pw.TextStyle(font: fontBold, fontSize: 14, color: textDark)),
                         ),
                         pw.Padding(
-                          padding: const pw.EdgeInsets.symmetric(vertical: 8),
-                          child: pw.Text('В процессе', style: pw.TextStyle(font: fontBold, fontSize: 14), textAlign: pw.TextAlign.right),
+                          padding: const pw.EdgeInsets.all(12),
+                          child: pw.Text('В процессе', style: pw.TextStyle(font: fontBold, fontSize: 14, color: textDark), textAlign: pw.TextAlign.right),
                         ),
                         pw.Padding(
-                          padding: const pw.EdgeInsets.symmetric(vertical: 8),
-                          child: pw.Text('Завершили', style: pw.TextStyle(font: fontBold, fontSize: 14), textAlign: pw.TextAlign.right),
+                          padding: const pw.EdgeInsets.all(12),
+                          child: pw.Text('Завершили', style: pw.TextStyle(font: fontBold, fontSize: 14, color: textDark), textAlign: pw.TextAlign.right),
                         ),
                       ],
                     ),
                     pw.TableRow(
                       children: [
                         pw.Padding(
-                          padding: const pw.EdgeInsets.symmetric(vertical: 12),
-                          child: pw.Text(courseName, style: pw.TextStyle(font: fontRegular, fontSize: 13)),
+                          padding: const pw.EdgeInsets.all(12),
+                          child: pw.Text(courseName, style: pw.TextStyle(font: fontRegular, fontSize: 13, color: textDark)),
                         ),
                         pw.Padding(
-                          padding: const pw.EdgeInsets.symmetric(vertical: 12),
-                          child: pw.Text(inProcessInPeriod.toString(), style: pw.TextStyle(font: fontRegular, fontSize: 13), textAlign: pw.TextAlign.right),
+                          padding: const pw.EdgeInsets.all(12),
+                          child: pw.Text(inProcessInPeriod.toString(), style: pw.TextStyle(font: fontRegular, fontSize: 13, color: textDark), textAlign: pw.TextAlign.right),
                         ),
                         pw.Padding(
-                          padding: const pw.EdgeInsets.symmetric(vertical: 12),
-                          child: pw.Text(completedInPeriod.toString(), style: pw.TextStyle(font: fontRegular, fontSize: 13), textAlign: pw.TextAlign.right),
+                          padding: const pw.EdgeInsets.all(12),
+                          child: pw.Text(completedInPeriod.toString(), style: pw.TextStyle(font: fontRegular, fontSize: 13, color: textDark), textAlign: pw.TextAlign.right),
                         ),
                       ],
                     ),
@@ -105,15 +120,15 @@ class StatisticsReportService {
                 pw.SizedBox(height: 40),
                 pw.Row(
                   children: [
-                    pw.Text('Общий процент завершения: ', style: pw.TextStyle(font: fontBold, fontSize: 16)),
-                    pw.Text('${completionRate.toStringAsFixed(1)}%', style: pw.TextStyle(font: fontBold, fontSize: 16, color: PdfColor.fromHex('#3B82F6'))),
+                    pw.Text('Общий процент завершения: ', style: pw.TextStyle(font: fontBold, fontSize: 16, color: textDark)),
+                    pw.Text('${completionRate.toStringAsFixed(1)}%', style: pw.TextStyle(font: fontBold, fontSize: 16, color: primaryPurple)),
                   ],
                 ),
                 pw.Spacer(),
-                pw.Divider(color: PdfColors.grey),
+                pw.Divider(color: bgLight),
                 pw.Align(
                   alignment: pw.Alignment.centerRight,
-                  child: pw.Text('Сформировано в системе Kodix LMS', style: pw.TextStyle(font: fontRegular, fontSize: 10, color: PdfColors.grey)),
+                  child: pw.Text('Сформировано в системе Kodix LMS', style: pw.TextStyle(font: fontRegular, fontSize: 10, color: textGrey)),
                 ),
               ],
             ),

@@ -24,14 +24,25 @@ class QualityReportService {
         ''')
         .eq('id_courses', courseId)
         .order('id', ascending: false)
-        .limit(15);
+        .limit(15)
+        .timeout(const Duration(seconds: 15));
 
     final feedbacks = List<Map<String, dynamic>>.from(feedbackRes as List);
+
+    // Цвета темы Kodix
+    final primaryPurple = PdfColor.fromHex('#A58EFF');
+    final textDark = PdfColor.fromHex('#1E1E2E');
+    final textGrey = PdfColor.fromHex('#9094A6');
+    final bgLight = PdfColor.fromHex('#F8F9FB');
+    final starColor = PdfColor.fromHex('#FFB020');
 
     final pdf = pw.Document();
     final fontRegular = await PdfGoogleFonts.robotoRegular();
     final fontBold = await PdfGoogleFonts.robotoBold();
     final fontItalic = await PdfGoogleFonts.robotoItalic();
+
+    final defaultStyle = pw.TextStyle(font: fontRegular, color: textDark);
+
 
     pdf.addPage(
       pw.MultiPage(
@@ -41,23 +52,23 @@ class QualityReportService {
           return [
             pw.Text(
               'АНАЛИЗ КАЧЕСТВА ОБУЧЕНИЯ',
-              style: pw.TextStyle(font: fontBold, fontSize: 24, color: PdfColor.fromHex('#EF4444')),
+              style: pw.TextStyle(font: fontBold, fontSize: 24, color: primaryPurple),
             ),
             pw.SizedBox(height: 12),
             pw.Row(
               mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
               children: [
-                pw.Text('Курс: $courseName', style: pw.TextStyle(font: fontRegular, fontSize: 14)),
+                pw.Text('Курс: $courseName', style: defaultStyle.copyWith(fontSize: 14)),
                 pw.Row(
                   children: [
-                    pw.Text('Средний балл: ', style: pw.TextStyle(font: fontBold, fontSize: 14)),
-                    pw.Text('★ ${averageRating.toStringAsFixed(1)}', style: pw.TextStyle(font: fontBold, fontSize: 14, color: PdfColors.orange)),
+                    pw.Text('Средний балл: ', style: pw.TextStyle(font: fontBold, fontSize: 14, color: textDark)),
+                    pw.Text('★ ${averageRating.toStringAsFixed(1)}', style: pw.TextStyle(font: fontBold, fontSize: 14, color: starColor)),
                   ],
                 ),
               ],
             ),
             pw.SizedBox(height: 32),
-            pw.Text('Последние отзывы пользователей:', style: pw.TextStyle(font: fontBold, fontSize: 16, decoration: pw.TextDecoration.underline)),
+            pw.Text('Последние отзывы пользователей:', style: pw.TextStyle(font: fontBold, fontSize: 16, decoration: pw.TextDecoration.underline, color: textDark)),
             pw.SizedBox(height: 16),
 
             ...feedbacks.map((f) {
@@ -70,10 +81,11 @@ class QualityReportService {
 
               return pw.Container(
                 margin: const pw.EdgeInsets.only(bottom: 20),
-                padding: const pw.EdgeInsets.all(12),
+                padding: const pw.EdgeInsets.all(16),
                 decoration: pw.BoxDecoration(
-                  border: pw.Border.all(color: PdfColors.grey300),
-                  borderRadius: const pw.BorderRadius.all(pw.Radius.circular(8)),
+                  color: PdfColors.white,
+                  border: pw.Border.all(color: bgLight, width: 2),
+                  borderRadius: const pw.BorderRadius.all(pw.Radius.circular(12)),
                 ),
                 child: pw.Column(
                   crossAxisAlignment: pw.CrossAxisAlignment.start,
@@ -81,17 +93,34 @@ class QualityReportService {
                     pw.Row(
                       mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                       children: [
-                        pw.Text('Пользователь: $userName', style: pw.TextStyle(font: fontBold, fontSize: 12)),
-                        pw.Text('Оценка: $rating', style: pw.TextStyle(font: fontBold, fontSize: 12)),
+                        pw.Text('Пользователь: $userName', style: pw.TextStyle(font: fontBold, fontSize: 12, color: textDark)),
+                        pw.Row(
+                          children: [
+                            pw.Text('Оценка: ', style: pw.TextStyle(font: fontBold, fontSize: 12, color: textDark)),
+                            pw.Text('★ $rating', style: pw.TextStyle(font: fontBold, fontSize: 12, color: starColor)),
+                          ],
+                        ),
                       ],
                     ),
                     pw.SizedBox(height: 8),
-                    pw.Text(comment, style: pw.TextStyle(font: fontRegular, fontSize: 11)),
+                    pw.Text(comment, style: pw.TextStyle(font: fontRegular, fontSize: 11, color: textDark)),
                     if (response != null) ...[
-                      pw.SizedBox(height: 8),
-                      pw.Divider(color: PdfColors.grey100, thickness: 0.5),
-                      pw.Text('Ответ сотрудника:', style: pw.TextStyle(font: fontItalic, fontSize: 10, color: PdfColors.grey)),
-                      pw.Text(response, style: pw.TextStyle(font: fontItalic, fontSize: 10, color: PdfColors.grey600)),
+                      pw.SizedBox(height: 12),
+                      pw.Container(
+                        padding: const pw.EdgeInsets.all(10),
+                        decoration: pw.BoxDecoration(
+                          color: bgLight,
+                          borderRadius: const pw.BorderRadius.all(pw.Radius.circular(8)),
+                        ),
+                        child: pw.Column(
+                          crossAxisAlignment: pw.CrossAxisAlignment.start,
+                          children: [
+                            pw.Text('Ответ сотрудника:', style: pw.TextStyle(font: fontItalic, fontSize: 10, color: textGrey)),
+                            pw.SizedBox(height: 4),
+                            pw.Text(response, style: pw.TextStyle(font: fontItalic, fontSize: 10, color: textDark)),
+                          ],
+                        ),
+                      ),
                     ],
                   ],
                 ),
@@ -99,7 +128,7 @@ class QualityReportService {
             }).toList(),
 
             if (feedbacks.isEmpty)
-              pw.Text('Отзывов пока нет', style: pw.TextStyle(font: fontRegular, color: PdfColors.grey)),
+              pw.Text('Отзывов пока нет', style: pw.TextStyle(font: fontRegular, color: textGrey)),
           ];
         },
       ),

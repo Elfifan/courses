@@ -23,13 +23,23 @@ class GraduatesReportService {
         .eq('id_courses', courseId)
         .gte('issue_date', startStr)
         .lte('issue_date', endStr)
-        .order('issue_date', ascending: true);
+        .order('issue_date', ascending: true)
+        .timeout(const Duration(seconds: 15));
 
     final graduates = List<Map<String, dynamic>>.from(graduatesRes as List);
+
+    // Цвета темы Kodix
+    final primaryPurple = PdfColor.fromHex('#A58EFF');
+    final textDark = PdfColor.fromHex('#1E1E2E');
+    final textGrey = PdfColor.fromHex('#9094A6');
+    final bgLight = PdfColor.fromHex('#F8F9FB');
 
     final pdf = pw.Document();
     final fontRegular = await PdfGoogleFonts.robotoRegular();
     final fontBold = await PdfGoogleFonts.robotoBold();
+
+    final defaultStyle = pw.TextStyle(font: fontRegular, color: textDark);
+
 
     pdf.addPage(
       pw.MultiPage(
@@ -39,15 +49,15 @@ class GraduatesReportService {
           return [
             pw.Text(
               'ВЕДОМОСТЬ ВЫПУСКНИКОВ КУРСА',
-              style: pw.TextStyle(font: fontBold, fontSize: 24),
+              style: pw.TextStyle(font: fontBold, fontSize: 24, color: primaryPurple),
             ),
             pw.SizedBox(height: 12),
-            pw.Text('Курс: $courseName', style: pw.TextStyle(font: fontRegular, fontSize: 14)),
-            pw.Text('Период: ${DateFormat('dd.MM.yyyy').format(startDate)} - ${DateFormat('dd.MM.yyyy').format(endDate)}', style: pw.TextStyle(font: fontRegular)),
+            pw.Text('Курс: $courseName', style: defaultStyle.copyWith(fontSize: 14)),
+            pw.Text('Период: ${DateFormat('dd.MM.yyyy').format(startDate)} - ${DateFormat('dd.MM.yyyy').format(endDate)}', style: defaultStyle),
             pw.SizedBox(height: 24),
 
             pw.Table(
-              border: pw.TableBorder.all(color: PdfColors.grey, width: 0.5),
+              border: pw.TableBorder.all(color: bgLight, width: 1),
               columnWidths: {
                 0: const pw.FixedColumnWidth(40),
                 1: const pw.FlexColumnWidth(),
@@ -55,19 +65,19 @@ class GraduatesReportService {
               },
               children: [
                 pw.TableRow(
-                  decoration: const pw.BoxDecoration(color: PdfColors.grey100),
+                  decoration: pw.BoxDecoration(color: bgLight),
                   children: [
                     pw.Padding(
-                      padding: const pw.EdgeInsets.all(8),
-                      child: pw.Text('№', style: pw.TextStyle(font: fontBold)),
+                      padding: const pw.EdgeInsets.all(10),
+                      child: pw.Text('№', style: pw.TextStyle(font: fontBold, color: textDark)),
                     ),
                     pw.Padding(
-                      padding: const pw.EdgeInsets.all(8),
-                      child: pw.Text('ФИО Студента', style: pw.TextStyle(font: fontBold)),
+                      padding: const pw.EdgeInsets.all(10),
+                      child: pw.Text('ФИО Студента', style: pw.TextStyle(font: fontBold, color: textDark)),
                     ),
                     pw.Padding(
-                      padding: const pw.EdgeInsets.all(8),
-                      child: pw.Text('Дата окончания', style: pw.TextStyle(font: fontBold), textAlign: pw.TextAlign.center),
+                      padding: const pw.EdgeInsets.all(10),
+                      child: pw.Text('Дата окончания', style: pw.TextStyle(font: fontBold, color: textDark), textAlign: pw.TextAlign.center),
                     ),
                   ],
                 ),
@@ -81,16 +91,16 @@ class GraduatesReportService {
                   return pw.TableRow(
                     children: [
                       pw.Padding(
-                        padding: const pw.EdgeInsets.all(8),
-                        child: pw.Text('${index + 1}', style: pw.TextStyle(font: fontRegular)),
+                        padding: const pw.EdgeInsets.all(10),
+                        child: pw.Text('${index + 1}', style: defaultStyle),
                       ),
                       pw.Padding(
-                        padding: const pw.EdgeInsets.all(8),
-                        child: pw.Text(userName, style: pw.TextStyle(font: fontRegular)),
+                        padding: const pw.EdgeInsets.all(10),
+                        child: pw.Text(userName, style: defaultStyle),
                       ),
                       pw.Padding(
-                        padding: const pw.EdgeInsets.all(8),
-                        child: pw.Text(date, style: pw.TextStyle(font: fontRegular), textAlign: pw.TextAlign.center),
+                        padding: const pw.EdgeInsets.all(10),
+                        child: pw.Text(date, style: defaultStyle, textAlign: pw.TextAlign.center),
                       ),
                     ],
                   );
@@ -101,14 +111,15 @@ class GraduatesReportService {
             if (graduates.isEmpty)
               pw.Padding(
                 padding: const pw.EdgeInsets.symmetric(vertical: 20),
-                child: pw.Text('За выбранный период выпускников не найдено', style: pw.TextStyle(font: fontRegular, color: PdfColors.grey)),
+                child: pw.Text('За выбранный период выпускников не найдено', style: pw.TextStyle(font: fontRegular, color: textGrey)),
               ),
 
             pw.SizedBox(height: 40),
             pw.Align(
               alignment: pw.Alignment.centerRight,
-              child: pw.Text('Всего выпускников: ${graduates.length}', style: pw.TextStyle(font: fontBold, fontSize: 14)),
+              child: pw.Text('Всего выпускников: ${graduates.length}', style: pw.TextStyle(font: fontBold, fontSize: 14, color: primaryPurple)),
             ),
+
           ];
         },
       ),
