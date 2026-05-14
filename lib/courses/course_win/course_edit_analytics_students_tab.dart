@@ -45,27 +45,17 @@ class _CourseEditAnalyticsStudentsTabState
       // Имитация задержки 2 секунды как в модулях
       await Future.delayed(const Duration(seconds: 2));
 
-      // 1. Считаем количество студентов (таблица user_courses)
-      final enrolledCount = await SupabaseService.safeDbCall(
+      // 1. Считаем количество студентов (таблица passing)
+      final enrolledData = await SupabaseService.safeDbCall(
         () => SupabaseService.client
-            .from('user_courses')
+            .from('passing')
             .select('id')
-            .eq('id_courses', widget.courseId)
-            .count(CountOption.exact),
+            .eq('id_courses', widget.courseId),
       );
+      final int count = (enrolledData as List).length;
 
-      // 2. Считаем выручку (таблица user_courses)
-      final revenueData = await SupabaseService.client
-          .from('user_courses')
-          .select('purchase_price')
-          .eq('id_courses', widget.courseId);
-
-      double totalRev = 0.0;
-      if (revenueData != null) {
-        for (var item in revenueData as List) {
-          totalRev += (item['purchase_price'] ?? 0).toDouble();
-        }
-      }
+      // 2. Считаем выручку (количество студентов * цена курса)
+      double totalRev = count * widget.coursePrice;
 
       // 3. Считаем средний рейтинг (таблица feedback)
       final feedbackData = await SupabaseService.safeDbCall(
@@ -76,13 +66,13 @@ class _CourseEditAnalyticsStudentsTabState
             .eq('status', true),
       );
 
-      // 4. Получаем список последних студентов (user_courses + users)
+      // 4. Получаем список последних студентов (passing + users)
       final studentsData = await SupabaseService.safeDbCall(
         () => SupabaseService.client
-            .from('user_courses')
+            .from('passing')
             .select('''
             id,
-            purchase_date,
+            date_passage,
             users:id_user (
               id,
               name,
@@ -90,7 +80,7 @@ class _CourseEditAnalyticsStudentsTabState
             )
           ''')
             .eq('id_courses', widget.courseId)
-            .order('purchase_date', ascending: false)
+            .order('date_passage', ascending: false)
             .limit(10),
       );
 
@@ -106,7 +96,7 @@ class _CourseEditAnalyticsStudentsTabState
         }
 
         setState(() {
-          _totalEnrolled = enrolledCount.count;
+          _totalEnrolled = count;
           _totalRevenue = totalRev;
           _averageRating = avg;
           _recentStudents = List<Map<String, dynamic>>.from(studentsData);
@@ -247,17 +237,20 @@ class _CourseEditAnalyticsStudentsTabState
                       crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
                         Text(
-                          student['purchase_date'] != null
+                          student['date_passage'] != null
                               ? DateFormat('dd.MM.yyyy').format(
-                                  DateTime.parse(student['purchase_date']),
+                                  DateTime.parse(student['date_passage']),
                                 )
-                              : '---',
-                          style: AppStyles.label.copyWith(fontSize: 11),
+                              : 'Дата неизвестна',
+                          style: AppStyles.label,
                         ),
-                        const Icon(
-                          Icons.check_circle,
-                          size: 14,
-                          color: Colors.green,
+                        const SizedBox(height: 4),
+                        Text(
+                          '${widget.coursePrice.toInt()} ₽',
+                          style: AppStyles.body.copyWith(
+                            color: Colors.green,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                       ],
                     ),
