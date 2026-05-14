@@ -19,6 +19,7 @@ class StudentProfileScreen extends StatefulWidget {
 class _StudentProfileScreenState extends State<StudentProfileScreen> {
   late bool _isBlocked;
   bool _isLoadingData = true;
+  String? _errorMessage;
   List<Map<String, dynamic>> _activeCourses = [];
   List<Map<String, dynamic>> _certificates = [];
   List<Map<String, dynamic>> _achievements = [];
@@ -31,50 +32,90 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
   }
 
   Future<void> _loadStudentData() async {
+    if (!mounted) return;
+    setState(() {
+      _isLoadingData = true;
+      _errorMessage = null;
+    });
+
     try {
-      // 1. Загружаем курсы студента из таблицы passing
-      final passingData = await SupabaseService.client
-          .from('passing')
-          .select('id_courses, status, date_passage, courses(name, icon)')
-          .eq('id_user', widget.student.id);
+      // 1. Загружаем все курсы для маппинга
+      final coursesData = await SupabaseService.safeDbCall(
+        () => SupabaseService.client.from('courses').select('id, name, icon')
+      );
+      final Map<int, Map<String, dynamic>> coursesMap = {
+        for (var c in coursesData as List) c['id'] as int: c as Map<String, dynamic>
+      };
+
+      // 2. Загружаем активные курсы из таблицы user_courses
+      final userCoursesData = await SupabaseService.safeDbCall(
+        () => SupabaseService.client
+          .from('user_courses')
+          .select('id_courses, purchase_date')
+          .eq('id_user', widget.student.id)
+      );
 
       final List<Map<String, dynamic>> active = [];
-      final List<Map<String, dynamic>> certs = [];
-      
-      for (var p in passingData as List) {
-        final courseInfo = p['courses'] as Map<String, dynamic>?;
-        if (courseInfo != null) {
-          final isCompleted = p['status'] == true;
-          final courseData = {
+      for (var uc in userCoursesData as List) {
+        final int? courseId = uc['id_courses'] as int?;
+        if (courseId != null && coursesMap.containsKey(courseId)) {
+          final courseInfo = coursesMap[courseId]!;
+          active.add({
             'name': courseInfo['name'] ?? 'Курс',
             'icon': courseInfo['icon'] ?? '📚',
-            'progress': isCompleted ? 100 : 0,
-            'completed': isCompleted,
-            'date': p['date_passage'],
-          };
-          
-          if (isCompleted) {
-            certs.add(courseData);
-          } else {
-            active.add(courseData);
-          }
+            'progress': 0, // Условный прогресс
+            'completed': false,
+            'date': uc['purchase_date'],
+          });
         }
       }
 
-      // 2. Загружаем достижения студента
-      final achievementsData = await SupabaseService.client
+      // 3. Загружаем сертификаты из таблицы certificates
+      final certsData = await SupabaseService.safeDbCall(
+        () => SupabaseService.client
+          .from('certificates')
+          .select('id_courses, issue_date')
+          .eq('id_user', widget.student.id)
+      );
+
+      final List<Map<String, dynamic>> certs = [];
+      for (var c in certsData as List) {
+        final int? courseId = c['id_courses'] as int?;
+        if (courseId != null && coursesMap.containsKey(courseId)) {
+          final courseInfo = coursesMap[courseId]!;
+          certs.add({
+            'name': courseInfo['name'] ?? 'Курс',
+            'icon': courseInfo['icon'] ?? '📚',
+            'date': c['issue_date'],
+          });
+        }
+      }
+
+      // 4. Загружаем все достижения для маппинга
+      final allAchievementsData = await SupabaseService.safeDbCall(
+        () => SupabaseService.client.from('achievement').select('id, name, image')
+      );
+      final Map<int, Map<String, dynamic>> achievementsMap = {
+        for (var a in allAchievementsData as List) a['id'] as int: a as Map<String, dynamic>
+      };
+
+      // 5. Загружаем достижения студента
+      final userAchievementsData = await SupabaseService.safeDbCall(
+        () => SupabaseService.client
           .from('achievements_user')
-          .select('id, achievement(name, image, created_at)')
-          .eq('id_user', widget.student.id);
+          .select('id_achievements')
+          .eq('id_user', widget.student.id)
+      );
 
       final List<Map<String, dynamic>> loadedAchievements = [];
-      for (var a in achievementsData as List) {
-        final achInfo = a['achievement'] as Map<String, dynamic>?;
-        if (achInfo != null) {
+      for (var ua in userAchievementsData as List) {
+        final int? achId = ua['id_achievements'] as int?;
+        if (achId != null && achievementsMap.containsKey(achId)) {
+          final achInfo = achievementsMap[achId]!;
           loadedAchievements.add({
             'name': achInfo['name'] ?? 'Достижение',
             'image': achInfo['image'],
-            'date': achInfo['created_at'],
+            'date': null, // В этой таблице нет даты получения, можно оставить null
           });
         }
       }
@@ -90,10 +131,18 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
     } catch (e) {
       debugPrint('Ошибка загрузки данных студента: $e');
       if (mounted) {
-        setState(() => _isLoadingData = false);
+        setState(() {
+          _errorMessage = e.toString();
+        });
+        
+        // Автоматический повтор через 3 секунды
+        Future.delayed(const Duration(seconds: 3), () {
+          if (mounted) _loadStudentData();
+        });
       }
     }
   }
+
 
   Future<void> _toggleBlockStatus() async {
     final newStatus = !_isBlocked; // Если был заблокирован (true), то новый статус активен (status = true в БД)
@@ -169,7 +218,9 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
                 children: [
                   Text('Активные курсы', style: AppStyles.h1.copyWith(fontSize: 22)),
                   const SizedBox(height: 16),
-                  if (_isLoadingData)
+                  if (_errorMessage != null)
+                    Text('Повторная попытка загрузки... (${_errorMessage})', style: AppStyles.label.copyWith(color: Colors.red))
+                  else if (_isLoadingData)
                     const Center(child: CircularProgressIndicator(color: AppColors.primaryPurple))
                   else if (_activeCourses.isEmpty)
                     Text('Студент пока не записан ни на один курс.', style: AppStyles.label)
@@ -183,7 +234,9 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
                   const SizedBox(height: 40),
                   _buildSectionHeader('Достижения'),
                   const SizedBox(height: 16),
-                  if (_isLoadingData)
+                  if (_errorMessage != null)
+                    Text('Повторная попытка загрузки...', style: AppStyles.label.copyWith(color: Colors.red))
+                  else if (_isLoadingData)
                     const Center(child: CircularProgressIndicator(color: AppColors.primaryPurple))
                   else if (_achievements.isEmpty)
                     Text('У студента пока нет достижений.', style: AppStyles.label)
@@ -193,7 +246,9 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
                   const SizedBox(height: 40),
                   _buildSectionHeader('Сертификаты'),
                   const SizedBox(height: 16),
-                  if (_isLoadingData)
+                  if (_errorMessage != null)
+                    Text('Повторная попытка загрузки...', style: AppStyles.label.copyWith(color: Colors.red))
+                  else if (_isLoadingData)
                     const Center(child: CircularProgressIndicator(color: AppColors.primaryPurple))
                   else if (_certificates.isEmpty)
                     Text('У студента пока нет сертификатов.', style: AppStyles.label)

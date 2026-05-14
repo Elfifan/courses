@@ -8,6 +8,8 @@ class SidePanel extends StatelessWidget {
   final List<String> menuItems;
   final List<IconData> menuIcons;
   final VoidCallback onLogout;
+  final String? userName;
+  final String? userRole;
 
   const SidePanel({
     super.key,
@@ -17,6 +19,8 @@ class SidePanel extends StatelessWidget {
     required this.menuItems,
     required this.menuIcons,
     required this.onLogout,
+    this.userName,
+    this.userRole,
   });
 
   @override
@@ -121,7 +125,10 @@ class SidePanel extends StatelessWidget {
                     CircleAvatar(
                       backgroundColor: Theme.of(context).primaryColor,
                       radius: 20,
-                      child: Text('А',
+                      child: Text(
+                          (userName != null && userName!.isNotEmpty)
+                              ? userName![0].toUpperCase()
+                              : 'А',
                           style: TextStyle(
                               color: Colors.white,
                               fontWeight: FontWeight.bold,
@@ -134,7 +141,7 @@ class SidePanel extends StatelessWidget {
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Text(
-                            'Админ Иванов',
+                            userName ?? 'Сотрудник',
                             style: TextStyle(
                                 color: Theme.of(context).sidePanelTextColor,
                                 fontSize: 14,
@@ -142,7 +149,7 @@ class SidePanel extends StatelessWidget {
                           ),
                           SizedBox(height: 2),
                           Text(
-                            'Администратор',
+                            userRole ?? 'Сотрудник',
                             style: TextStyle(
                                 color: Theme.of(context).sidePanelTextSecondaryColor,
                                 fontSize: 12),
@@ -157,7 +164,10 @@ class SidePanel extends StatelessWidget {
                   width: double.infinity,
                   child: TextButton.icon(
                     onPressed: () => _showLogoutDialog(context),
-                    icon: Icon(Icons.logout, color: Theme.of(context).sidePanelTextSecondaryColor, size: 18),
+                    icon: Padding(
+                      padding: const EdgeInsets.only(left: 8.0),
+                      child: Icon(Icons.logout, color: Theme.of(context).sidePanelTextSecondaryColor, size: 18),
+                    ),
                     label: Text(
                       'Выйти',
                       style: TextStyle(

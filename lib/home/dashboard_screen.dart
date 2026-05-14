@@ -48,6 +48,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
   
   List<Map<String, dynamic>> _recentCoursesList = [];
   List<Map<String, dynamic>> _recentActivities = [];
+  String? _errorMessage;
+  String? _userName;
+  String? _displayUserRole;
   StreamSubscription? _courseSubscription;
   StreamSubscription? _usersSubscription;
 
@@ -87,7 +90,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Future<void> _loadDashboardData({bool isBackground = false}) async {
     if (!mounted) return;
     if (!isBackground) {
-      setState(() => _isLoadingDashboard = true);
+      setState(() {
+        _isLoadingDashboard = true;
+        _errorMessage = null;
+      });
     }
 
     try {
@@ -99,7 +105,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       
       int totalCourses = courses.length;
       int paidCourses = courses.where((c) => (c['price'] ?? 0) > 0).length;
-      int coursesInDev = courses.where((c) => c['status'] == 'В разработке').length;
+      int coursesOnReview = courses.where((c) => c['status'] == 'На проверке').length;
       
       List<Map<String, dynamic>> recentCoursesList = List<Map<String, dynamic>>.from(courses);
       recentCoursesList.sort((a, b) {
@@ -109,34 +115,29 @@ class _DashboardScreenState extends State<DashboardScreen> {
       });
       recentCoursesList = recentCoursesList.take(4).toList();
 
-      // Fetch passing
-      final passingRes = await SupabaseService.safeDbCall(() =>
-        SupabaseService.client.from('passing').select('id_courses, status, date_passage')
+      // Fetch user_courses for enrollment and revenue
+      final userCoursesRes = await SupabaseService.safeDbCall(() =>
+        SupabaseService.client.from('user_courses').select('id_courses, purchase_price, purchase_date')
       );
-      final passings = passingRes as List;
+      final userCourses = userCoursesRes as List;
       
-      int completedCoursesCount = 0;
       Map<int, int> studentsPerCourse = {};
-      
-      for (var p in passings) {
-        int courseId = p['id_courses'];
-        studentsPerCourse[courseId] = (studentsPerCourse[courseId] ?? 0) + 1;
-        if (p['status'] == true) {
-          completedCoursesCount++;
-        }
-      }
-      
       double totalRevenue = 0.0;
-      for (var c in courses) {
-        int courseId = c['id'];
-        double price = (c['price'] ?? 0).toDouble();
-        int students = studentsPerCourse[courseId] ?? 0;
-        totalRevenue += price * students;
+      
+      for (var uc in userCourses) {
+        int courseId = uc['id_courses'];
+        studentsPerCourse[courseId] = (studentsPerCourse[courseId] ?? 0) + 1;
+        totalRevenue += (uc['purchase_price'] ?? 0).toDouble();
       }
       
       for (var rc in recentCoursesList) {
         rc['students_count'] = studentsPerCourse[rc['id']] ?? 0;
       }
+
+      final certsRes = await SupabaseService.safeDbCall(() =>
+        SupabaseService.client.from('certificates').select('id')
+      );
+      int completedCoursesCount = (certsRes as List).length;
 
       // Fetch users
       final usersRes = await SupabaseService.safeDbCall(() => 
@@ -190,11 +191,25 @@ class _DashboardScreenState extends State<DashboardScreen> {
         averageRating = sum / feedbacks.length;
       }
 
+      // Fetch current employee info if not already loaded
+      String? userName = _userName;
+      String? displayUserRole = _displayUserRole;
+      
+      if (userName == null && widget.userId != null) {
+        final employeeRes = await SupabaseService.safeDbCall(() =>
+          SupabaseService.client.from('employee').select('surname, name, role').eq('id', widget.userId!).single()
+        );
+        if (employeeRes != null) {
+          userName = '${employeeRes['surname'] ?? ''} ${employeeRes['name'] ?? ''}'.trim();
+          displayUserRole = employeeRes['role'] ?? widget.userRole;
+        }
+      }
+
       if (mounted) {
         setState(() {
           _totalCourses = totalCourses;
           _paidCourses = paidCourses;
-          _coursesInDevelopment = coursesInDev;
+          _coursesInDevelopment = coursesOnReview;
           _recentCoursesList = recentCoursesList;
           _totalRevenue = totalRevenue;
           _completedCoursesCount = completedCoursesCount;
@@ -202,13 +217,25 @@ class _DashboardScreenState extends State<DashboardScreen> {
           _newStudentsMonth = newStudentsMonth;
           _averageRating = averageRating;
           _recentActivities = recentActivities;
+          _userName = userName;
+          _displayUserRole = displayUserRole;
           _isLoadingDashboard = false;
         });
       }
     } catch (e) {
       debugPrint('Ошибка загрузки дашборда: $e');
       if (mounted) {
-        setState(() => _isLoadingDashboard = false);
+        setState(() {
+          _errorMessage = e.toString();
+          _isLoadingDashboard = false;
+        });
+        
+        // Автоматический повтор через 3 секунды при ошибке
+        Future.delayed(const Duration(seconds: 3), () {
+          if (mounted && _errorMessage != null && _selectedIndex == 0) {
+            _loadDashboardData();
+          }
+        });
       }
     }
   }
@@ -288,6 +315,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
             menuItems: _menuItems,
             menuIcons: _menuIcons,
             onLogout: widget.onLogout,
+            userName: _userName,
+            userRole: _displayUserRole,
           ),
           Expanded(
             child: Column(
@@ -332,6 +361,30 @@ class _DashboardScreenState extends State<DashboardScreen> {
   // _buildContent больше не нужен, так как используется IndexedStack
   
   Widget _buildDashboard() {
+    if (_errorMessage != null) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.error_outline_rounded, color: Colors.red, size: 48),
+            const SizedBox(height: 16),
+            Text('Ошибка загрузки статистики', style: AppStyles.h1.copyWith(fontSize: 20)),
+            const SizedBox(height: 8),
+            Text(_errorMessage!, style: AppStyles.label, textAlign: TextAlign.center),
+            const SizedBox(height: 24),
+            TextButton.icon(
+              onPressed: () => _loadDashboardData(),
+              icon: const Icon(Icons.refresh_rounded),
+              label: const Text('Попробовать снова'),
+              style: TextButton.styleFrom(foregroundColor: AppColors.primaryPurple),
+            ),
+            const SizedBox(height: 8),
+            const Text('Повторная попытка через несколько секунд...', style: TextStyle(fontSize: 12, color: AppColors.textGrey)),
+          ],
+        ),
+      );
+    }
+
     if (_isLoadingDashboard) {
       return const Center(child: CircularProgressIndicator(color: AppColors.primaryPurple));
     }
@@ -356,7 +409,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           children: [
             _buildInfoCard('Средняя оценка курсов', _averageRating.toStringAsFixed(1), Icons.star_rounded, const Color(0xFFEAB308)),
             const SizedBox(width: 20),
-            _buildInfoCard('Курсов в разработке', _coursesInDevelopment.toString(), Icons.autorenew, const Color(0xFFC57110)),
+            _buildInfoCard('Курсов на проверке', _coursesInDevelopment.toString(), Icons.autorenew, const Color(0xFFC57110)),
             const SizedBox(width: 20),
             _buildInfoCard('Новых студентов за месяц', '+$_newStudentsMonth', Icons.trending_up_rounded, const Color(0xFF38BDF8)),
             const SizedBox(width: 20),
