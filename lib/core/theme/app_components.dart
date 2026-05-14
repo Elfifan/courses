@@ -50,13 +50,15 @@ class KodixComponents {
     VoidCallback? onPressed,
     double height = 56,
     double? width,
+    Color? backgroundColor,
   }) {
     return InkWell(
       onTap: onPressed,
       borderRadius: AppStyles.mainRadius,
       child: Ink(
         decoration: BoxDecoration(
-          gradient: AppColors.primaryGradient,
+          color: backgroundColor,
+          gradient: backgroundColor == null ? AppColors.primaryGradient : null,
           borderRadius: AppStyles.mainRadius,
           boxShadow: [
             BoxShadow(
