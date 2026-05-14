@@ -1,9 +1,11 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../core/theme/app_components.dart'; // Подключаем вашу дизайн-систему
 import '../models/database_models.dart';
 import '../services/supabase_service.dart';
 import '../shared/search_row.dart';
 import '../courses/course_edit_screen.dart';
+import '../repositories/course_repository.dart';
 
 class CoursesScreen extends StatefulWidget {
   final bool isDarkMode;
@@ -23,6 +25,7 @@ class _CoursesScreenState extends State<CoursesScreen> {
   List<Course> _courses = [];
   bool _isLoading = true;
   String _selectedFilter = 'all';  
+  StreamSubscription? _courseSubscription;
 
   final List<Map<String, String>> _filters = [ 
     {'value': 'all', 'label': 'Все курсы'},
@@ -38,17 +41,25 @@ class _CoursesScreenState extends State<CoursesScreen> {
   void initState() {
     super.initState();
     _loadCourses();
+    _setupRealtime();
+  }
+
+  void _setupRealtime() {
+    _courseSubscription = CourseService.watchCourses().listen((_) {
+      _loadCourses(isBackground: true);
+    });
   }
 
   bool _isPerformingLoad = false;
 
-  Future<void> _loadCourses() async {
+  Future<void> _loadCourses({bool isBackground = false}) async {
     if (!mounted || _isPerformingLoad) return;
-    setState(() {
-      _isLoading = true;
-      _isPerformingLoad = true;
-    });
-    
+    if (!isBackground) {
+      setState(() {
+        _isLoading = true;
+      });
+    }
+    _isPerformingLoad = true;
     try {
       final data = await SupabaseService.safeDbCall(() async {
         final query = SupabaseService.client.from('courses').select();
@@ -112,6 +123,7 @@ class _CoursesScreenState extends State<CoursesScreen> {
 
   @override
   void dispose() {
+    _courseSubscription?.cancel();
     _searchController.dispose();
     super.dispose();
   }

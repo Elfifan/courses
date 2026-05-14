@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../core/theme/app_components.dart';
@@ -198,5 +199,32 @@ class CourseService {
         },
       ),
     );
+  }
+
+  static Stream<void> watchCourses() {
+    final supabase = Supabase.instance.client;
+    final controller = StreamController<void>.broadcast();
+
+    final channel = supabase
+        .channel('public:courses')
+        .onPostgresChanges(
+          event: PostgresChangeEvent.all,
+          schema: 'public',
+          table: 'courses',
+          callback: (payload) {
+            if (!controller.isClosed) {
+              controller.add(null);
+            }
+          },
+        );
+
+    channel.subscribe();
+
+    controller.onCancel = () {
+      channel.unsubscribe();
+      controller.close();
+    };
+
+    return controller.stream;
   }
 }

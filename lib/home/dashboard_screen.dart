@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../core/theme/app_components.dart';
 import '../shared/side_panel.dart';
@@ -47,6 +48,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   
   List<Map<String, dynamic>> _recentCoursesList = [];
   List<Map<String, dynamic>> _recentActivities = [];
+  StreamSubscription? _courseSubscription;
 
   final GlobalKey _achievementsKey = GlobalKey();
 
@@ -58,11 +60,28 @@ class _DashboardScreenState extends State<DashboardScreen> {
     if (!_isAuthor) {
       _loadDashboardData();
     }
+    _setupRealtime();
   }
 
-  Future<void> _loadDashboardData() async {
+  void _setupRealtime() {
+    _courseSubscription = CourseService.watchCourses().listen((_) {
+      if (!_isAuthor) {
+        _loadDashboardData(isBackground: true);
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _courseSubscription?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _loadDashboardData({bool isBackground = false}) async {
     if (!mounted) return;
-    setState(() => _isLoadingDashboard = true);
+    if (!isBackground) {
+      setState(() => _isLoadingDashboard = true);
+    }
 
     try {
       // Fetch courses
