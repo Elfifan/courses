@@ -26,6 +26,9 @@ dependencies:
 
   url_launcher: any
   uuid: any
+  pdf: ^3.12.0
+  printing: ^5.14.3
+  path_provider: ^2.1.5
 dev_dependencies:
   flutter_test:
     sdk: flutter

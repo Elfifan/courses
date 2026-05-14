@@ -269,6 +269,7 @@ class _CourseEditScreenState extends State<CourseEditScreen>
                 ),
                 CourseEditAnalyticsStudentsTab(
                   courseId: _course!.id,
+                  courseName: _course!.name ?? 'Без названия',
                   coursePrice: _course!.price ?? 0,
                 ),
                 CourseEditReviewsTab(courseId: _course!.id, readOnly: _isAdmin),
