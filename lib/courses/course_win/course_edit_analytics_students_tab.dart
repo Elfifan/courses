@@ -27,6 +27,7 @@ class _CourseEditAnalyticsStudentsTabState
   double _totalRevenue = 0.0;
   double _averageRating = 0.0;
   List<Map<String, dynamic>> _recentStudents = [];
+  String? _errorMessage;
 
   @override
   bool get wantKeepAlive => true;
@@ -39,74 +40,108 @@ class _CourseEditAnalyticsStudentsTabState
 
   Future<void> _loadAnalytics() async {
     if (!mounted) return;
-    setState(() => _isLoading = true);
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
 
     try {
-      // Имитация задержки 2 секунды как в модулях
-      await Future.delayed(const Duration(seconds: 2));
+      debugPrint('--- [Аналитика] Финальная попытка оптимизации для ID: ${widget.courseId} ---');
 
-      // 1. Считаем количество студентов (таблица passing)
-      final enrolledData = await SupabaseService.safeDbCall(
-        () => SupabaseService.client
-            .from('passing')
-            .select('id')
-            .eq('id_courses', widget.courseId),
-      );
-      final int count = (enrolledData as List).length;
+      // 1. Получаем список ID (простой вариант, работает везде)
+      final countFuture = SupabaseService.client
+          .from('user_courses')
+          .select('id')
+          .eq('id_courses', widget.courseId)
+          .timeout(const Duration(seconds: 10));
 
-      // 2. Считаем выручку (количество студентов * цена курса)
-      double totalRev = count * widget.coursePrice;
+      // 2. Получаем рейтинг
+      final feedbackFuture = SupabaseService.client
+          .from('feedback')
+          .select('estimation')
+          .eq('id_courses', widget.courseId)
+          .eq('status', true)
+          .timeout(const Duration(seconds: 10));
 
-      // 3. Считаем средний рейтинг (таблица feedback)
-      final feedbackData = await SupabaseService.safeDbCall(
-        () => SupabaseService.client
-            .from('feedback')
-            .select('estimation')
-            .eq('id_courses', widget.courseId)
-            .eq('status', true),
-      );
-
-      // 4. Получаем список последних студентов (passing + users)
-      final studentsData = await SupabaseService.safeDbCall(
-        () => SupabaseService.client
-            .from('passing')
-            .select('''
+      // 3. Получаем последние записи (с упрощенным JOIN)
+      final recentFuture = SupabaseService.client
+          .from('user_courses')
+          .select('''
             id,
-            date_passage,
-            users:id_user (
-              id,
+            purchase_date,
+            users (
               name,
               email
             )
           ''')
-            .eq('id_courses', widget.courseId)
-            .order('date_passage', ascending: false)
-            .limit(10),
-      );
+          .eq('id_courses', widget.courseId)
+          .order('purchase_date', ascending: false)
+          .limit(10)
+          .timeout(const Duration(seconds: 12));
+
+      // 4. Получаем цены для выручки
+      final revenueFuture = SupabaseService.client
+          .from('user_courses')
+          .select('purchase_price')
+          .eq('id_courses', widget.courseId)
+          .timeout(const Duration(seconds: 15));
+
+      debugPrint('--- [Аналитика] Все запросы отправлены... ---');
+
+      final results = await Future.wait([
+        countFuture,
+        feedbackFuture,
+        recentFuture,
+        revenueFuture,
+      ]);
+
+      debugPrint('--- [Аналитика] Все запросы завершены! ---');
+
+      final countData = results[0] as List<dynamic>;
+      final feedbackData = results[1] as List<dynamic>;
+      final recentData = results[2] as List<dynamic>;
+      final revenueData = results[3] as List<dynamic>;
+
+      // Считаем выручку
+      double totalRev = 0;
+      for (var row in revenueData) {
+        final price = row['purchase_price'];
+        if (price != null) {
+          totalRev += (price is num) ? price.toDouble() : 0.0;
+        }
+      }
+
+      // Считаем рейтинг
+      double avg = 0.0;
+      if (feedbackData.isNotEmpty) {
+        double sum = 0;
+        int count = 0;
+        for (var f in feedbackData) {
+          final est = f['estimation'];
+          if (est != null) {
+            sum += (est as num).toDouble();
+            count++;
+          }
+        }
+        if (count > 0) avg = sum / count;
+      }
 
       if (mounted) {
-        double avg = 0.0;
-        final feedbacks = feedbackData as List;
-        if (feedbacks.isNotEmpty) {
-          final sum = feedbacks.fold<double>(
-            0,
-            (prev, element) => prev + (element['estimation'] ?? 0).toDouble(),
-          );
-          avg = sum / feedbacks.length;
-        }
-
         setState(() {
-          _totalEnrolled = count;
+          _totalEnrolled = countData.length;
           _totalRevenue = totalRev;
           _averageRating = avg;
-          _recentStudents = List<Map<String, dynamic>>.from(studentsData);
+          _recentStudents = List<Map<String, dynamic>>.from(recentData);
           _isLoading = false;
         });
       }
     } catch (e) {
-      debugPrint('Ошибка аналитики: $e');
+      debugPrint('--- [Аналитика] КРИТИЧЕСКАЯ ОШИБКА: $e ---');
       if (mounted) {
-        setState(() => _isLoading = false);
+        setState(() {
+          _isLoading = false;
+          _errorMessage = 'Не удалось загрузить аналитику: $e';
+        });
       }
     }
   }
@@ -114,6 +149,23 @@ class _CourseEditAnalyticsStudentsTabState
   @override
   Widget build(BuildContext context) {
     super.build(context);
+
+    if (_errorMessage != null) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.error_outline_rounded, color: Colors.red, size: 48),
+            const SizedBox(height: 16),
+            const Text('Ошибка загрузки аналитики', style: TextStyle(fontWeight: FontWeight.bold)),
+            const SizedBox(height: 8),
+            Text(_errorMessage!, style: AppStyles.label, textAlign: TextAlign.center),
+            const SizedBox(height: 16),
+            const Text('Повтор через 3 секунды...', style: TextStyle(fontSize: 12, color: AppColors.textGrey)),
+          ],
+        ),
+      );
+    }
 
     if (_isLoading) {
       return const Center(
@@ -237,9 +289,9 @@ class _CourseEditAnalyticsStudentsTabState
                       crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
                         Text(
-                          student['date_passage'] != null
+                          student['purchase_date'] != null
                               ? DateFormat('dd.MM.yyyy').format(
-                                  DateTime.parse(student['date_passage']),
+                                  DateTime.parse(student['purchase_date']),
                                 )
                               : 'Дата неизвестна',
                           style: AppStyles.label,
