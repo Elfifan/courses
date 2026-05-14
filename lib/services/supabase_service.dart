@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:supabase_flutter/supabase_flutter.dart' hide User;
 
 import '../models/database_models.dart';
@@ -59,6 +60,31 @@ class SupabaseService {
     } catch (e) {
       throw Exception('Ошибка при создании пользователя: $e');
     }
+  }
+
+  static Stream<void> watchUsers() {
+    final controller = StreamController<void>.broadcast();
+    final channel = _supabase
+        .channel('public:users')
+        .onPostgresChanges(
+          event: PostgresChangeEvent.all,
+          schema: 'public',
+          table: 'users',
+          callback: (payload) {
+            if (!controller.isClosed) {
+              controller.add(null);
+            }
+          },
+        );
+
+    channel.subscribe();
+
+    controller.onCancel = () {
+      channel.unsubscribe();
+      controller.close();
+    };
+
+    return controller.stream;
   }
 
   // ============ COURSES ============

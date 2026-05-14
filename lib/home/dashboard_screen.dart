@@ -49,6 +49,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   List<Map<String, dynamic>> _recentCoursesList = [];
   List<Map<String, dynamic>> _recentActivities = [];
   StreamSubscription? _courseSubscription;
+  StreamSubscription? _usersSubscription;
 
   final GlobalKey _achievementsKey = GlobalKey();
 
@@ -69,11 +70,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
         _loadDashboardData(isBackground: true);
       }
     });
+    _usersSubscription = SupabaseService.watchUsers().listen((_) {
+      if (!_isAuthor) {
+        _loadDashboardData(isBackground: true);
+      }
+    });
   }
 
   @override
   void dispose() {
     _courseSubscription?.cancel();
+    _usersSubscription?.cancel();
     super.dispose();
   }
 

@@ -1,8 +1,10 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../core/theme/app_components.dart'; // Ваша дизайн-система
 import '../models/database_models.dart' as db_models;
 import 'package:intl/intl.dart';
+import '../services/supabase_service.dart';
 import '../shared/search_row.dart';
 import '../students/student_profile_screen.dart';
 
@@ -27,24 +29,33 @@ class _StudentsScreenState extends State<StudentsScreen> {
   int? _hoveredIndex;
   List<db_models.User> _students = [];
   bool _isLoading = true;
+  StreamSubscription? _usersSubscription;
   final TextEditingController _searchController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
     _loadStudentsFromDatabase();
+    _setupRealtime();
     _searchController.addListener(() => setState(() {}));
+  }
+
+  void _setupRealtime() {
+    _usersSubscription = SupabaseService.watchUsers().listen((_) {
+      _loadStudentsFromDatabase(isBackground: true);
+    });
   }
 
   @override
   void dispose() {
+    _usersSubscription?.cancel();
     _searchController.removeListener(() {});
     _searchController.dispose();
     super.dispose();
   }
 
-  Future<void> _loadStudentsFromDatabase() async {
-    setState(() => _isLoading = true);
+  Future<void> _loadStudentsFromDatabase({bool isBackground = false}) async {
+    if (!isBackground) setState(() => _isLoading = true);
     try {
       final response = await supabase.from('users').select().order('id', ascending: true) as List<dynamic>;
       final users = response.map((e) {

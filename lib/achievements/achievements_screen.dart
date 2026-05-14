@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
@@ -21,6 +22,7 @@ class _AchievementsScreenState extends State<AchievementsScreen>
 
   List<Achievement> _allAchievements = [];
   bool _isLoading = true;
+  StreamSubscription? _achievementsSubscription;
 
   @override
   void initState() {
@@ -33,6 +35,13 @@ class _AchievementsScreenState extends State<AchievementsScreen>
       }
     });
     _loadData();
+    _setupRealtime();
+  }
+
+  void _setupRealtime() {
+    _achievementsSubscription = AchievementRepository.watchAchievements().listen((_) {
+      _loadData(forceRefresh: true, isBackground: true);
+    });
   }
 
   @override
@@ -44,11 +53,11 @@ class _AchievementsScreenState extends State<AchievementsScreen>
   }
 
   /// Загрузка данных с возможностью принудительного обновления
-  Future<void> _loadData({bool forceRefresh = false}) async {
+  Future<void> _loadData({bool forceRefresh = false, bool isBackground = false}) async {
     if (!mounted) return;
     
-    // Не показываем индикатор загрузки если это не первая загрузка
-    if (_allAchievements.isEmpty) {
+    // Не показываем индикатор загрузки если это фоновое обновление или не первая загрузка
+    if (_allAchievements.isEmpty && !isBackground) {
       setState(() => _isLoading = true);
     }
     
@@ -510,6 +519,7 @@ class _AchievementsScreenState extends State<AchievementsScreen>
 
   @override
   void dispose() {
+    _achievementsSubscription?.cancel();
     WidgetsBinding.instance.removeObserver(this);
     _tabController.dispose();
     _searchController.dispose();

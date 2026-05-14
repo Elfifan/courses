@@ -1,6 +1,8 @@
+import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'dart:io';
 import 'package:uuid/uuid.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' hide User;
 import '../models/database_models.dart';
 import '../services/supabase_service.dart';
 
@@ -322,5 +324,34 @@ class AchievementRepository {
       debugPrint('Error deleting achievement: $e');
       rethrow;
     }
+  }
+
+  // =========================================================================
+  // REALTIME ПОДПИСКА
+  // =========================================================================
+  static Stream<void> watchAchievements() {
+    final controller = StreamController<void>.broadcast();
+    final channel = SupabaseService.client
+        .channel('public:achievement')
+        .onPostgresChanges(
+          event: PostgresChangeEvent.all,
+          schema: 'public',
+          table: 'achievement',
+          callback: (payload) {
+            clearCache();
+            if (!controller.isClosed) {
+              controller.add(null);
+            }
+          },
+        );
+
+    channel.subscribe();
+
+    controller.onCancel = () {
+      channel.unsubscribe();
+      controller.close();
+    };
+
+    return controller.stream;
   }
 }

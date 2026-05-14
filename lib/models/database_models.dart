@@ -97,7 +97,7 @@ class User {
   final String? email;
   final String? password;
   final DateTime? dateRegistration;
-  final List<int>? avatar; // BYTEA -> List<int>
+  final String? avatar; // text -> String
   final bool? status;
   final DateTime? lastEntry;
 
@@ -121,7 +121,7 @@ class User {
       dateRegistration: json['date_registration'] != null
           ? DateTime.parse(json['date_registration'] as String)
           : null,
-      avatar: json['avatar'] as List<int>?,
+      avatar: json['avatar'] as String?,
       status: json['status'] as bool?,
       lastEntry: json['last_entry'] != null
           ? DateTime.parse(json['last_entry'] as String)
