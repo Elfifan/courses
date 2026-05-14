@@ -392,9 +392,9 @@ Widget _buildAdminStatusButtons() {
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),
             ),
-            // Отключаем стандартные эффекты наведения/нажатия для заблокированной кнопки
-            disabledBackgroundColor: AppColors.primaryPurple,
-            disabledForegroundColor: Colors.white,
+            // Убираем фиксированный disabledBackgroundColor, чтобы кнопки не красились все сразу при загрузке
+            disabledForegroundColor: isActive ? Colors.white : AppColors.primaryPurple.withValues(alpha: 0.5),
+            disabledBackgroundColor: isActive ? AppColors.primaryPurple : Colors.transparent,
           ),
           child: Text(
             status,

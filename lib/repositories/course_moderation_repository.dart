@@ -31,24 +31,31 @@ class CourseModerationRepository {
     required String newStatus,
     String? comment,
   }) async {
+    // 1. Пытаемся сохранить лог модерации (не блокируем обновление статуса, если лог не создался)
     try {
-      // Сохраняем лог модерации
-      await SupabaseService.client.from('course_moderation_logs').insert({
-        'id_courses': courseId,
-        'id_admin': adminId,
-        'status_assigned': newStatus,
-        'comment': comment,
-        'created_at': DateTime.now().toIso8601String(),
-      });
-
-      // Обновляем статус курса
-      await SupabaseService.client
-          .from('courses')
-          .update({'status': newStatus})
-          .eq('id', courseId);
+      await SupabaseService.safeDbCall(() => 
+        SupabaseService.client.from('course_moderation_logs').insert({
+          'id_courses': courseId,
+          'id_admin': adminId,
+          'status_assigned': newStatus,
+          'comment': comment,
+        })
+      );
     } catch (e) {
-      debugPrint('Ошибка сохранения логов модерации: $e');
-      throw Exception('Ошибка сохранения логов модерации: $e');
+      debugPrint('Предупреждение: Не удалось сохранить лог модерации: $e');
+    }
+
+    // 2. Пытаемся обновить статус самого курса (основное действие)
+    try {
+      await SupabaseService.safeDbCall(() =>
+        SupabaseService.client
+            .from('courses')
+            .update({'status': newStatus})
+            .eq('id', courseId)
+      );
+    } catch (e) {
+      debugPrint('Критическая ошибка обновления статуса курса: $e');
+      throw Exception('Не удалось обновить статус курса: $e');
     }
   }
 
