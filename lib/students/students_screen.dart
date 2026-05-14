@@ -172,7 +172,10 @@ class _StudentsScreenState extends State<StudentsScreen> {
                                 onTap: () {
                                   Navigator.of(context).push(
                                     MaterialPageRoute(
-                                      builder: (_) => StudentProfileScreen(isDarkMode: widget.isDarkMode),
+                                      builder: (_) => StudentProfileScreen(
+                                        isDarkMode: widget.isDarkMode,
+                                        student: s,
+                                      ),
                                     ),
                                   );
                                 },

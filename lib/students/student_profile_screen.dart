@@ -1,37 +1,133 @@
 import 'package:flutter/material.dart';
-import '../core/theme/app_components.dart'; // Ваша дизайн-система
+import '../core/theme/app_components.dart';
+import '../models/database_models.dart' as db_models;
+import 'package:intl/intl.dart';
+import '../services/supabase_service.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+
 
 class StudentProfileScreen extends StatefulWidget {
   final bool isDarkMode;
+  final db_models.User student;
 
-  const StudentProfileScreen({super.key, required this.isDarkMode});
+  const StudentProfileScreen({super.key, required this.isDarkMode, required this.student});
 
   @override
   State<StudentProfileScreen> createState() => _StudentProfileScreenState();
 }
 
 class _StudentProfileScreenState extends State<StudentProfileScreen> {
-  bool _showPassword = false;
-  bool _isBlocked = false;
+  late bool _isBlocked;
+  bool _isLoadingData = true;
+  List<Map<String, dynamic>> _activeCourses = [];
+  List<Map<String, dynamic>> _certificates = [];
+  List<Map<String, dynamic>> _achievements = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _isBlocked = !(widget.student.status ?? true);
+    _loadStudentData();
+  }
+
+  Future<void> _loadStudentData() async {
+    try {
+      // 1. Загружаем курсы студента из таблицы passing
+      final passingData = await SupabaseService.client
+          .from('passing')
+          .select('id_courses, status, date_passage, courses(name, icon)')
+          .eq('id_user', widget.student.id);
+
+      final List<Map<String, dynamic>> active = [];
+      final List<Map<String, dynamic>> certs = [];
+      
+      for (var p in passingData as List) {
+        final courseInfo = p['courses'] as Map<String, dynamic>?;
+        if (courseInfo != null) {
+          final isCompleted = p['status'] == true;
+          final courseData = {
+            'name': courseInfo['name'] ?? 'Курс',
+            'icon': courseInfo['icon'] ?? '📚',
+            'progress': isCompleted ? 100 : 0,
+            'completed': isCompleted,
+            'date': p['date_passage'],
+          };
+          
+          if (isCompleted) {
+            certs.add(courseData);
+          } else {
+            active.add(courseData);
+          }
+        }
+      }
+
+      // 2. Загружаем достижения студента
+      final achievementsData = await SupabaseService.client
+          .from('achievements_user')
+          .select('id, achievement(name, image, created_at)')
+          .eq('id_user', widget.student.id);
+
+      final List<Map<String, dynamic>> loadedAchievements = [];
+      for (var a in achievementsData as List) {
+        final achInfo = a['achievement'] as Map<String, dynamic>?;
+        if (achInfo != null) {
+          loadedAchievements.add({
+            'name': achInfo['name'] ?? 'Достижение',
+            'image': achInfo['image'],
+            'date': achInfo['created_at'],
+          });
+        }
+      }
+
+      if (mounted) {
+        setState(() {
+          _activeCourses = active;
+          _certificates = certs;
+          _achievements = loadedAchievements;
+          _isLoadingData = false;
+        });
+      }
+    } catch (e) {
+      debugPrint('Ошибка загрузки данных студента: $e');
+      if (mounted) {
+        setState(() => _isLoadingData = false);
+      }
+    }
+  }
+
+  Future<void> _toggleBlockStatus() async {
+    final newStatus = !_isBlocked; // Если был заблокирован (true), то новый статус активен (status = true в БД)
+    final dbStatus = !newStatus; // status в БД: true = активен, false = заблокирован
+    
+    try {
+      await SupabaseService.client
+          .from('users')
+          .update({'status': dbStatus})
+          .eq('id', widget.student.id);
+      
+      setState(() {
+        _isBlocked = newStatus;
+      });
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(dbStatus ? 'Студент разблокирован' : 'Студент заблокирован'),
+            backgroundColor: dbStatus ? Colors.green : Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Ошибка обновления статуса: $e'), backgroundColor: Colors.red),
+        );
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    // Данные студента (сохранены из оригинала)
-    final student = {
-      'avatar': 'А',
-      'name': 'Анна Петрова',
-      'email': 'anna.petrova@email.com',
-      'phone': '+7 (900) 123-45-67',
-      'registration_date': '15 марта 2024',
-      'password': 'mypass123',
-      'last_login': '20 сентября, 18:45',
-    };
-
-    final courses = [
-      {'name': 'Python для начинающих', 'icon': Icons.code, 'progress': 85, 'completed': false},
-      {'name': 'Flutter Mobile Dev', 'icon': Icons.phone_iphone, 'progress': 100, 'completed': true},
-      {'name': 'JavaScript Advanced', 'icon': Icons.javascript, 'progress': 60, 'completed': false},
-    ];
 
     return Scaffold(
       backgroundColor: AppColors.bgLight, // Светлый фон приложения
@@ -59,7 +155,7 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
               width: 380,
               child: Column(
                 children: [
-                  _buildMainInfoCard(student),
+                  _buildMainInfoCard(),
                   const SizedBox(height: 24),
                   _buildActionCard(),
                 ],
@@ -73,16 +169,41 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
                 children: [
                   Text('Активные курсы', style: AppStyles.h1.copyWith(fontSize: 22)),
                   const SizedBox(height: 16),
-                  Wrap(
-                    spacing: 20,
-                    runSpacing: 20,
-                    children: courses.map((c) => _buildCourseCard(c)).toList(),
-                  ),
+                  if (_isLoadingData)
+                    const Center(child: CircularProgressIndicator(color: AppColors.primaryPurple))
+                  else if (_activeCourses.isEmpty)
+                    Text('Студент пока не записан ни на один курс.', style: AppStyles.label)
+                  else
+                    Wrap(
+                      spacing: 20,
+                      runSpacing: 20,
+                      children: _activeCourses.map((c) => _buildCourseCard(c)).toList(),
+                    ),
+                  
                   const SizedBox(height: 40),
-                  _buildSectionHeader('Достижения и Сертификаты'),
+                  _buildSectionHeader('Достижения'),
                   const SizedBox(height: 16),
-                  _buildAchievementTile('Сертификат Python', '10 сент.', Icons.workspace_premium),
-                  _buildAchievementTile('Регистрация на платформе', '15 марта', Icons.stars_rounded),
+                  if (_isLoadingData)
+                    const Center(child: CircularProgressIndicator(color: AppColors.primaryPurple))
+                  else if (_achievements.isEmpty)
+                    Text('У студента пока нет достижений.', style: AppStyles.label)
+                  else
+                    ..._achievements.map((a) => _buildAchievementTile(a)),
+                  
+                  const SizedBox(height: 40),
+                  _buildSectionHeader('Сертификаты'),
+                  const SizedBox(height: 16),
+                  if (_isLoadingData)
+                    const Center(child: CircularProgressIndicator(color: AppColors.primaryPurple))
+                  else if (_certificates.isEmpty)
+                    Text('У студента пока нет сертификатов.', style: AppStyles.label)
+                  else
+                    Wrap(
+                      spacing: 20,
+                      runSpacing: 20,
+                      children: _certificates.map((c) => _buildCertificateCard(c)).toList(),
+                    ),
+                  const SizedBox(height: 40),
                 ],
               ),
             ),
@@ -92,11 +213,15 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
     );
   }
 
-  Widget _buildMainInfoCard(Map<String, String> student) {
+  Widget _buildMainInfoCard() {
+    final displayName = widget.student.name ?? widget.student.email ?? 'Студент';
+    final avatarLetter = displayName.isNotEmpty ? displayName[0].toUpperCase() : '?';
+    String formatDate(DateTime? d) => d == null ? '—' : DateFormat('dd.MM.yyyy HH:mm').format(d.toLocal());
+
     return KodixComponents.cardContainer(
       child: Column(
         children: [
-          // Аватар с градиентом Кодикс[cite: 1]
+          // Аватар
           Container(
             width: 90,
             height: 90,
@@ -105,19 +230,25 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
               gradient: AppColors.primaryGradient,
               boxShadow: [BoxShadow(color: AppColors.primaryPurple.withValues(alpha: 0.3), blurRadius: 15)],
             ),
-            child: Center(
-              child: Text(student['avatar']!, style: const TextStyle(fontSize: 36, color: Colors.white, fontWeight: FontWeight.bold)),
-            ),
+            child: widget.student.avatar != null && widget.student.avatar!.isNotEmpty
+                ? ClipOval(
+                    child: Image.network(
+                      widget.student.avatar!,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => _buildAvatarPlaceholder(avatarLetter),
+                    ),
+                  )
+                : _buildAvatarPlaceholder(avatarLetter),
           ),
           const SizedBox(height: 16),
-          Text(student['name']!, style: AppStyles.h1.copyWith(fontSize: 24)),
-          Text(student['email']!, style: AppStyles.label),
+          Text(displayName, style: AppStyles.h1.copyWith(fontSize: 24), textAlign: TextAlign.center),
+          const SizedBox(height: 4),
+          Text(widget.student.email ?? 'Нет email', style: AppStyles.label),
           const SizedBox(height: 24),
           const Divider(color: AppColors.bgLight),
-          _buildInfoItem('Телефон', student['phone']!),
-          _buildPasswordItem(student['password']!),
-          _buildInfoItem('Регистрация', student['registration_date']!),
-          _buildInfoItem('Последний вход', student['last_login']!),
+          _buildInfoItem('ID пользователя', '${widget.student.id}'),
+          _buildInfoItem('Регистрация', formatDate(widget.student.dateRegistration)),
+          _buildInfoItem('Последний вход', formatDate(widget.student.lastEntry)),
           const SizedBox(height: 16),
           _buildStatusBadge(),
         ],
@@ -125,8 +256,13 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
     );
   }
 
-  Widget _buildCourseCard(Map course) {
-    final isComplete = course['completed'] as bool;
+  Widget _buildAvatarPlaceholder(String letter) {
+    return Center(
+      child: Text(letter, style: const TextStyle(fontSize: 36, color: Colors.white, fontWeight: FontWeight.bold)),
+    );
+  }
+
+  Widget _buildCourseCard(Map<String, dynamic> course) {
     final progress = course['progress'] as int;
     
     return Container(
@@ -142,7 +278,20 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
         children: [
           Row(
             children: [
-              Icon(course['icon'] as IconData, color: AppColors.primaryPurple),
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: AppColors.primaryPurple.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Center(
+                  child: Text(
+                    course['icon'] as String,
+                    style: const TextStyle(fontSize: 20),
+                  ),
+                ),
+              ),
               const SizedBox(width: 12),
               Expanded(child: Text(course['name'] as String, style: AppStyles.body.copyWith(fontWeight: FontWeight.bold))),
             ],
@@ -154,15 +303,64 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
               value: progress / 100,
               minHeight: 8,
               backgroundColor: AppColors.bgLight,
-              color: isComplete ? const Color(0xFF10B981) : AppColors.primaryPurple,
+              color: AppColors.primaryPurple,
             ),
           ),
           const SizedBox(height: 10),
+          Text('$progress% пройдено', style: AppStyles.label.copyWith(fontSize: 12)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCertificateCard(Map<String, dynamic> cert) {
+    String formatDate(String? dateStr) {
+      if (dateStr == null) return 'Завершено';
+      try {
+        final d = DateTime.parse(dateStr).toLocal();
+        return DateFormat('dd.MM.yyyy').format(d);
+      } catch (e) {
+        return 'Завершено';
+      }
+    }
+
+    return Container(
+      width: 300,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: AppColors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppColors.bgLight),
+        boxShadow: [
+          BoxShadow(color: const Color(0xFF10B981).withValues(alpha: 0.05), blurRadius: 15, offset: const Offset(0, 4)),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: const Color(0xFF10B981).withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Center(
+                  child: Icon(Icons.workspace_premium_rounded, color: Color(0xFF10B981)),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(child: Text(cert['name'] as String, style: AppStyles.body.copyWith(fontWeight: FontWeight.bold))),
+            ],
+          ),
+          const SizedBox(height: 20),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('$progress% завершено', style: AppStyles.label.copyWith(fontSize: 12)),
-              if (isComplete) const Icon(Icons.check_circle_rounded, color: Color(0xFF10B981), size: 18),
+              Text('Выдан: ${formatDate(cert['date']?.toString())}', style: AppStyles.label.copyWith(fontSize: 12)),
+              const Icon(Icons.check_circle_rounded, color: Color(0xFF10B981), size: 18),
             ],
           ),
         ],
@@ -174,20 +372,8 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
     return KodixComponents.cardContainer(
       child: Column(
         children: [
-          ElevatedButton.icon(
-            onPressed: () {},
-            icon: const Icon(Icons.edit_rounded, size: 18),
-            label: const Text('Редактировать профиль'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primaryPurple,
-              foregroundColor: Colors.white,
-              minimumSize: const Size(double.infinity, 50),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            ),
-          ),
-          const SizedBox(height: 12),
           OutlinedButton.icon(
-            onPressed: () => setState(() => _isBlocked = !_isBlocked),
+            onPressed: _toggleBlockStatus,
             icon: Icon(_isBlocked ? Icons.lock_open_rounded : Icons.block_rounded, size: 18),
             label: Text(_isBlocked ? 'Разблокировать' : 'Заблокировать'),
             style: OutlinedButton.styleFrom(
@@ -215,27 +401,6 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
     );
   }
 
-  Widget _buildPasswordItem(String password) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text('Пароль', style: AppStyles.label),
-          Row(
-            children: [
-              Text(_showPassword ? password : '••••••••', style: AppStyles.body.copyWith(fontWeight: FontWeight.bold)),
-              IconButton(
-                icon: Icon(_showPassword ? Icons.visibility_off : Icons.visibility, size: 18, color: AppColors.textGrey),
-                onPressed: () => setState(() => _showPassword = !_showPassword),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _buildStatusBadge() {
     final color = _isBlocked ? const Color(0xFFEF4444) : const Color(0xFF10B981);
     return Container(
@@ -248,17 +413,43 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
     );
   }
 
-  Widget _buildAchievementTile(String title, String date, IconData icon) {
+  Widget _buildAchievementTile(Map<String, dynamic> ach) {
+    final title = ach['name'] as String? ?? 'Достижение';
+    final imageUrl = ach['image'] as String?;
+    
+    String dateStr = '—';
+    if (ach['date'] != null) {
+      try {
+        final d = DateTime.parse(ach['date']).toLocal();
+        dateStr = DateFormat('dd.MM.yyyy').format(d);
+      } catch (_) {}
+    }
+
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(color: AppColors.white, borderRadius: BorderRadius.circular(16), border: Border.all(color: AppColors.bgLight)),
       child: Row(
         children: [
-          Icon(icon, color: AppColors.primaryPurple, size: 24),
+          Container(
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+              color: AppColors.bgLight,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            clipBehavior: Clip.hardEdge,
+            child: imageUrl != null && imageUrl.isNotEmpty
+                ? Image.network(
+                    SupabaseService.client.storage.from('achievements').getPublicUrl(imageUrl),
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) => const Icon(Icons.stars_rounded, color: AppColors.primaryPurple),
+                  )
+                : const Icon(Icons.stars_rounded, color: AppColors.primaryPurple),
+          ),
           const SizedBox(width: 16),
           Expanded(child: Text(title, style: AppStyles.body.copyWith(fontWeight: FontWeight.w600))),
-          Text(date, style: AppStyles.label.copyWith(fontSize: 12)),
+          Text(dateStr, style: AppStyles.label.copyWith(fontSize: 12)),
         ],
       ),
     );
