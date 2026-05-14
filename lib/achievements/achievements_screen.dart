@@ -8,8 +8,7 @@ import '../models/database_models.dart';
 import '../repositories/achievement_repository.dart';
 
 class AchievementsScreen extends StatefulWidget {
-  final bool isDarkMode;
-  const AchievementsScreen({super.key, required this.isDarkMode});
+  const AchievementsScreen({super.key});
   @override
   State<AchievementsScreen> createState() => _AchievementsScreenState();
 }

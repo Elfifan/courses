@@ -12,16 +12,12 @@ import '../services/supabase_service.dart';
 import 'package:intl/intl.dart';
 
 class DashboardScreen extends StatefulWidget {
-  final VoidCallback onThemeToggle;
-  final bool isDarkMode;
   final String? userRole;
   final int? userId;
   final VoidCallback onLogout;
 
   const DashboardScreen({
     super.key,
-    required this.onThemeToggle,
-    required this.isDarkMode,
     required this.userRole,
     required this.userId,
     required this.onLogout,
@@ -270,7 +266,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final List<Widget> screens = _isAuthor 
       ? [
           CoursesScreen(
-            isDarkMode: widget.isDarkMode,
             authorId: widget.userId,
             userRole: widget.userRole,
             userId: widget.userId,
@@ -280,7 +275,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
       : [
           _buildDashboard(),
           CoursesScreen(
-            isDarkMode: widget.isDarkMode,
             authorId: null,
             userRole: widget.userRole,
             userId: widget.userId,
@@ -292,11 +286,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 _selectedStudentFilter = filter;
               });
             },
-            isDarkMode: widget.isDarkMode,
           ),
           AchievementsScreen(
             key: _achievementsKey,
-            isDarkMode: widget.isDarkMode,
           ),
         ];
 
@@ -311,7 +303,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 _selectedIndex = index;
               });
             },
-            isDarkMode: widget.isDarkMode,
             menuItems: _menuItems,
             menuIcons: _menuIcons,
             onLogout: widget.onLogout,
@@ -323,8 +314,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
               children: [
                 TopBar(
                   selectedIndex: _selectedIndex,
-                  onThemeToggle: widget.onThemeToggle,
-                  isDarkMode: widget.isDarkMode,
                   menuItems: _menuItems,
                   onAddCourse: () {
                     if (_menuItems[_selectedIndex] == 'Курсы') {

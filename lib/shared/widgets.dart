@@ -7,14 +7,12 @@ class CustomDropdown extends StatelessWidget {
   final ValueChanged<String?> onChanged;
   final String? hint;
   final double? width;
-  final bool isDarkMode;
 
   const CustomDropdown({
     super.key,
     required this.value,
     required this.items,
     required this.onChanged,
-    required this.isDarkMode,
     this.hint,
     this.width,
   });
@@ -29,7 +27,7 @@ class CustomDropdown extends StatelessWidget {
         color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(10),
         border: Border.all(
-          color: isDarkMode ? Color(0xFF30363D) : Color(0xFFD1D5DB),
+          color: const Color(0xFFD1D5DB),
         ),
       ),
       child: DropdownButtonHideUnderline(

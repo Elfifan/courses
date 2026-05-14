@@ -4,7 +4,6 @@ import '../app.dart';
 class SidePanel extends StatelessWidget {
   final int selectedIndex;
   final Function(int) onItemSelected;
-  final bool isDarkMode;
   final List<String> menuItems;
   final List<IconData> menuIcons;
   final VoidCallback onLogout;
@@ -15,7 +14,6 @@ class SidePanel extends StatelessWidget {
     super.key,
     required this.selectedIndex,
     required this.onItemSelected,
-    required this.isDarkMode,
     required this.menuItems,
     required this.menuIcons,
     required this.onLogout,
@@ -60,31 +58,25 @@ class SidePanel extends StatelessWidget {
           // Разделитель
           Container(
             height: 1,
-            margin: EdgeInsets.symmetric(horizontal: 20),
-            color: isDarkMode ? Color(0xFF30363D) : Color(0xFFE2E8F0),
+            margin: const EdgeInsets.symmetric(horizontal: 20),
+            color: const Color(0xFFE2E8F0),
           ),
 
           // Меню навигации
           Expanded(
             child: Padding(
-              padding: EdgeInsets.symmetric(vertical: 16),
+              padding: const EdgeInsets.symmetric(vertical: 16),
               child: ListView.builder(
                 itemCount: menuItems.length,
                 itemBuilder: (context, index) {
                   bool isSelected = selectedIndex == index;
                   return Container(
-                    margin: EdgeInsets.symmetric(horizontal: 12, vertical: 3),
+                    margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 3),
                     decoration: BoxDecoration(
                       color: isSelected
-                          ? Theme.of(context).primaryColor.withValues(alpha: isDarkMode ? 0.2 : 0.1)
+                          ? Theme.of(context).primaryColor.withValues(alpha: 0.1)
                           : Colors.transparent,
                       borderRadius: BorderRadius.circular(12),
-                      border: isSelected && isDarkMode
-                          ? Border.all(
-                              color: Theme.of(context).primaryColor.withValues(alpha: 0.3),
-                              width: 1,
-                            )
-                          : null,
                     ),
                     child: ListTile(
                       contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 4),

@@ -31,18 +31,11 @@ class AdminApp extends StatefulWidget {
 }
 
 class _AdminAppState extends State<AdminApp> {
-  bool isDarkMode = false;
   bool isLoggedIn = false;
   String? employeeRole;
   int? employeeId;
   late final AppLinks _appLinks;
   StreamSubscription<Uri?>? _linkSub;
-
-  void toggleTheme(bool newValue) {
-    setState(() {
-      isDarkMode = newValue;
-    });
-  }
 
   void loginSuccess(String? role, int? id) {
     setState(() {
@@ -97,22 +90,16 @@ class _AdminAppState extends State<AdminApp> {
     return MaterialApp(
       title: 'Course Platform',
       theme: lightTheme,
-      darkTheme: darkTheme,
-      themeMode: isDarkMode ? ThemeMode.dark : ThemeMode.light,
       debugShowCheckedModeBanner: false,
       initialRoute: '/',
       routes: {
         '/': (context) => isLoggedIn
             ? DashboardScreen(
-                onThemeToggle: () => toggleTheme(!isDarkMode),
-                isDarkMode: isDarkMode,
                 userRole: employeeRole,
                 userId: employeeId,
                 onLogout: logout,
               )
             : AuthScreen(
-                isDarkMode: isDarkMode,
-                onToggleTheme: (value) => toggleTheme(value),
                 onLoginSuccess: loginSuccess,
               ),
       },

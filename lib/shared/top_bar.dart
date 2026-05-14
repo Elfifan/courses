@@ -2,8 +2,6 @@ import 'package:flutter/material.dart';
 
 class TopBar extends StatelessWidget {
   final int selectedIndex;
-  final VoidCallback onThemeToggle;
-  final bool isDarkMode;
   final List<String> menuItems;
   final VoidCallback? onAddCourse;
   final VoidCallback? onAddAchievement;
@@ -11,8 +9,6 @@ class TopBar extends StatelessWidget {
   const TopBar({
     super.key,
     required this.selectedIndex,
-    required this.onThemeToggle,
-    required this.isDarkMode,
     required this.menuItems,
     this.onAddCourse,
     this.onAddAchievement,
@@ -39,26 +35,7 @@ class TopBar extends StatelessWidget {
           ),
           const Spacer(),
 
-          // Theme toggle
-          Container(
-            decoration: BoxDecoration(
-              color: isDarkMode ? const Color(0xFF21262D) : const Color(0xFFF7F8FC),
-              borderRadius: BorderRadius.circular(10), 
-              border: Border.all(
-                color: isDarkMode ? const Color(0xFF30363D) : const Color(0xFFEFEFEF),
-              ),
-            ),
-            child: IconButton(
-              icon: Icon(
-                isDarkMode ? Icons.light_mode : Icons.dark_mode,
-                color: Theme.of(context).colorScheme.primary,
-              ),
-              onPressed: onThemeToggle,
-              tooltip: isDarkMode ? 'Светлая тема' : 'Тёмная тема',
-            ),
-          ),
-
-          const SizedBox(width: 12),
+          const Spacer(),
 
           // Add button
           if (showAddButton)

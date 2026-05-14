@@ -3,14 +3,14 @@ import '../core/theme/app_components.dart';
 import '../models/database_models.dart' as db_models;
 import 'package:intl/intl.dart';
 import '../services/supabase_service.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
-
 
 class StudentProfileScreen extends StatefulWidget {
-  final bool isDarkMode;
   final db_models.User student;
 
-  const StudentProfileScreen({super.key, required this.isDarkMode, required this.student});
+  const StudentProfileScreen({
+    super.key,
+    required this.student,
+  });
 
   @override
   State<StudentProfileScreen> createState() => _StudentProfileScreenState();
@@ -41,18 +41,19 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
     try {
       // 1. Загружаем все курсы для маппинга
       final coursesData = await SupabaseService.safeDbCall(
-        () => SupabaseService.client.from('courses').select('id, name, icon')
+        () => SupabaseService.client.from('courses').select('id, name, icon'),
       );
       final Map<int, Map<String, dynamic>> coursesMap = {
-        for (var c in coursesData as List) c['id'] as int: c as Map<String, dynamic>
+        for (var c in coursesData as List)
+          c['id'] as int: c as Map<String, dynamic>,
       };
 
       // 2. Загружаем активные курсы из таблицы user_courses
       final userCoursesData = await SupabaseService.safeDbCall(
         () => SupabaseService.client
-          .from('user_courses')
-          .select('id_courses, purchase_date')
-          .eq('id_user', widget.student.id)
+            .from('user_courses')
+            .select('id_courses, purchase_date')
+            .eq('id_user', widget.student.id),
       );
 
       final List<Map<String, dynamic>> active = [];
@@ -73,9 +74,9 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
       // 3. Загружаем сертификаты из таблицы certificates
       final certsData = await SupabaseService.safeDbCall(
         () => SupabaseService.client
-          .from('certificates')
-          .select('id_courses, issue_date')
-          .eq('id_user', widget.student.id)
+            .from('certificates')
+            .select('id_courses, issue_date')
+            .eq('id_user', widget.student.id),
       );
 
       final List<Map<String, dynamic>> certs = [];
@@ -93,18 +94,21 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
 
       // 4. Загружаем все достижения для маппинга
       final allAchievementsData = await SupabaseService.safeDbCall(
-        () => SupabaseService.client.from('achievement').select('id, name, image')
+        () => SupabaseService.client
+            .from('achievement')
+            .select('id, name, image'),
       );
       final Map<int, Map<String, dynamic>> achievementsMap = {
-        for (var a in allAchievementsData as List) a['id'] as int: a as Map<String, dynamic>
+        for (var a in allAchievementsData as List)
+          a['id'] as int: a as Map<String, dynamic>,
       };
 
       // 5. Загружаем достижения студента
       final userAchievementsData = await SupabaseService.safeDbCall(
         () => SupabaseService.client
-          .from('achievements_user')
-          .select('id_achievements')
-          .eq('id_user', widget.student.id)
+            .from('achievements_user')
+            .select('id_achievements')
+            .eq('id_user', widget.student.id),
       );
 
       final List<Map<String, dynamic>> loadedAchievements = [];
@@ -115,7 +119,8 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
           loadedAchievements.add({
             'name': achInfo['name'] ?? 'Достижение',
             'image': achInfo['image'],
-            'date': null, // В этой таблице нет даты получения, можно оставить null
+            'date':
+                null, // В этой таблице нет даты получения, можно оставить null
           });
         }
       }
@@ -134,7 +139,7 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
         setState(() {
           _errorMessage = e.toString();
         });
-        
+
         // Автоматический повтор через 3 секунды
         Future.delayed(const Duration(seconds: 3), () {
           if (mounted) _loadStudentData();
@@ -143,25 +148,28 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
     }
   }
 
-
   Future<void> _toggleBlockStatus() async {
-    final newStatus = !_isBlocked; // Если был заблокирован (true), то новый статус активен (status = true в БД)
-    final dbStatus = !newStatus; // status в БД: true = активен, false = заблокирован
-    
+    final newStatus =
+        !_isBlocked; // Если был заблокирован (true), то новый статус активен (status = true в БД)
+    final dbStatus =
+        !newStatus; // status в БД: true = активен, false = заблокирован
+
     try {
       await SupabaseService.client
           .from('users')
           .update({'status': dbStatus})
           .eq('id', widget.student.id);
-      
+
       setState(() {
         _isBlocked = newStatus;
       });
-      
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(dbStatus ? 'Студент разблокирован' : 'Студент заблокирован'),
+            content: Text(
+              dbStatus ? 'Студент разблокирован' : 'Студент заблокирован',
+            ),
             backgroundColor: dbStatus ? Colors.green : Colors.red,
           ),
         );
@@ -169,7 +177,10 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Ошибка обновления статуса: $e'), backgroundColor: Colors.red),
+          SnackBar(
+            content: Text('Ошибка обновления статуса: $e'),
+            backgroundColor: Colors.red,
+          ),
         );
       }
     }
@@ -177,16 +188,21 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
-
     return Scaffold(
       backgroundColor: AppColors.bgLight, // Светлый фон приложения
       appBar: AppBar(
-        title: Text('Профиль студента', style: AppStyles.h1.copyWith(fontSize: 20)),
+        title: Text(
+          'Профиль студента',
+          style: AppStyles.h1.copyWith(fontSize: 20),
+        ),
         backgroundColor: AppColors.white,
         elevation: 0,
         centerTitle: false,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: AppColors.textGrey),
+          icon: const Icon(
+            Icons.arrow_back_ios_new_rounded,
+            color: AppColors.textGrey,
+          ),
           onPressed: () => Navigator.pop(context),
         ),
         bottom: PreferredSize(
@@ -216,47 +232,84 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Активные курсы', style: AppStyles.h1.copyWith(fontSize: 22)),
+                  Text(
+                    'Активные курсы',
+                    style: AppStyles.h1.copyWith(fontSize: 22),
+                  ),
                   const SizedBox(height: 16),
                   if (_errorMessage != null)
-                    Text('Повторная попытка загрузки... (${_errorMessage})', style: AppStyles.label.copyWith(color: Colors.red))
+                    Text(
+                      'Повторная попытка загрузки... (${_errorMessage})',
+                      style: AppStyles.label.copyWith(color: Colors.red),
+                    )
                   else if (_isLoadingData)
-                    const Center(child: CircularProgressIndicator(color: AppColors.primaryPurple))
+                    const Center(
+                      child: CircularProgressIndicator(
+                        color: AppColors.primaryPurple,
+                      ),
+                    )
                   else if (_activeCourses.isEmpty)
-                    Text('Студент пока не записан ни на один курс.', style: AppStyles.label)
+                    Text(
+                      'Студент пока не записан ни на один курс.',
+                      style: AppStyles.label,
+                    )
                   else
                     Wrap(
                       spacing: 20,
                       runSpacing: 20,
-                      children: _activeCourses.map((c) => _buildCourseCard(c)).toList(),
+                      children: _activeCourses
+                          .map((c) => _buildCourseCard(c))
+                          .toList(),
                     ),
-                  
+
                   const SizedBox(height: 40),
                   _buildSectionHeader('Достижения'),
                   const SizedBox(height: 16),
                   if (_errorMessage != null)
-                    Text('Повторная попытка загрузки...', style: AppStyles.label.copyWith(color: Colors.red))
+                    Text(
+                      'Повторная попытка загрузки...',
+                      style: AppStyles.label.copyWith(color: Colors.red),
+                    )
                   else if (_isLoadingData)
-                    const Center(child: CircularProgressIndicator(color: AppColors.primaryPurple))
+                    const Center(
+                      child: CircularProgressIndicator(
+                        color: AppColors.primaryPurple,
+                      ),
+                    )
                   else if (_achievements.isEmpty)
-                    Text('У студента пока нет достижений.', style: AppStyles.label)
+                    Text(
+                      'У студента пока нет достижений.',
+                      style: AppStyles.label,
+                    )
                   else
                     ..._achievements.map((a) => _buildAchievementTile(a)),
-                  
+
                   const SizedBox(height: 40),
                   _buildSectionHeader('Сертификаты'),
                   const SizedBox(height: 16),
                   if (_errorMessage != null)
-                    Text('Повторная попытка загрузки...', style: AppStyles.label.copyWith(color: Colors.red))
+                    Text(
+                      'Повторная попытка загрузки...',
+                      style: AppStyles.label.copyWith(color: Colors.red),
+                    )
                   else if (_isLoadingData)
-                    const Center(child: CircularProgressIndicator(color: AppColors.primaryPurple))
+                    const Center(
+                      child: CircularProgressIndicator(
+                        color: AppColors.primaryPurple,
+                      ),
+                    )
                   else if (_certificates.isEmpty)
-                    Text('У студента пока нет сертификатов.', style: AppStyles.label)
+                    Text(
+                      'У студента пока нет сертификатов.',
+                      style: AppStyles.label,
+                    )
                   else
                     Wrap(
                       spacing: 20,
                       runSpacing: 20,
-                      children: _certificates.map((c) => _buildCertificateCard(c)).toList(),
+                      children: _certificates
+                          .map((c) => _buildCertificateCard(c))
+                          .toList(),
                     ),
                   const SizedBox(height: 40),
                 ],
@@ -269,9 +322,13 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
   }
 
   Widget _buildMainInfoCard() {
-    final displayName = widget.student.name ?? widget.student.email ?? 'Студент';
-    final avatarLetter = displayName.isNotEmpty ? displayName[0].toUpperCase() : '?';
-    String formatDate(DateTime? d) => d == null ? '—' : DateFormat('dd.MM.yyyy HH:mm').format(d.toLocal());
+    final displayName =
+        widget.student.name ?? widget.student.email ?? 'Студент';
+    final avatarLetter = displayName.isNotEmpty
+        ? displayName[0].toUpperCase()
+        : '?';
+    String formatDate(DateTime? d) =>
+        d == null ? '—' : DateFormat('dd.MM.yyyy HH:mm').format(d.toLocal());
 
     return KodixComponents.cardContainer(
       child: Column(
@@ -283,27 +340,45 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               gradient: AppColors.primaryGradient,
-              boxShadow: [BoxShadow(color: AppColors.primaryPurple.withValues(alpha: 0.3), blurRadius: 15)],
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.primaryPurple.withValues(alpha: 0.3),
+                  blurRadius: 15,
+                ),
+              ],
             ),
-            child: widget.student.avatar != null && widget.student.avatar!.isNotEmpty
+            child:
+                widget.student.avatar != null &&
+                    widget.student.avatar!.isNotEmpty
                 ? ClipOval(
                     child: Image.network(
                       widget.student.avatar!,
                       fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => _buildAvatarPlaceholder(avatarLetter),
+                      errorBuilder: (_, __, ___) =>
+                          _buildAvatarPlaceholder(avatarLetter),
                     ),
                   )
                 : _buildAvatarPlaceholder(avatarLetter),
           ),
           const SizedBox(height: 16),
-          Text(displayName, style: AppStyles.h1.copyWith(fontSize: 24), textAlign: TextAlign.center),
+          Text(
+            displayName,
+            style: AppStyles.h1.copyWith(fontSize: 24),
+            textAlign: TextAlign.center,
+          ),
           const SizedBox(height: 4),
           Text(widget.student.email ?? 'Нет email', style: AppStyles.label),
           const SizedBox(height: 24),
           const Divider(color: AppColors.bgLight),
           _buildInfoItem('ID пользователя', '${widget.student.id}'),
-          _buildInfoItem('Регистрация', formatDate(widget.student.dateRegistration)),
-          _buildInfoItem('Последний вход', formatDate(widget.student.lastEntry)),
+          _buildInfoItem(
+            'Регистрация',
+            formatDate(widget.student.dateRegistration),
+          ),
+          _buildInfoItem(
+            'Последний вход',
+            formatDate(widget.student.lastEntry),
+          ),
           const SizedBox(height: 16),
           _buildStatusBadge(),
         ],
@@ -313,13 +388,20 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
 
   Widget _buildAvatarPlaceholder(String letter) {
     return Center(
-      child: Text(letter, style: const TextStyle(fontSize: 36, color: Colors.white, fontWeight: FontWeight.bold)),
+      child: Text(
+        letter,
+        style: const TextStyle(
+          fontSize: 36,
+          color: Colors.white,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
     );
   }
 
   Widget _buildCourseCard(Map<String, dynamic> course) {
     final progress = course['progress'] as int;
-    
+
     return Container(
       width: 300,
       padding: const EdgeInsets.all(20),
@@ -348,7 +430,12 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
                 ),
               ),
               const SizedBox(width: 12),
-              Expanded(child: Text(course['name'] as String, style: AppStyles.body.copyWith(fontWeight: FontWeight.bold))),
+              Expanded(
+                child: Text(
+                  course['name'] as String,
+                  style: AppStyles.body.copyWith(fontWeight: FontWeight.bold),
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 20),
@@ -362,7 +449,10 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
             ),
           ),
           const SizedBox(height: 10),
-          Text('$progress% пройдено', style: AppStyles.label.copyWith(fontSize: 12)),
+          Text(
+            '$progress% пройдено',
+            style: AppStyles.label.copyWith(fontSize: 12),
+          ),
         ],
       ),
     );
@@ -387,7 +477,11 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: AppColors.bgLight),
         boxShadow: [
-          BoxShadow(color: const Color(0xFF10B981).withValues(alpha: 0.05), blurRadius: 15, offset: const Offset(0, 4)),
+          BoxShadow(
+            color: const Color(0xFF10B981).withValues(alpha: 0.05),
+            blurRadius: 15,
+            offset: const Offset(0, 4),
+          ),
         ],
       ),
       child: Column(
@@ -403,19 +497,34 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: const Center(
-                  child: Icon(Icons.workspace_premium_rounded, color: Color(0xFF10B981)),
+                  child: Icon(
+                    Icons.workspace_premium_rounded,
+                    color: Color(0xFF10B981),
+                  ),
                 ),
               ),
               const SizedBox(width: 12),
-              Expanded(child: Text(cert['name'] as String, style: AppStyles.body.copyWith(fontWeight: FontWeight.bold))),
+              Expanded(
+                child: Text(
+                  cert['name'] as String,
+                  style: AppStyles.body.copyWith(fontWeight: FontWeight.bold),
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 20),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('Выдан: ${formatDate(cert['date']?.toString())}', style: AppStyles.label.copyWith(fontSize: 12)),
-              const Icon(Icons.check_circle_rounded, color: Color(0xFF10B981), size: 18),
+              Text(
+                'Выдан: ${formatDate(cert['date']?.toString())}',
+                style: AppStyles.label.copyWith(fontSize: 12),
+              ),
+              const Icon(
+                Icons.check_circle_rounded,
+                color: Color(0xFF10B981),
+                size: 18,
+              ),
             ],
           ),
         ],
@@ -429,13 +538,24 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
         children: [
           OutlinedButton.icon(
             onPressed: _toggleBlockStatus,
-            icon: Icon(_isBlocked ? Icons.lock_open_rounded : Icons.block_rounded, size: 18),
+            icon: Icon(
+              _isBlocked ? Icons.lock_open_rounded : Icons.block_rounded,
+              size: 18,
+            ),
             label: Text(_isBlocked ? 'Разблокировать' : 'Заблокировать'),
             style: OutlinedButton.styleFrom(
-              foregroundColor: _isBlocked ? const Color(0xFF10B981) : const Color(0xFFEF4444),
-              side: BorderSide(color: _isBlocked ? const Color(0xFF10B981) : const Color(0xFFEF4444)),
+              foregroundColor: _isBlocked
+                  ? const Color(0xFF10B981)
+                  : const Color(0xFFEF4444),
+              side: BorderSide(
+                color: _isBlocked
+                    ? const Color(0xFF10B981)
+                    : const Color(0xFFEF4444),
+              ),
               minimumSize: const Size(double.infinity, 50),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
             ),
           ),
         ],
@@ -450,20 +570,37 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(label, style: AppStyles.label),
-          Text(value, style: AppStyles.body.copyWith(fontWeight: FontWeight.w600, fontSize: 13)),
+          Text(
+            value,
+            style: AppStyles.body.copyWith(
+              fontWeight: FontWeight.w600,
+              fontSize: 13,
+            ),
+          ),
         ],
       ),
     );
   }
 
   Widget _buildStatusBadge() {
-    final color = _isBlocked ? const Color(0xFFEF4444) : const Color(0xFF10B981);
+    final color = _isBlocked
+        ? const Color(0xFFEF4444)
+        : const Color(0xFF10B981);
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(vertical: 10),
-      decoration: BoxDecoration(color: color.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(12)),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(12),
+      ),
       child: Center(
-        child: Text(_isBlocked ? 'Заблокирован' : 'Активен', style: AppStyles.label.copyWith(color: color, fontWeight: FontWeight.bold)),
+        child: Text(
+          _isBlocked ? 'Заблокирован' : 'Активен',
+          style: AppStyles.label.copyWith(
+            color: color,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
       ),
     );
   }
@@ -471,7 +608,7 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
   Widget _buildAchievementTile(Map<String, dynamic> ach) {
     final title = ach['name'] as String? ?? 'Достижение';
     final imageUrl = ach['image'] as String?;
-    
+
     String dateStr = '—';
     if (ach['date'] != null) {
       try {
@@ -483,7 +620,11 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(color: AppColors.white, borderRadius: BorderRadius.circular(16), border: Border.all(color: AppColors.bgLight)),
+      decoration: BoxDecoration(
+        color: AppColors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.bgLight),
+      ),
       child: Row(
         children: [
           Container(
@@ -496,14 +637,27 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
             clipBehavior: Clip.hardEdge,
             child: imageUrl != null && imageUrl.isNotEmpty
                 ? Image.network(
-                    SupabaseService.client.storage.from('achievements').getPublicUrl(imageUrl),
+                    SupabaseService.client.storage
+                        .from('achievements')
+                        .getPublicUrl(imageUrl),
                     fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => const Icon(Icons.stars_rounded, color: AppColors.primaryPurple),
+                    errorBuilder: (_, __, ___) => const Icon(
+                      Icons.stars_rounded,
+                      color: AppColors.primaryPurple,
+                    ),
                   )
-                : const Icon(Icons.stars_rounded, color: AppColors.primaryPurple),
+                : const Icon(
+                    Icons.stars_rounded,
+                    color: AppColors.primaryPurple,
+                  ),
           ),
           const SizedBox(width: 16),
-          Expanded(child: Text(title, style: AppStyles.body.copyWith(fontWeight: FontWeight.w600))),
+          Expanded(
+            child: Text(
+              title,
+              style: AppStyles.body.copyWith(fontWeight: FontWeight.w600),
+            ),
+          ),
           Text(dateStr, style: AppStyles.label.copyWith(fontSize: 12)),
         ],
       ),

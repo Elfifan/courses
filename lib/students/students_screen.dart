@@ -11,13 +11,11 @@ import '../students/student_profile_screen.dart';
 class StudentsScreen extends StatefulWidget {
   final String selectedFilter;
   final ValueChanged<String> onFilterChanged;
-  final bool isDarkMode;
 
   const StudentsScreen({
     super.key,
     required this.selectedFilter,
     required this.onFilterChanged,
-    required this.isDarkMode,
   });
 
   @override
@@ -173,7 +171,6 @@ class _StudentsScreenState extends State<StudentsScreen> {
                                   Navigator.of(context).push(
                                     MaterialPageRoute(
                                       builder: (_) => StudentProfileScreen(
-                                        isDarkMode: widget.isDarkMode,
                                         student: s,
                                       ),
                                     ),

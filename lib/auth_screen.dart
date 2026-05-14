@@ -9,14 +9,10 @@ typedef LoginSuccessCallback = void Function(String? role, int? employeeId);
 
 class AuthScreen extends StatefulWidget {
   final LoginSuccessCallback onLoginSuccess;
-  final bool isDarkMode;
-  final ValueChanged<bool> onToggleTheme;
 
   const AuthScreen({
     super.key,
     required this.onLoginSuccess,
-    required this.isDarkMode,
-    required this.onToggleTheme,
   });
 
   @override

@@ -60,74 +60,11 @@ final ThemeData lightTheme = ThemeData(
   ),
 );
 
-// Обычная тёмная тема
-final ThemeData darkTheme = ThemeData(
-  primaryColor: Color(0xFF2196F3), // стандартный синий
-  scaffoldBackgroundColor: Color(0xFF121212), // стандартный темный фон
-  colorScheme: ColorScheme.dark(
-    primary: Color(0xFF2196F3),
-    primaryContainer: Color(0xFF1976D2),
-    secondary: Color(0xFF03DAC6), // стандартный teal
-    secondaryContainer: Color(0xFF1E1E1E),
-    surface: Color(0xFF1E1E1E),
-    error: Color(0xFFCF6679),
-    onPrimary: Colors.white,
-    onSecondary: Colors.black,
-    onSurface: Colors.white,
-    onError: Colors.white,
-  ),
-  appBarTheme: AppBarTheme(
-    backgroundColor: Color(0xFF1E1E1E),
-    foregroundColor: Colors.white,
-    elevation: 4,
-  ),
-  elevatedButtonTheme: ElevatedButtonThemeData(
-    style: ElevatedButton.styleFrom(
-      backgroundColor: Color(0xFF2196F3),
-      foregroundColor: Colors.white,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-      padding: EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-      textStyle: TextStyle(fontWeight: FontWeight.w600),
-    ),
-  ),
-  outlinedButtonTheme: OutlinedButtonThemeData(
-    style: OutlinedButton.styleFrom(
-      foregroundColor: Color(0xFF2196F3),
-      side: BorderSide(color: Color(0xFF2196F3), width: 1.5),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      textStyle: TextStyle(fontWeight: FontWeight.w600),
-    ),
-  ),
-  inputDecorationTheme: InputDecorationTheme(
-    filled: true,
-    fillColor: Color(0xFF1E1E1E),
-    border: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(10),
-      borderSide: BorderSide(color: Color(0xFF424242)),
-    ),
-    enabledBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(10),
-      borderSide: BorderSide(color: Color(0xFF424242)),
-    ),
-    focusedBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(10),
-      borderSide: BorderSide(color: Color(0xFF2196F3), width: 2),
-    ),
-    prefixIconColor: Color(0xFF03DAC6),
-    hintStyle: TextStyle(color: Color(0xFF9E9E9E)),
-  ),
-);
-
 // Расширение для тем
 extension CustomColors on ThemeData {
-  Color get sidePanelColor => colorScheme.secondaryContainer;
-  Color get sidePanelTextColor => brightness == Brightness.dark 
-    ? Colors.white
-    : Color(0xFF1E293B);
-  Color get sidePanelTextSecondaryColor => brightness == Brightness.dark 
-    ? Color(0xFF9E9E9E) 
-    : Color(0xFF64748B);
+  Color get sidePanelColor => const Color(0xFFF4F6F8);
+  Color get sidePanelTextColor => const Color(0xFF1E293B);
+  Color get sidePanelTextSecondaryColor => const Color(0xFF64748B);
 }
 
 // Основное приложение
@@ -140,7 +77,7 @@ class AdminCoursesApp extends StatefulWidget {
 
 class _AdminCoursesAppState extends State<AdminCoursesApp> {
   bool isDarkMode = true; // По умолчанию тёмная тема
-  
+
   void toggleTheme() {
     setState(() {
       isDarkMode = !isDarkMode;
@@ -151,7 +88,7 @@ class _AdminCoursesAppState extends State<AdminCoursesApp> {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Админ панель - Курсы программирования',
-      theme: isDarkMode ? darkTheme : lightTheme,
+      theme: lightTheme,
       debugShowCheckedModeBanner: false,
     );
   }

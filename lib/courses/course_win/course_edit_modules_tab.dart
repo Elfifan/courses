@@ -5,7 +5,6 @@ import 'dart:convert';
 import '../../models/database_models.dart' as db_models;
 import '../../services/supabase_service.dart';
 import '../lessons/lesson_viewer_screen.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../core/theme/app_components.dart';
 
 class CourseEditModulesTab extends StatefulWidget {
@@ -1216,28 +1215,42 @@ class _CourseEditModulesTabState extends State<CourseEditModulesTab>
   Future<void> _addModule(String name) async {
     try {
       final order = _modules.isEmpty ? 1 : (_modules.last.orderModule ?? 0) + 1;
-      final response = await SupabaseService.client.from('module').insert({
-        'id_courses': widget.courseId,
-        'name': name,
-        'order_module': order,
-        'status': true,
-      }).select().single().timeout(const Duration(seconds: 1));
-      
+      final response = await SupabaseService.client
+          .from('module')
+          .insert({
+            'id_courses': widget.courseId,
+            'name': name,
+            'order_module': order,
+            'status': true,
+          })
+          .select()
+          .single()
+          .timeout(const Duration(seconds: 1));
+
       if (mounted) {
         setState(() {
           _modules.add(db_models.Module.fromJson(response));
           _submodules[response['id']] = [];
         });
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Модуль "$name" добавлен')));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Модуль "$name" добавлен')));
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Ошибка: $e')));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Ошибка: $e')));
       }
     }
   }
 
-  Future<void> _addSubmodule(int moduleId, String name, int leadTime, String filePath) async {
+  Future<void> _addSubmodule(
+    int moduleId,
+    String name,
+    int leadTime,
+    String filePath,
+  ) async {
     try {
       final moduleData = await SupabaseService.client
           .from('module')
@@ -1252,8 +1265,10 @@ class _CourseEditModulesTabState extends State<CourseEditModulesTab>
       final fileExtension = file.path.split('.').last;
       final fileBytes = await file.readAsBytes();
 
-      final safeFileName = 'submodule_${DateTime.now().millisecondsSinceEpoch}.$fileExtension';
-      final storagePath = 'c${widget.courseId}/module$orderModule/$safeFileName';
+      final safeFileName =
+          'submodule_${DateTime.now().millisecondsSinceEpoch}.$fileExtension';
+      final storagePath =
+          'c${widget.courseId}/module$orderModule/$safeFileName';
 
       // Для загрузки файла тайм-аут не ставим, так как файлы могут быть большими
       await SupabaseService.client.storage
@@ -1267,28 +1282,39 @@ class _CourseEditModulesTabState extends State<CourseEditModulesTab>
       final submodules = _submodules[moduleId] ?? [];
       final nextOrder = submodules.isEmpty
           ? 1
-          : (submodules.map((s) => s.orderSubmodule ?? 0).reduce((a, b) => a > b ? a : b)) + 1;
+          : (submodules
+                    .map((s) => s.orderSubmodule ?? 0)
+                    .reduce((a, b) => a > b ? a : b)) +
+                1;
 
-      final response = await SupabaseService.client.from('submodule').insert({
-        'id_module': moduleId,
-        'name': name,
-        'lead_time': leadTime,
-        'content': signedUrl,
-        'order_submodule': nextOrder,
-        'status': true,
-      }).select().single().timeout(const Duration(seconds: 1));
+      final response = await SupabaseService.client
+          .from('submodule')
+          .insert({
+            'id_module': moduleId,
+            'name': name,
+            'lead_time': leadTime,
+            'content': signedUrl,
+            'order_submodule': nextOrder,
+            'status': true,
+          })
+          .select()
+          .single()
+          .timeout(const Duration(seconds: 1));
 
       if (mounted) {
         setState(() {
           if (_submodules[moduleId] == null) _submodules[moduleId] = [];
           _submodules[moduleId]!.add(db_models.Submodule.fromJson(response));
         });
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('Подмодуль "$name" добавлен')));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Подмодуль "$name" добавлен')));
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Ошибка: $e')));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Ошибка: $e')));
       }
     }
   }
@@ -1303,28 +1329,37 @@ class _CourseEditModulesTabState extends State<CourseEditModulesTab>
     String tests,
   ) async {
     try {
-      final response = await SupabaseService.client.from('practical_task').insert({
-        'id_submodule': subId,
-        'name': name,
-        'description': desc,
-        'content': content,
-        'language': lang,
-        'starter_code': starter,
-        'test_cases': jsonDecode(tests),
-        'status': true,
-        'order_task': (_practicalTasks[subId]?.length ?? 0) + 1,
-      }).select().single().timeout(const Duration(seconds: 1));
+      final response = await SupabaseService.client
+          .from('practical_task')
+          .insert({
+            'id_submodule': subId,
+            'name': name,
+            'description': desc,
+            'content': content,
+            'language': lang,
+            'starter_code': starter,
+            'test_cases': jsonDecode(tests),
+            'status': true,
+            'order_task': (_practicalTasks[subId]?.length ?? 0) + 1,
+          })
+          .select()
+          .single()
+          .timeout(const Duration(seconds: 1));
 
       if (mounted) {
         setState(() {
           if (_practicalTasks[subId] == null) _practicalTasks[subId] = [];
           _practicalTasks[subId]!.add(response);
         });
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Практическое задание добавлено')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Практическое задание добавлено')),
+        );
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Ошибка: $e')));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Ошибка: $e')));
       }
     }
   }
@@ -1357,18 +1392,24 @@ class _CourseEditModulesTabState extends State<CourseEditModulesTab>
       if (mounted) {
         setState(() {
           for (var subId in _practicalTasks.keys) {
-            final index = _practicalTasks[subId]?.indexWhere((t) => t['id'] == taskId) ?? -1;
+            final index =
+                _practicalTasks[subId]?.indexWhere((t) => t['id'] == taskId) ??
+                -1;
             if (index != -1) {
               _practicalTasks[subId]![index] = response;
               break;
             }
           }
         });
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Практическое задание обновлено')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Практическое задание обновлено')),
+        );
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Ошибка: $e')));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Ошибка: $e')));
       }
     }
   }
@@ -1394,22 +1435,29 @@ class _CourseEditModulesTabState extends State<CourseEditModulesTab>
           .single()
           .timeout(const Duration(seconds: 1));
 
-      await SupabaseService.client.from('submodule_test').insert({
-        'id_submodule': subId,
-        'id_test': res['id'],
-        'order_test': (_tests[subId]?.length ?? 0) + 1,
-      }).timeout(const Duration(seconds: 1));
+      await SupabaseService.client
+          .from('submodule_test')
+          .insert({
+            'id_submodule': subId,
+            'id_test': res['id'],
+            'order_test': (_tests[subId]?.length ?? 0) + 1,
+          })
+          .timeout(const Duration(seconds: 1));
 
       if (mounted) {
         setState(() {
           if (_tests[subId] == null) _tests[subId] = [];
           _tests[subId]!.add(db_models.Test.fromJson(res));
         });
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Тест добавлен')));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Тест добавлен')));
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Ошибка: $e')));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Ошибка: $e')));
       }
     }
   }
@@ -1445,44 +1493,64 @@ class _CourseEditModulesTabState extends State<CourseEditModulesTab>
             }
           }
         });
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Тест обновлен')));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Тест обновлен')));
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Ошибка: $e')));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Ошибка: $e')));
       }
     }
   }
 
   Future<void> _deleteModule(int id) async {
     try {
-      await SupabaseService.client.from('module').delete().eq('id', id).timeout(const Duration(seconds: 1));
+      await SupabaseService.client
+          .from('module')
+          .delete()
+          .eq('id', id)
+          .timeout(const Duration(seconds: 1));
       if (mounted) {
         setState(() {
           _modules.removeWhere((m) => m.id == id);
           _submodules.remove(id);
         });
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Модуль удален')));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Модуль удален')));
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Ошибка: $e')));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Ошибка: $e')));
       }
     }
   }
 
   Future<void> _deleteSubmodule(int id, int mid) async {
     try {
-      await SupabaseService.client.from('submodule').delete().eq('id', id).timeout(const Duration(seconds: 1));
+      await SupabaseService.client
+          .from('submodule')
+          .delete()
+          .eq('id', id)
+          .timeout(const Duration(seconds: 1));
       if (mounted) {
         setState(() {
           _submodules[mid]?.removeWhere((s) => s.id == id);
         });
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Подмодуль удален')));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Подмодуль удален')));
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Ошибка: $e')));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Ошибка: $e')));
       }
     }
   }
@@ -1494,32 +1562,48 @@ class _CourseEditModulesTabState extends State<CourseEditModulesTab>
           .delete()
           .eq('id_test', tid)
           .timeout(const Duration(seconds: 1));
-      await SupabaseService.client.from('test').delete().eq('id', tid).timeout(const Duration(seconds: 1));
+      await SupabaseService.client
+          .from('test')
+          .delete()
+          .eq('id', tid)
+          .timeout(const Duration(seconds: 1));
       if (mounted) {
         setState(() {
           _tests[sid]?.removeWhere((t) => t.id == tid);
         });
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Тест удален')));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Тест удален')));
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Ошибка: $e')));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Ошибка: $e')));
       }
     }
   }
 
   Future<void> _deletePracticalTask(int tid, int sid) async {
     try {
-      await SupabaseService.client.from('practical_task').delete().eq('id', tid).timeout(const Duration(seconds: 1));
+      await SupabaseService.client
+          .from('practical_task')
+          .delete()
+          .eq('id', tid)
+          .timeout(const Duration(seconds: 1));
       if (mounted) {
         setState(() {
           _practicalTasks[sid]?.removeWhere((t) => t['id'] == tid);
         });
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Практическое задание удалено')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Практическое задание удалено')),
+        );
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Ошибка: $e')));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Ошибка: $e')));
       }
     }
   }

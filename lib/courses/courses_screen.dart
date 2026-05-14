@@ -8,12 +8,11 @@ import '../courses/course_edit_screen.dart';
 import '../repositories/course_repository.dart';
 
 class CoursesScreen extends StatefulWidget {
-  final bool isDarkMode;
   final int? authorId;
   final String? userRole;
   final int? userId;
 
-  const CoursesScreen({super.key, required this.isDarkMode, this.authorId, this.userRole, this.userId});
+  const CoursesScreen({super.key, this.authorId, this.userRole, this.userId});
 
   @override
   // ignore: library_private_types_in_public_api
