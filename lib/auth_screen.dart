@@ -344,7 +344,7 @@ class _AuthScreenState extends State<AuthScreen> {
                               style: AppStyles.body.copyWith(
                                 color: AppColors.primaryPurple.withValues(alpha: 0.8),
                                 fontWeight: FontWeight.w600,
-                                decoration: TextDecoration.underline,
+                                decoration: TextDecoration.none,
                               ),
                             ),
                           ),
