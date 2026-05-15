@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../core/theme/app_components.dart';
+
 
 class TopBar extends StatelessWidget {
   final int selectedIndex;
@@ -16,8 +18,7 @@ class TopBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bool showAddButton = menuItems[selectedIndex] == 'Курсы' && onAddCourse != null ||
-        menuItems[selectedIndex] == 'Достижения' && onAddAchievement != null;
+    final bool showAddButton = menuItems[selectedIndex] == 'Курсы' && onAddCourse != null;
 
     return Container(
       height: 70,
@@ -39,22 +40,28 @@ class TopBar extends StatelessWidget {
 
           // Add button
           if (showAddButton)
-            ElevatedButton.icon(
+            KodixComponents.primaryButton(
+              height: 40,
+              width: 180,
               onPressed: () {
                 if (menuItems[selectedIndex] == 'Курсы') {
                   onAddCourse?.call();
-                } else if (menuItems[selectedIndex] == 'Достижения') {
-                  onAddAchievement?.call();
                 }
               },
-              icon: const Icon(Icons.add),
-              label: Text(_getButtonText()),
-              style: ElevatedButton.styleFrom(
-                elevation: 0,
-                minimumSize: const Size(140, 40),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.add_rounded, color: Colors.white, size: 18),
+                  const SizedBox(width: 6),
+                  Text(
+                    _getButtonText(),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
               ),
             ),
         ],
@@ -74,7 +81,6 @@ class TopBar extends StatelessWidget {
         ? menuItems[selectedIndex]
         : '';
     if (item == 'Курсы') return 'Добавить курс';
-    if (item == 'Достижения') return 'Добавить достижение';
     return '';
   }
 }

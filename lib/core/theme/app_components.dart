@@ -52,28 +52,32 @@ class KodixComponents {
     double? width,
     Color? backgroundColor,
   }) {
-    return InkWell(
-      onTap: onPressed,
-      borderRadius: AppStyles.mainRadius,
-      child: Ink(
-        decoration: BoxDecoration(
-          color: backgroundColor,
-          gradient: backgroundColor == null ? AppColors.primaryGradient : null,
-          borderRadius: AppStyles.mainRadius,
-          boxShadow: [
-            BoxShadow(
-              color: AppColors.primaryPurple.withValues(alpha: 0.3),
-              blurRadius: 12,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: Container(
-          width: width,
-          height: height,
-          padding: width == null ? const EdgeInsets.symmetric(horizontal: 24) : null,
-          alignment: Alignment.center,
-          child: child,
+    return Container(
+      decoration: BoxDecoration(
+        color: backgroundColor,
+        gradient: backgroundColor == null ? AppColors.primaryGradient : null,
+        borderRadius: AppStyles.mainRadius,
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.primaryPurple.withValues(alpha: 0.3),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: AppStyles.mainRadius,
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: onPressed,
+          child: Container(
+            width: width,
+            height: height,
+            padding: width == null ? const EdgeInsets.symmetric(horizontal: 24) : null,
+            alignment: Alignment.center,
+            child: child,
+          ),
         ),
       ),
     );
@@ -87,29 +91,33 @@ class KodixComponents {
     double height = 56,
     double? width,
   }) {
-    return InkWell(
-      onTap: onPressed,
-      borderRadius: AppStyles.mainRadius,
-      child: Ink(
-        decoration: BoxDecoration(
-          color: AppColors.bgLight,
-          borderRadius: AppStyles.mainRadius,
-          border: Border.all(color: AppColors.primaryPurple.withValues(alpha: 0.2)),
-        ),
-        child: Container(
-          width: width,
-          height: height,
-          padding: width == null ? const EdgeInsets.symmetric(horizontal: 24) : null,
-          alignment: Alignment.center,
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              if (icon != null) ...[
-                Icon(icon, color: AppColors.primaryPurple, size: 20),
-                const SizedBox(width: 8),
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.bgLight,
+        borderRadius: AppStyles.mainRadius,
+        border: Border.all(color: AppColors.primaryPurple.withValues(alpha: 0.2)),
+      ),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: AppStyles.mainRadius,
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: onPressed,
+          child: Container(
+            width: width,
+            height: height,
+            padding: width == null ? const EdgeInsets.symmetric(horizontal: 24) : null,
+            alignment: Alignment.center,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                if (icon != null) ...[
+                  Icon(icon, color: AppColors.primaryPurple, size: 20),
+                  const SizedBox(width: 8),
+                ],
+                child,
               ],
-              child,
-            ],
+            ),
           ),
         ),
       ),

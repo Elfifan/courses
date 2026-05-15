@@ -360,14 +360,6 @@ class _AchievementsScreenState extends State<AchievementsScreen>
               ),
               const SizedBox(width: 20),
               _buildTabSelector(),
-              const SizedBox(width: 20),
-              SizedBox(
-                width: 50,
-                child: KodixComponents.primaryButton(
-                  onPressed: () => _showForm(),
-                  child: const Text('+'),
-                ),
-              ),
             ],
           ),
           const SizedBox(height: 32),
