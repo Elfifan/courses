@@ -10,6 +10,7 @@ import '../repositories/course_repository.dart';
 import '../courses/author_chats_screen.dart';
 import '../services/supabase_service.dart';
 import 'package:intl/intl.dart';
+import 'authors_management_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   final String? userRole;
@@ -249,7 +250,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   List<String> get _menuItems => _isAuthor
       ? ['Курсы', 'Чаты']
-      : ['Статистика', 'Курсы', 'Пользователь', 'Достижения'];
+      : ['Статистика', 'Курсы', 'Пользователь', 'Авторы', 'Достижения'];
 
   List<IconData> get _menuIcons => _isAuthor
       ? [Icons.school_rounded, Icons.message_rounded]
@@ -257,6 +258,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           Icons.dashboard_rounded,
           Icons.school_rounded,
           Icons.people_rounded,
+          Icons.badge_outlined,
           Icons.analytics_rounded,
         ];
 
@@ -287,6 +289,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               });
             },
           ),
+          const AuthorsManagementScreen(),
           AchievementsScreen(
             key: _achievementsKey,
           ),
