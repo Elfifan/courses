@@ -21,45 +21,105 @@ class AuthScreen extends StatefulWidget {
 
 class _AuthScreenState extends State<AuthScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _loginController = TextEditingController();
-  final _passwordController = TextEditingController();
+  
+  bool _isLoginMode = true;
   bool _isObscured = true;
   bool _isLoading = false;
 
+  // Login Controllers
+  final _loginController = TextEditingController();
+  final _passwordController = TextEditingController();
+
+  // Registration Controllers
+  final _regNameController = TextEditingController();
+  final _regSurnameController = TextEditingController();
+  final _regPatronymicController = TextEditingController();
+  final _regEmailController = TextEditingController();
+  final _regPasswordController = TextEditingController();
+  final _regConfirmPasswordController = TextEditingController();
+
   final supabase = Supabase.instance.client;
 
-  Future<void> _tryLogin() async {
+  Future<void> _handleSubmit() async {
     if (_formKey.currentState?.validate() ?? false) {
       setState(() => _isLoading = true);
       try {
-        final response = await supabase
-            .from('employee')
-            .select()
-            .eq('email', _loginController.text.trim())
-            .maybeSingle();
+        if (_isLoginMode) {
+          // Логика авторизации
+          final response = await supabase
+              .from('employee')
+              .select()
+              .eq('email', _loginController.text.trim())
+              .maybeSingle();
 
-        if (!mounted) return;
+          if (!mounted) return;
 
-        if (response == null) {
-          _showSnackBar('Пользователь не найден');
-        } else {
-          if (response['password'] == _passwordController.text &&
-              response['status'] == true) {
-            widget.onLoginSuccess(response['role'] as String?, response['id'] as int?);
+          if (response == null) {
+            _showSnackBar('Пользователь не найден', isError: true);
           } else {
-            _showSnackBar('Неверный логин или пароль');
+            if (response['password'] == _passwordController.text) {
+              if (response['status'] == true) {
+                widget.onLoginSuccess(response['role'] as String?, response['id'] as int?);
+              } else {
+                _showSnackBar('Ваш аккаунт еще не одобрен администратором', isError: true);
+              }
+            } else {
+              _showSnackBar('Неверный логин или пароль', isError: true);
+            }
           }
+        } else {
+          // Логика регистрации
+          if (_regPasswordController.text != _regConfirmPasswordController.text) {
+             _showSnackBar('Пароли не совпадают', isError: true);
+             return;
+          }
+
+          final email = _regEmailController.text.trim();
+          final existing = await supabase.from('employee').select('id').eq('email', email).maybeSingle();
+          if (existing != null) {
+             _showSnackBar('Пользователь с таким email уже существует', isError: true);
+             return;
+          }
+
+          await supabase.from('employee').insert({
+            'name': _regNameController.text.trim(),
+            'surname': _regSurnameController.text.trim(),
+            'patronymic': _regPatronymicController.text.trim().isEmpty ? null : _regPatronymicController.text.trim(),
+            'email': email,
+            'password': _regPasswordController.text.trim(),
+            'role': 'Автор',
+            'status': false,
+          });
+
+          if (!mounted) return;
+          _showSnackBar('Регистрация успешна! Ожидайте одобрения администратором.', isError: false);
+          
+          setState(() {
+            _isLoginMode = true;
+            _loginController.text = email;
+            _passwordController.clear();
+            _regNameController.clear();
+            _regSurnameController.clear();
+            _regPatronymicController.clear();
+            _regPasswordController.clear();
+            _regConfirmPasswordController.clear();
+          });
         }
       } catch (e) {
-        if (mounted) _showSnackBar('Ошибка: $e');
+        if (mounted) _showSnackBar('Ошибка: $e', isError: true);
       } finally {
         if (mounted) setState(() => _isLoading = false);
       }
     }
   }
 
-  void _showSnackBar(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+  void _showSnackBar(String message, {bool isError = false}) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: isError ? Colors.red : Colors.green,
+      )
+    );
   }
 
   void _showPasswordRecoveryDialog() {
@@ -70,6 +130,7 @@ class _AuthScreenState extends State<AuthScreen> {
     ).then((recoveredEmail) {
       if (recoveredEmail != null && recoveredEmail is String) {
         setState(() {
+          _isLoginMode = true;
           _loginController.text = recoveredEmail;
           _passwordController.clear();
         });
@@ -104,69 +165,191 @@ class _AuthScreenState extends State<AuthScreen> {
             flex: 4,
             child: Center(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 60),
+                padding: const EdgeInsets.symmetric(horizontal: 60, vertical: 40),
                 child: Form(
                   key: _formKey,
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Вход в систему', style: AppStyles.h1.copyWith(fontSize: 32)),
+                      Text(_isLoginMode ? 'Вход в систему' : 'Регистрация', style: AppStyles.h1.copyWith(fontSize: 32)),
                       const SizedBox(height: 8),
-                      Text('Введите ваши данные для доступа к панели', style: AppStyles.label),
-                      const SizedBox(height: 48),
-                      Text('Логин (Email)', style: AppStyles.label),
-                      const SizedBox(height: 8),
-                      TextFormField(
-                        controller: _loginController,
-                        style: AppStyles.body,
-                        decoration: KodixComponents.textFieldDecoration(
-                          hintText: 'admin@kodix.ru',
-                          prefixIcon: Icons.person_outline_rounded,
-                        ),
-                        validator: (v) => (v == null || v.isEmpty) ? "Введите логин" : null,
+                      Text(
+                        _isLoginMode 
+                          ? 'Введите ваши данные для доступа к панели' 
+                          : 'Создайте аккаунт автора (требует одобрения)', 
+                        style: AppStyles.label
                       ),
-                      const SizedBox(height: 24),
-                      Text('Пароль', style: AppStyles.label),
-                      const SizedBox(height: 8),
-                      TextFormField(
-                        controller: _passwordController,
-                        obscureText: _isObscured,
-                        style: AppStyles.body,
-                        decoration: KodixComponents.textFieldDecoration(
-                          hintText: '••••••••',
-                          prefixIcon: Icons.lock_outline_rounded,
-                        ).copyWith(
-                          suffixIcon: MouseRegion(
-                            child: IconButton(
-                              icon: Icon(_isObscured ? Icons.visibility_off : Icons.visibility, color: AppColors.textGrey,),
-                              onPressed: () => setState(() => _isObscured = !_isObscured),
+                      const SizedBox(height: 48),
+                      
+                      if (_isLoginMode) ...[
+                        Text('Логин (Email)', style: AppStyles.label),
+                        const SizedBox(height: 8),
+                        TextFormField(
+                          controller: _loginController,
+                          style: AppStyles.body,
+                          decoration: KodixComponents.textFieldDecoration(
+                            hintText: 'admin@kodix.ru',
+                            prefixIcon: Icons.person_outline_rounded,
+                          ),
+                          validator: (v) => (v == null || v.isEmpty) ? "Введите логин" : null,
+                        ),
+                        const SizedBox(height: 24),
+                        Text('Пароль', style: AppStyles.label),
+                        const SizedBox(height: 8),
+                        TextFormField(
+                          controller: _passwordController,
+                          obscureText: _isObscured,
+                          style: AppStyles.body,
+                          decoration: KodixComponents.textFieldDecoration(
+                            hintText: '••••••••',
+                            prefixIcon: Icons.lock_outline_rounded,
+                          ).copyWith(
+                            suffixIcon: MouseRegion(
+                              child: IconButton(
+                                icon: Icon(_isObscured ? Icons.visibility_off : Icons.visibility, color: AppColors.textGrey),
+                                onPressed: () => setState(() => _isObscured = !_isObscured),
+                              ),
+                            ),
+                          ),
+                          validator: (v) => (v == null || v.isEmpty) ? "Введите пароль" : null,
+                        ),
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: MouseRegion(
+                            cursor: SystemMouseCursors.click,
+                            child: TextButton(
+                              onPressed: _showPasswordRecoveryDialog,
+                              child: Text("Забыли пароль?", 
+                                style: AppStyles.label.copyWith(color: AppColors.primaryPurple, fontWeight: FontWeight.bold)),
                             ),
                           ),
                         ),
-                        validator: (v) => (v == null || v.isEmpty) ? "Введите пароль" : null,
-                      ),
-                      Align(
-                        alignment: Alignment.centerRight,
-                        child: MouseRegion(
-                          cursor: SystemMouseCursors.click,
-                          child: TextButton(
-                            onPressed: _showPasswordRecoveryDialog,
-                            child: Text("Забыли пароль?", 
-                              style: AppStyles.label.copyWith(color: AppColors.primaryPurple, fontWeight: FontWeight.bold)),
-                          ),
+                      ] else ...[
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text('Имя', style: AppStyles.label),
+                                  const SizedBox(height: 8),
+                                  TextFormField(
+                                    controller: _regNameController,
+                                    style: AppStyles.body,
+                                    decoration: KodixComponents.textFieldDecoration(hintText: 'Иван'),
+                                    validator: (v) => (v == null || v.isEmpty) ? "Введите имя" : null,
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text('Фамилия', style: AppStyles.label),
+                                  const SizedBox(height: 8),
+                                  TextFormField(
+                                    controller: _regSurnameController,
+                                    style: AppStyles.body,
+                                    decoration: KodixComponents.textFieldDecoration(hintText: 'Иванов'),
+                                    validator: (v) => (v == null || v.isEmpty) ? "Введите фамилию" : null,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
                         ),
-                      ),
+                        const SizedBox(height: 20),
+                        Text('Отчество (необязательно)', style: AppStyles.label),
+                        const SizedBox(height: 8),
+                        TextFormField(
+                          controller: _regPatronymicController,
+                          style: AppStyles.body,
+                          decoration: KodixComponents.textFieldDecoration(hintText: 'Иванович'),
+                        ),
+                        const SizedBox(height: 20),
+                        Text('Email', style: AppStyles.label),
+                        const SizedBox(height: 8),
+                        TextFormField(
+                          controller: _regEmailController,
+                          style: AppStyles.body,
+                          decoration: KodixComponents.textFieldDecoration(
+                            hintText: 'example@email.com',
+                            prefixIcon: Icons.email_outlined,
+                          ),
+                          validator: (v) => (v == null || v.isEmpty || !v.contains('@')) ? "Введите корректный email" : null,
+                        ),
+                        const SizedBox(height: 20),
+                        Text('Пароль', style: AppStyles.label),
+                        const SizedBox(height: 8),
+                        TextFormField(
+                          controller: _regPasswordController,
+                          obscureText: _isObscured,
+                          style: AppStyles.body,
+                          decoration: KodixComponents.textFieldDecoration(
+                            hintText: 'Минимум 6 символов',
+                            prefixIcon: Icons.lock_outline_rounded,
+                          ).copyWith(
+                            suffixIcon: MouseRegion(
+                              child: IconButton(
+                                icon: Icon(_isObscured ? Icons.visibility_off : Icons.visibility, color: AppColors.textGrey),
+                                onPressed: () => setState(() => _isObscured = !_isObscured),
+                              ),
+                            ),
+                          ),
+                          validator: (v) => (v == null || v.length < 6) ? "Минимум 6 символов" : null,
+                        ),
+                        const SizedBox(height: 20),
+                        Text('Повторите пароль', style: AppStyles.label),
+                        const SizedBox(height: 8),
+                        TextFormField(
+                          controller: _regConfirmPasswordController,
+                          obscureText: _isObscured,
+                          style: AppStyles.body,
+                          decoration: KodixComponents.textFieldDecoration(
+                            hintText: 'Повторите пароль',
+                            prefixIcon: Icons.lock_outline_rounded,
+                          ),
+                          validator: (v) => (v == null || v.isEmpty) ? "Повторите пароль" : null,
+                        ),
+                      ],
+                      
                       const SizedBox(height: 32),
                       _isLoading 
                         ? const Center(child: CircularProgressIndicator(color: AppColors.primaryPurple))
                         : MouseRegion(
                             child: KodixComponents.primaryButton(
                               width: double.infinity,
-                              onPressed: _tryLogin,
-                              child: const Text('Войти'),
+                              onPressed: _handleSubmit,
+                              child: Text(_isLoginMode ? 'Войти' : 'Зарегистрироваться'),
                             ),
                           ),
+                      const SizedBox(height: 24),
+                      Center(
+                        child: MouseRegion(
+                          cursor: SystemMouseCursors.click,
+                          child: GestureDetector(
+                            onTap: () {
+                              setState(() {
+                                _isLoginMode = !_isLoginMode;
+                                _formKey.currentState?.reset();
+                              });
+                            },
+                            child: Text(
+                              _isLoginMode 
+                                ? 'Нет аккаунта? Зарегистрироваться как Автор' 
+                                : 'Уже есть аккаунт? Войти',
+                              style: AppStyles.body.copyWith(
+                                color: AppColors.primaryPurple.withValues(alpha: 0.8),
+                                fontWeight: FontWeight.w600,
+                                decoration: TextDecoration.underline,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
                     ],
                   ),
                 ),
