@@ -5,7 +5,6 @@ import '../../services/supabase_service.dart';
 import 'package:intl/intl.dart';
 import '../../services/reports/statistics_report_service.dart';
 import '../../services/reports/graduates_report_service.dart';
-import '../../services/reports/quality_report_service.dart';
 
 class CourseEditAnalyticsStudentsTab extends StatefulWidget {
   final int courseId;
@@ -315,29 +314,6 @@ class _CourseEditAnalyticsStudentsTabState
     }
   }
 
-  Future<void> _generateQualityReport() async {
-    setState(() => _isGeneratingReport = true);
-    try {
-      await QualityReportService.generate(
-        courseId: widget.courseId,
-        courseName: widget.courseName,
-        averageRating: _averageRating,
-      );
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Ошибка генерации: $e'),
-            backgroundColor: Colors.red,
-            duration: const Duration(seconds: 4),
-          ),
-        );
-      }
-    } finally {
-      if (mounted) setState(() => _isGeneratingReport = false);
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     super.build(context);
@@ -559,14 +535,6 @@ class _CourseEditAnalyticsStudentsTabState
                   title: 'Выпускники',
                   icon: Icons.school_outlined,
                   onPressed: _generateGraduatesReport,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: _buildReportButton(
-                  title: 'Качество',
-                  icon: Icons.star_outline_rounded,
-                  onPressed: _generateQualityReport,
                 ),
               ),
             ],

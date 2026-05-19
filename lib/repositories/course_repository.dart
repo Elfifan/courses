@@ -10,6 +10,7 @@ class CourseService {
     final priceController = TextEditingController();
     int selectedComplexity = 1;
     final formKey = GlobalKey<FormState>();
+    bool isLoading = false;
 
     // Список эмодзи для выбора
     final List<String> emojiOptions = ['📚', '🐍', '⚡', '📱', '🧑‍💻', '🎯', '🚀', '💻'];
@@ -35,11 +36,13 @@ class CourseService {
             content: SingleChildScrollView(
               child: Form(
                 key: formKey,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Text('Иконка курса', style: AppStyles.label.copyWith(fontWeight: FontWeight.w700)),
+                child: AbsorbPointer(
+                  absorbing: isLoading,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Text('Иконка курса', style: AppStyles.label.copyWith(fontWeight: FontWeight.w700)),
                     const SizedBox(height: 12),
                     Wrap(
                       spacing: 8,
@@ -133,9 +136,10 @@ class CourseService {
                 ),
               ),
             ),
+          ),
             actions: [
               TextButton(
-                onPressed: () => Navigator.pop(context),
+                onPressed: isLoading ? null : () => Navigator.pop(context),
                 style: TextButton.styleFrom(
                   foregroundColor: AppColors.primaryPurple,
                   textStyle: AppStyles.body.copyWith(fontWeight: FontWeight.w700),
@@ -145,53 +149,71 @@ class CourseService {
               SizedBox(
                 width: 140,
                 child: KodixComponents.primaryButton(
-                  onPressed: () async {
-                    if (formKey.currentState!.validate()) {
-                      if (authorId == null) {
-                        final scaffold = ScaffoldMessenger.of(context);
-                        scaffold.showSnackBar(
-                          const SnackBar(content: Text('Не удалось определить автора курса')),
-                        );
-                        return;
-                      }
+                  backgroundColor: isLoading ? Colors.grey : null,
+                  onPressed: isLoading
+                      ? null
+                      : () async {
+                          if (formKey.currentState!.validate()) {
+                            if (authorId == null) {
+                              final scaffold = ScaffoldMessenger.of(context);
+                              scaffold.showSnackBar(
+                                const SnackBar(content: Text('Не удалось определить автора курса')),
+                              );
+                              return;
+                            }
 
-                      final navigator = Navigator.of(context);
-                      final scaffold = ScaffoldMessenger.of(context);
+                            final navigator = Navigator.of(context);
+                            final scaffold = ScaffoldMessenger.of(context);
 
-                      try {
-                        await Supabase.instance.client
-                            .from('courses')
-                            .insert({
-                              'id_employee': authorId,
-                              'name': nameController.text.trim(),
-                              'description': descriptionController.text.trim(),
-                              'date_create': DateTime.now().toIso8601String(),
-                              'price': double.tryParse(priceController.text) ?? 0.0,
-                              'complexity': selectedComplexity,
-                              'status': 'На проверке',
-                              'icon': selectedEmoji,
+                            setState(() {
+                              isLoading = true;
                             });
 
-                        navigator.pop();
-                        scaffold.showSnackBar(
-                          SnackBar(
-                            content: Text('Курс "${nameController.text}" успешно добавлен'),
-                            backgroundColor: Colors.green,
+                            try {
+                              await Supabase.instance.client
+                                  .from('courses')
+                                  .insert({
+                                    'id_employee': authorId,
+                                    'name': nameController.text.trim(),
+                                    'description': descriptionController.text.trim(),
+                                    'date_create': DateTime.now().toIso8601String(),
+                                    'price': double.tryParse(priceController.text) ?? 0.0,
+                                    'complexity': selectedComplexity,
+                                    'status': 'На проверке',
+                                    'icon': selectedEmoji,
+                                  });
+
+                              navigator.pop();
+                              scaffold.showSnackBar(
+                                SnackBar(
+                                  content: Text('Курс "${nameController.text}" успешно добавлен'),
+                                  backgroundColor: Colors.green,
+                                ),
+                              );
+                            } catch (e) {
+                              setState(() {
+                                isLoading = false;
+                              });
+                              scaffold.showSnackBar(
+                                SnackBar(
+                                  content: Text('Ошибка при сохранении: $e'),
+                                  backgroundColor: Colors.red,
+                                ),
+                              );
+                              debugPrint('Ошибка: $e');
+                            }
+                          }
+                        },
+                  child: isLoading
+                      ? const SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(
+                            color: Colors.white,
+                            strokeWidth: 2,
                           ),
-                        );
-                      } catch (e) {
-                        navigator.pop();
-                        scaffold.showSnackBar(
-                          SnackBar(
-                            content: Text('Ошибка при сохранении: $e'),
-                            backgroundColor: Colors.red,
-                          ),
-                        );
-                        debugPrint('Ошибка: $e');
-                      }
-                    }
-                  },
-                  child: const Text('Добавить'),
+                        )
+                      : const Text('Добавить'),
                 ),
               ),
             ],

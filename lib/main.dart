@@ -6,6 +6,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'app.dart';
 import 'auth_screen.dart';
 import 'home/dashboard_screen.dart';
+import 'services/timeout_client.dart';
 
 typedef LoginSuccessCallback = void Function(String? role, int? employeeId);
 
@@ -18,6 +19,7 @@ void main() async {
   await Supabase.initialize(
     url: 'https://xrpuolgthmgonondczfy.supabase.co',
     anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhycHVvbGd0aG1nb25vbmRjemZ5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgxODcxNjcsImV4cCI6MjA3Mzc2MzE2N30.lWjE3d_BTloNXjWrlKU-SH3MB8vG15npTkguLg2FVu8',
+    httpClient: TimeoutAndRetryClient(),
   );
   
   runApp(const AdminApp());

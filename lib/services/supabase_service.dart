@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' hide User;
 
 import '../models/database_models.dart';
@@ -17,6 +18,7 @@ class SupabaseService {
         return await call();
       } catch (e) {
         attempts++;
+        debugPrint('Supabase query failed (attempt $attempts/$retries): $e. Retrying in ${500 * attempts}ms...');
         if (attempts >= retries) rethrow;
         // Задержка перед повтором (экспоненциальная или фиксированная)
         await Future.delayed(Duration(milliseconds: 500 * attempts));
