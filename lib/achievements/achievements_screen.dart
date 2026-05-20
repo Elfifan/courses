@@ -118,8 +118,9 @@ class _AchievementsScreenState extends State<AchievementsScreen>
           backgroundColor: AppColors.white,
           shape: RoundedRectangleBorder(borderRadius: AppStyles.cardRadius),
           title: Text(isEdit ? 'Редактировать' : 'Новая награда', style: AppStyles.h1),
-          content: SizedBox(
-            width: 450,
+          content: Container(
+            width: MediaQuery.of(context).size.width * 0.85,
+            constraints: const BoxConstraints(maxWidth: 450),
             child: SingleChildScrollView(
               child: Column(
                 mainAxisSize: MainAxisSize.min,

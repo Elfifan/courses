@@ -565,8 +565,9 @@ class _CourseEditModulesTabState extends State<CourseEditModulesTab>
           backgroundColor: AppColors.white,
           shape: RoundedRectangleBorder(borderRadius: AppStyles.cardRadius),
           title: Text('Теория / Видео', style: AppStyles.h1),
-          content: SizedBox(
-            width: 500,
+          content: Container(
+            width: MediaQuery.of(context).size.width * 0.85,
+            constraints: const BoxConstraints(maxWidth: 500),
             child: Form(
               key: formKey,
               child: Column(
@@ -715,9 +716,10 @@ class _CourseEditModulesTabState extends State<CourseEditModulesTab>
           backgroundColor: AppColors.white,
           shape: RoundedRectangleBorder(borderRadius: AppStyles.cardRadius),
           title: Text('Новая практика', style: AppStyles.h1),
-          content: SizedBox(
-            width: 700,
-            height: 600,
+          content: Container(
+            width: MediaQuery.of(context).size.width * 0.85,
+            height: MediaQuery.of(context).size.height * 0.75,
+            constraints: const BoxConstraints(maxWidth: 700, maxHeight: 600),
             child: Form(
               key: formKey,
               child: SingleChildScrollView(
@@ -868,9 +870,10 @@ class _CourseEditModulesTabState extends State<CourseEditModulesTab>
           backgroundColor: AppColors.white,
           shape: RoundedRectangleBorder(borderRadius: AppStyles.cardRadius),
           title: Text('Редактировать практику', style: AppStyles.h1),
-          content: SizedBox(
-            width: 700,
-            height: 600,
+          content: Container(
+            width: MediaQuery.of(context).size.width * 0.85,
+            height: MediaQuery.of(context).size.height * 0.75,
+            constraints: const BoxConstraints(maxWidth: 700, maxHeight: 600),
             child: Form(
               key: formKey,
               child: SingleChildScrollView(
@@ -1018,8 +1021,9 @@ class _CourseEditModulesTabState extends State<CourseEditModulesTab>
           backgroundColor: AppColors.white,
           shape: RoundedRectangleBorder(borderRadius: AppStyles.cardRadius),
           title: Text('Новый тест', style: AppStyles.h1),
-          content: SizedBox(
-            width: 500,
+          content: Container(
+            width: MediaQuery.of(context).size.width * 0.85,
+            constraints: const BoxConstraints(maxWidth: 500),
             child: Form(
               key: formKey,
               child: SingleChildScrollView(
@@ -1122,8 +1126,9 @@ class _CourseEditModulesTabState extends State<CourseEditModulesTab>
           backgroundColor: AppColors.white,
           shape: RoundedRectangleBorder(borderRadius: AppStyles.cardRadius),
           title: Text('Редактировать тест', style: AppStyles.h1),
-          content: SizedBox(
-            width: 500,
+          content: Container(
+            width: MediaQuery.of(context).size.width * 0.85,
+            constraints: const BoxConstraints(maxWidth: 500),
             child: Form(
               key: formKey,
               child: SingleChildScrollView(

@@ -74,7 +74,9 @@ class ChatRepository {
 
     final result = await supabase
         .from('chat_messages')
-        .select('id, id_room, sender_type, sender_id, message, is_read, created_at')
+        .select(
+          'id, id_room, sender_type, sender_id, message, is_read, created_at',
+        )
         .eq('id_room', roomId)
         .order('created_at', ascending: true);
 
@@ -117,9 +119,10 @@ class ChatRepository {
 
     try {
       // Получаем все комнаты, курсы и данные пользователей одним запросом
-      final roomsResult = await SupabaseService.safeDbCall(() => supabase
-          .from('chat_rooms')
-          .select('''
+      final roomsResult = await SupabaseService.safeDbCall(
+        () => supabase
+            .from('chat_rooms')
+            .select('''
             id,
             id_user,
             id_courses,
@@ -127,8 +130,9 @@ class ChatRepository {
             courses!inner(id, id_employee, name),
             users!id_user(id, name, email)
           ''')
-          .eq('courses.id_employee', authorIdInt)
-          .order('created_at', ascending: false));
+            .eq('courses.id_employee', authorIdInt)
+            .order('created_at', ascending: false),
+      );
 
       final rooms = roomsResult as List;
       if (rooms.isEmpty) return [];
@@ -140,36 +144,43 @@ class ChatRepository {
         final userId = room['id_user'] as int;
         final courseData = room['courses'] as Map<String, dynamic>;
         final userData = room['users'] as Map<String, dynamic>?;
-        
-        final courseName = courseData['name']?.toString() ?? 'Курс';
-        final userName = userData?['name']?.toString() ?? 
-                         userData?['email']?.toString() ?? 
-                         'Пользователь $userId';
 
-        // Для последнего сообщения пока оставим отдельный запрос, 
+        final courseName = courseData['name']?.toString() ?? 'Курс';
+        final userName =
+            userData?['name']?.toString() ??
+            userData?['email']?.toString() ??
+            'Пользователь $userId';
+
+        // Для последнего сообщения пока оставим отдельный запрос,
         // но обернем в safeDbCall для надежности.
         // В идеале это тоже можно оптимизировать через RPC или сложные вью.
-        final lastMsgResult = await SupabaseService.safeDbCall(() => supabase
-            .from('chat_messages')
-            .select('message, created_at')
-            .eq('id_room', roomId)
-            .order('created_at', ascending: false)
-            .limit(1)
-            .maybeSingle());
+        final lastMsgResult = await SupabaseService.safeDbCall(
+          () => supabase
+              .from('chat_messages')
+              .select('message, created_at')
+              .eq('id_room', roomId)
+              .order('created_at', ascending: false)
+              .limit(1)
+              .maybeSingle(),
+        );
 
-        final lastMessage = lastMsgResult?['message']?.toString() ?? 'Нет сообщений';
+        final lastMessage =
+            lastMsgResult?['message']?.toString() ?? 'Нет сообщений';
         final lastUpdated = lastMsgResult?['created_at'] != null
-            ? DateTime.tryParse(lastMsgResult!['created_at'].toString()) ?? DateTime.now()
+            ? DateTime.tryParse(lastMsgResult!['created_at'].toString()) ??
+                  DateTime.now()
             : DateTime.now();
 
-        threads.add(ChatThread(
-          chatId: roomId.toString(),
-          otherUserId: userId.toString(),
-          displayName: '$userName ($courseName)',
-          lastMessage: lastMessage,
-          lastUpdated: lastUpdated,
-          courseId: courseData['id'] as int?,
-        ));
+        threads.add(
+          ChatThread(
+            chatId: roomId.toString(),
+            otherUserId: userId.toString(),
+            displayName: '$userName ($courseName)',
+            lastMessage: lastMessage,
+            lastUpdated: lastUpdated,
+            courseId: courseData['id'] as int?,
+          ),
+        );
       }
 
       threads.sort((a, b) => b.lastUpdated.compareTo(a.lastUpdated));
@@ -183,7 +194,7 @@ class ChatRepository {
   /// Realtime подписка
   Stream<MessageModel> subscribeToMessages(String chatId) {
     final roomId = int.tryParse(chatId);
-    
+
     final channel = supabase.channel(
       'chat-$chatId',
       opts: const RealtimeChannelConfig(),
@@ -221,7 +232,7 @@ class ChatRepository {
   /// Подписка на изменения в списке комнат автора
   Stream<void> watchAuthorRooms(String authorId) {
     final controller = StreamController<void>();
-    
+
     final channel = supabase
         .channel('public:chat_rooms')
         .onPostgresChanges(
@@ -234,7 +245,7 @@ class ChatRepository {
             }
           },
         );
-        
+
     channel.subscribe();
 
     controller.onCancel = () {

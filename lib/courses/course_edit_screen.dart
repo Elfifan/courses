@@ -125,8 +125,9 @@ class _CourseEditScreenState extends State<CourseEditScreen>
         backgroundColor: AppColors.white,
         shape: RoundedRectangleBorder(borderRadius: AppStyles.cardRadius),
         title: Text('Отклонить курс', style: AppStyles.h1),
-        content: SizedBox(
-          width: 400,
+        content: Container(
+          width: MediaQuery.of(context).size.width * 0.85,
+          constraints: const BoxConstraints(maxWidth: 400),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,

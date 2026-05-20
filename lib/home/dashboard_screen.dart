@@ -138,7 +138,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
       // Fetch users
       final usersRes = await SupabaseService.safeDbCall(() => 
-        SupabaseService.client.from('users').select('id, date_registration')
+        SupabaseService.client.from('users').select('id, name, email, date_registration')
       );
       final users = usersRes as List;
       int totalStudents = users.length;
@@ -154,8 +154,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
           if (regDate.isAfter(thirtyDaysAgo)) {
             newStudentsMonth++;
           }
+          final userName = u['name']?.toString();
+          final userEmail = u['email']?.toString();
+          String subtitle = '';
+          if (userName != null && userName.isNotEmpty) {
+            subtitle = userName;
+            if (userEmail != null && userEmail.isNotEmpty) {
+              subtitle += ' ($userEmail)';
+            }
+          } else if (userEmail != null && userEmail.isNotEmpty) {
+            subtitle = userEmail;
+          }
           activities.add({
             'title': 'Новый студент',
+            'subtitle': subtitle,
             'time': regDate,
             'icon': Icons.person_add_rounded,
             'color': const Color(0xFF10B981)
@@ -167,6 +179,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         if (c['date_create'] != null) {
           activities.add({
             'title': 'Новый курс',
+            'subtitle': c['name']?.toString() ?? '',
             'time': DateTime.parse(c['date_create']),
             'icon': Icons.school_rounded,
             'color': AppColors.primaryPurple
@@ -238,13 +251,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   String _formatTimeAgo(DateTime time) {
-    final diff = DateTime.now().difference(time);
-    if (diff.inMinutes < 60) {
-      return '${diff.inMinutes} мин назад';
-    } else if (diff.inHours < 24) {
-      return '${diff.inHours} час назад';
+    final now = DateTime.now();
+    final diff = now.difference(time);
+    final days = diff.inDays.abs();
+    if (days == 0 || diff.isNegative) {
+      return 'Сегодня';
+    } else if (days == 1) {
+      return '1 день назад';
+    } else if (days < 5) {
+      return '$days дня назад';
     } else {
-      return '${diff.inDays} дн назад';
+      return '$days дней назад';
     }
   }
 
@@ -594,6 +611,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         _formatTimeAgo(act['time']),
                         act['icon'],
                         act['color'],
+                        subtitle: act['subtitle'] ?? '',
                       );
                     }).toList(),
                   ),
@@ -603,7 +621,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  Widget _buildActivityItem(String title, String time, IconData icon, Color color) {
+  Widget _buildActivityItem(String title, String time, IconData icon, Color color, {String subtitle = ''}) {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: Row(
@@ -622,6 +640,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(title, style: AppStyles.body.copyWith(fontSize: 12, fontWeight: FontWeight.w600)),
+                if (subtitle.isNotEmpty)
+                  Text(subtitle, style: AppStyles.label.copyWith(fontSize: 11), overflow: TextOverflow.ellipsis, maxLines: 1),
                 Text(time, style: AppStyles.label.copyWith(fontSize: 10)),
               ],
             ),

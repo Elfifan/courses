@@ -237,8 +237,16 @@ class _AuthScreenState extends State<AuthScreen> {
                                   TextFormField(
                                     controller: _regNameController,
                                     style: AppStyles.body,
-                                    decoration: KodixComponents.textFieldDecoration(hintText: 'Иван'),
-                                    validator: (v) => (v == null || v.isEmpty) ? "Введите имя" : null,
+                                    maxLength: 50,
+                                    decoration: KodixComponents.textFieldDecoration(hintText: 'Иван').copyWith(counterText: ''),
+                                    validator: (v) {
+                                      if (v == null || v.trim().isEmpty) return "Введите имя";
+                                      final name = v.trim();
+                                      if (!RegExp(r'^[А-ЯЁ][а-яёЁ]*$').hasMatch(name)) {
+                                        return "Только русские буквы, начиная с заглавной";
+                                      }
+                                      return null;
+                                    },
                                   ),
                                 ],
                               ),
@@ -253,8 +261,16 @@ class _AuthScreenState extends State<AuthScreen> {
                                   TextFormField(
                                     controller: _regSurnameController,
                                     style: AppStyles.body,
-                                    decoration: KodixComponents.textFieldDecoration(hintText: 'Иванов'),
-                                    validator: (v) => (v == null || v.isEmpty) ? "Введите фамилию" : null,
+                                    maxLength: 50,
+                                    decoration: KodixComponents.textFieldDecoration(hintText: 'Иванов').copyWith(counterText: ''),
+                                    validator: (v) {
+                                      if (v == null || v.trim().isEmpty) return "Введите фамилию";
+                                      final surname = v.trim();
+                                      if (!RegExp(r'^[А-ЯЁ][а-яёЁ]*$').hasMatch(surname)) {
+                                        return "Только русские буквы, начиная с заглавной";
+                                      }
+                                      return null;
+                                    },
                                   ),
                                 ],
                               ),
@@ -267,7 +283,16 @@ class _AuthScreenState extends State<AuthScreen> {
                         TextFormField(
                           controller: _regPatronymicController,
                           style: AppStyles.body,
-                          decoration: KodixComponents.textFieldDecoration(hintText: 'Иванович'),
+                          maxLength: 50,
+                          decoration: KodixComponents.textFieldDecoration(hintText: 'Иванович').copyWith(counterText: ''),
+                          validator: (v) {
+                            if (v == null || v.trim().isEmpty) return null;
+                            final patronymic = v.trim();
+                            if (!RegExp(r'^[А-ЯЁ][а-яёЁ]*$').hasMatch(patronymic)) {
+                              return "Только русские буквы, начиная с заглавной";
+                            }
+                            return null;
+                          },
                         ),
                         const SizedBox(height: 20),
                         Text('Email', style: AppStyles.label),
@@ -275,11 +300,19 @@ class _AuthScreenState extends State<AuthScreen> {
                         TextFormField(
                           controller: _regEmailController,
                           style: AppStyles.body,
+                          maxLength: 30,
                           decoration: KodixComponents.textFieldDecoration(
                             hintText: 'example@email.com',
                             prefixIcon: Icons.email_outlined,
-                          ),
-                          validator: (v) => (v == null || v.isEmpty || !v.contains('@')) ? "Введите корректный email" : null,
+                          ).copyWith(counterText: ''),
+                          validator: (v) {
+                            if (v == null || v.trim().isEmpty) return "Введите email";
+                            final email = v.trim();
+                            if (!email.contains('@') || !email.contains('.')) {
+                              return "Email должен содержать '@' и '.'";
+                            }
+                            return null;
+                          },
                         ),
                         const SizedBox(height: 20),
                         Text('Пароль', style: AppStyles.label),
@@ -288,10 +321,12 @@ class _AuthScreenState extends State<AuthScreen> {
                           controller: _regPasswordController,
                           obscureText: _isObscured,
                           style: AppStyles.body,
+                          maxLength: 30,
                           decoration: KodixComponents.textFieldDecoration(
                             hintText: 'Минимум 6 символов',
                             prefixIcon: Icons.lock_outline_rounded,
                           ).copyWith(
+                            counterText: '',
                             suffixIcon: MouseRegion(
                               child: IconButton(
                                 icon: Icon(_isObscured ? Icons.visibility_off : Icons.visibility, color: AppColors.textGrey),
@@ -299,7 +334,18 @@ class _AuthScreenState extends State<AuthScreen> {
                               ),
                             ),
                           ),
-                          validator: (v) => (v == null || v.length < 6) ? "Минимум 6 символов" : null,
+                          validator: (v) {
+                            if (v == null || v.length < 6) {
+                              return "Минимум 6 символов";
+                            }
+                            if (!v.contains(RegExp(r'[A-ZА-ЯЁ]'))) {
+                              return "Должен содержать хотя бы 1 заглавную букву";
+                            }
+                            if (!v.contains(RegExp(r'[!@#\$%^&*(),.?":{}|<>_\-+=~/`\\\[\]]'))) {
+                              return "Должен содержать хотя бы 1 спецсимвол";
+                            }
+                            return null;
+                          },
                         ),
                         const SizedBox(height: 20),
                         Text('Повторите пароль', style: AppStyles.label),
@@ -308,10 +354,11 @@ class _AuthScreenState extends State<AuthScreen> {
                           controller: _regConfirmPasswordController,
                           obscureText: _isObscured,
                           style: AppStyles.body,
+                          maxLength: 30,
                           decoration: KodixComponents.textFieldDecoration(
                             hintText: 'Повторите пароль',
                             prefixIcon: Icons.lock_outline_rounded,
-                          ),
+                          ).copyWith(counterText: ''),
                           validator: (v) => (v == null || v.isEmpty) ? "Повторите пароль" : null,
                         ),
                       ],
@@ -439,11 +486,20 @@ class _PasswordRecoveryDialogState extends State<PasswordRecoveryDialog> {
   }
 
   Future<void> _submitPassword() async {
-    if (_passwordController.text.length < 6) {
+    final password = _passwordController.text;
+    if (password.length < 6) {
       setState(() => _errorMessage = "Минимум 6 символов");
       return;
     }
-    if (_passwordController.text != _confirmController.text) {
+    if (!password.contains(RegExp(r'[A-ZА-ЯЁ]'))) {
+      setState(() => _errorMessage = "Нужна хотя бы 1 заглавная буква");
+      return;
+    }
+    if (!password.contains(RegExp(r'[!@#\$%^&*(),.?":{}|<>_\-+=~/`\\\[\]]'))) {
+      setState(() => _errorMessage = "Нужен хотя бы 1 спецсимвол");
+      return;
+    }
+    if (password != _confirmController.text) {
       setState(() => _errorMessage = "Пароли не совпадают");
       return;
     }
@@ -468,8 +524,9 @@ class _PasswordRecoveryDialogState extends State<PasswordRecoveryDialog> {
         surfaceTintColor: Colors.transparent,
         shape: RoundedRectangleBorder(borderRadius: AppStyles.cardRadius),
         title: Text(_getTitle(), style: AppStyles.h1.copyWith(color: AppColors.textDark)),
-        content: SizedBox(
-          width: 400,
+        content: Container(
+          width: MediaQuery.of(context).size.width * 0.85,
+          constraints: const BoxConstraints(maxWidth: 400),
           child: _buildCurrentStepView(),
         ),
         actions: [
