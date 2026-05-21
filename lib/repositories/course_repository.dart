@@ -101,15 +101,15 @@ class CourseService {
                       const SizedBox(height: 8),
                       TextFormField(
                         controller: nameController,
-                        maxLength: 50,
+                        maxLength: 70,
                         decoration: KodixComponents.textFieldDecoration(hintText: 'Введите название курса', prefixIcon: Icons.menu_book_outlined),
                         validator: (v) {
                           if (v == null || v.isEmpty) {
                             return 'Введите название';
                           }
                           final trimmed = v.trim();
-                          if (trimmed.length > 50) {
-                            return 'Название не должно превышать 50 символов';
+                          if (trimmed.length > 70) {
+                            return 'Название не должно превышать 70 символов';
                           }
                           final alphanumericOnly = RegExp(r'[a-zA-Zа-яА-Я0-9]').hasMatch(trimmed);
                           if (!alphanumericOnly) {
@@ -123,13 +123,13 @@ class CourseService {
                       const SizedBox(height: 8),
                       TextFormField(
                         controller: descriptionController,
-                        maxLength: 100,
+                        maxLength: 350,
                         decoration: KodixComponents.textFieldDecoration(hintText: 'Введите описание курса', prefixIcon: Icons.description_outlined),
                         minLines: 3,
                         maxLines: 5,
                         validator: (v) {
-                          if (v != null && v.trim().length > 100) {
-                            return 'Описание не должно превышать 100 символов';
+                          if (v != null && v.trim().length > 350) {
+                            return 'Описание не должно превышать 350 символов';
                           }
                           return null;
                         },

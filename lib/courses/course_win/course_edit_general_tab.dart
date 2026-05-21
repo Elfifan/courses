@@ -22,14 +22,15 @@ class CourseEditGeneralTab extends StatefulWidget {
   State<CourseEditGeneralTab> createState() => _CourseEditGeneralTabState();
 }
 
-class _CourseEditGeneralTabState extends State<CourseEditGeneralTab> with AutomaticKeepAliveClientMixin {
+class _CourseEditGeneralTabState extends State<CourseEditGeneralTab>
+    with AutomaticKeepAliveClientMixin {
   @override
   bool get wantKeepAlive => true;
 
   late TextEditingController _titleController;
   late TextEditingController _descriptionController;
   late TextEditingController _priceController;
-  
+
   int? _selectedComplexity;
   bool _isSaving = false;
 
@@ -69,8 +70,12 @@ class _CourseEditGeneralTabState extends State<CourseEditGeneralTab> with Automa
   void initState() {
     super.initState();
     _titleController = TextEditingController(text: widget.course.name ?? '');
-    _descriptionController = TextEditingController(text: widget.course.description ?? '');
-    _priceController = TextEditingController(text: widget.course.price?.toString() ?? '');
+    _descriptionController = TextEditingController(
+      text: widget.course.description ?? '',
+    );
+    _priceController = TextEditingController(
+      text: widget.course.price?.toString() ?? '',
+    );
     _selectedComplexity = widget.course.complexity ?? 1;
   }
 
@@ -84,21 +89,23 @@ class _CourseEditGeneralTabState extends State<CourseEditGeneralTab> with Automa
 
   Future<void> _saveCourse() async {
     if (!mounted) return;
-    
+
     if (!(widget.formKey.currentState?.validate() ?? false)) {
       return;
     }
-    
+
     final title = _titleController.text.trim();
     if (title.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Введите название курса')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Введите название курса')));
       return;
     }
-    if (title.length > 50) {
+    if (title.length > 70) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Название не должно превышать 50 символов')),
+        const SnackBar(
+          content: Text('Название не должно превышать 70 символов'),
+        ),
       );
       return;
     }
@@ -106,15 +113,21 @@ class _CourseEditGeneralTabState extends State<CourseEditGeneralTab> with Automa
     final alphanumericOnly = RegExp(r'[a-zA-Zа-яА-Я0-9]').hasMatch(title);
     if (!alphanumericOnly) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Название не может состоять только из знаков препинания и специальных символов')),
+        const SnackBar(
+          content: Text(
+            'Название не может состоять только из знаков препинания и специальных символов',
+          ),
+        ),
       );
       return;
     }
 
     final description = _descriptionController.text.trim();
-    if (description.length > 100) {
+    if (description.length > 350) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Описание не должно превышать 100 символов')),
+        const SnackBar(
+          content: Text('Описание не должно превышать 350 символов'),
+        ),
       );
       return;
     }
@@ -132,20 +145,22 @@ class _CourseEditGeneralTabState extends State<CourseEditGeneralTab> with Automa
     try {
       final price = double.tryParse(_priceController.text) ?? 0;
 
-      await SupabaseService.safeDbCall(() => SupabaseService.client
-          .from('courses')
-          .update({
-            'name': _titleController.text,
-            'description': _descriptionController.text,
-            'price': price,
-            'complexity': _selectedComplexity,
-          })
-          .eq('id', widget.course.id));
+      await SupabaseService.safeDbCall(
+        () => SupabaseService.client
+            .from('courses')
+            .update({
+              'name': _titleController.text,
+              'description': _descriptionController.text,
+              'price': price,
+              'complexity': _selectedComplexity,
+            })
+            .eq('id', widget.course.id),
+      );
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Курс сохранен успешно')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Курс сохранен успешно')));
         // ← ВЫЗЫВАЕМ CALLBACK с новыми данными
         widget.onCourseUpdated(
           _titleController.text,
@@ -156,9 +171,9 @@ class _CourseEditGeneralTabState extends State<CourseEditGeneralTab> with Automa
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Ошибка сохранения: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Ошибка сохранения: $e')));
       }
     } finally {
       if (mounted) {
@@ -192,46 +207,55 @@ class _CourseEditGeneralTabState extends State<CourseEditGeneralTab> with Automa
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Основная информация', 
-                  style: AppStyles.h1.copyWith(fontSize: 20)
+                  'Основная информация',
+                  style: AppStyles.h1.copyWith(fontSize: 20),
                 ),
                 const SizedBox(height: 24),
-                
+
                 // Название
-                Text('Название курса', style: AppStyles.label.copyWith(fontWeight: FontWeight.w700)),
+                Text(
+                  'Название курса',
+                  style: AppStyles.label.copyWith(fontWeight: FontWeight.w700),
+                ),
                 const SizedBox(height: 8),
                 TextFormField(
                   controller: _titleController,
                   enabled: !widget.readOnly,
-                  maxLength: 50,
+                  maxLength: 70,
                   decoration: KodixComponents.textFieldDecoration(
-                    hintText: 'Введите название курса', 
-                    prefixIcon: Icons.book_rounded
+                    hintText: 'Введите название курса',
+                    prefixIcon: Icons.book_rounded,
                   ),
                   style: AppStyles.body,
                   validator: (val) {
-                    if (val == null || val.trim().isEmpty) return 'Поле обязательно';
-                    if (val.trim().length > 50) return 'Название не должно превышать 50 символов';
+                    if (val == null || val.trim().isEmpty)
+                      return 'Поле обязательно';
+                    if (val.trim().length > 70)
+                      return 'Название не должно превышать 70 символов';
                     return null;
                   },
                 ),
                 const SizedBox(height: 24),
 
                 // Описание
-                Text('Описание', style: AppStyles.label.copyWith(fontWeight: FontWeight.w700)),
+                Text(
+                  'Описание',
+                  style: AppStyles.label.copyWith(fontWeight: FontWeight.w700),
+                ),
                 const SizedBox(height: 8),
                 TextFormField(
                   controller: _descriptionController,
                   enabled: !widget.readOnly,
                   maxLines: 5,
-                  maxLength: 100,
+                  maxLength: 350,
                   decoration: KodixComponents.textFieldDecoration(
-                    hintText: 'Введите подробное описание курса', 
-                    prefixIcon: Icons.description_rounded
+                    hintText: 'Введите подробное описание курса',
+                    prefixIcon: Icons.description_rounded,
                   ),
                   style: AppStyles.body,
                   validator: (val) {
-                    if (val != null && val.trim().length > 100) return 'Описание не должно превышать 100 символов';
+                    if (val != null && val.trim().length > 350)
+                      return 'Описание не должно превышать 350 символов';
                     return null;
                   },
                 ),
@@ -244,24 +268,33 @@ class _CourseEditGeneralTabState extends State<CourseEditGeneralTab> with Automa
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text('Цена (₽)', style: AppStyles.label.copyWith(fontWeight: FontWeight.w700)),
+                          Text(
+                            'Цена (₽)',
+                            style: AppStyles.label.copyWith(
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
                           const SizedBox(height: 8),
                           TextFormField(
                             controller: _priceController,
                             enabled: !widget.readOnly,
                             maxLength: 5,
                             keyboardType: TextInputType.number,
-                            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                            inputFormatters: [
+                              FilteringTextInputFormatter.digitsOnly,
+                            ],
                             decoration: KodixComponents.textFieldDecoration(
-                              hintText: '0', 
-                              prefixIcon: Icons.payments_rounded
+                              hintText: '0',
+                              prefixIcon: Icons.payments_rounded,
                             ),
                             style: AppStyles.body,
                             validator: (val) {
                               if (val == null || val.isEmpty) return null;
                               final price = val.trim();
-                              if (price.length > 5) return 'Цена не должна превышать 5 символов';
-                              if (double.tryParse(price) == null) return 'Введите корректное число';
+                              if (price.length > 5)
+                                return 'Цена не должна превышать 5 символов';
+                              if (double.tryParse(price) == null)
+                                return 'Введите корректное число';
                               return null;
                             },
                           ),
@@ -274,36 +307,53 @@ class _CourseEditGeneralTabState extends State<CourseEditGeneralTab> with Automa
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text('Сложность', style: AppStyles.label.copyWith(fontWeight: FontWeight.w700)),
+                          Text(
+                            'Сложность',
+                            style: AppStyles.label.copyWith(
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
                           const SizedBox(height: 8),
                           DropdownButtonFormField<int>(
                             key: ValueKey(_selectedComplexity),
                             initialValue: _selectedComplexity,
                             dropdownColor: AppColors.white,
                             borderRadius: AppStyles.mainRadius,
-                            icon: const Icon(Icons.keyboard_arrow_down_rounded, color: AppColors.primaryPurple, size: 26),
+                            icon: const Icon(
+                              Icons.keyboard_arrow_down_rounded,
+                              color: AppColors.primaryPurple,
+                              size: 26,
+                            ),
                             elevation: 8,
                             decoration: KodixComponents.textFieldDecoration(
-                              hintText: 'Выберите уровень', 
-                              prefixIcon: Icons.bar_chart_rounded
+                              hintText: 'Выберите уровень',
+                              prefixIcon: Icons.bar_chart_rounded,
                             ),
                             items: _complexityLevels.entries.map((entry) {
                               return DropdownMenuItem<int>(
                                 value: entry.key,
                                 child: Row(
                                   children: [
-                                    Icon(_getComplexityIcon(entry.key), color: _getComplexityColor(entry.key), size: 20),
+                                    Icon(
+                                      _getComplexityIcon(entry.key),
+                                      color: _getComplexityColor(entry.key),
+                                      size: 20,
+                                    ),
                                     const SizedBox(width: 10),
                                     Text(entry.value, style: AppStyles.body),
                                   ],
                                 ),
                               );
                             }).toList(),
-                            onChanged: widget.readOnly ? null : (value) {
-                              if (value != null) {
-                                setState(() => _selectedComplexity = value);
-                              }
-                            },
+                            onChanged: widget.readOnly
+                                ? null
+                                : (value) {
+                                    if (value != null) {
+                                      setState(
+                                        () => _selectedComplexity = value,
+                                      );
+                                    }
+                                  },
                           ),
                         ],
                       ),
@@ -321,9 +371,18 @@ class _CourseEditGeneralTabState extends State<CourseEditGeneralTab> with Automa
                         ? const SizedBox(
                             width: 20,
                             height: 20,
-                            child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
                           )
-                        : const Text('Сохранить изменения', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                        : const Text(
+                            'Сохранить изменения',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
                   ),
                 const SizedBox(height: 80),
               ],

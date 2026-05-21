@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_html/flutter_html.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:video_player/video_player.dart';
+import 'dart:convert';
+import '../../core/theme/app_components.dart';
 import '../../services/theory_service.dart';
 import '../../models/database_models.dart';
+
 
 
 
@@ -34,6 +38,11 @@ class _LessonViewerScreenState extends State<LessonViewerScreen>
   Submodule? submodule;
   bool isLoading = true;
   String? errorMessage;
+  
+  bool isVideo = false;
+  String? videoUrl;
+  String? videoDescription;
+  List<String> videoTheses = [];
 
 
 
@@ -103,11 +112,7 @@ class _LessonViewerScreenState extends State<LessonViewerScreen>
         errorMessage = null;
       });
 
-
-
       debugPrint('Начинаем загрузку подмодуля ${widget.submoduleId}');
-
-
 
       final submoduleData = await TheoryService.getSubmodule(widget.submoduleId)
           .timeout(
@@ -118,8 +123,6 @@ class _LessonViewerScreenState extends State<LessonViewerScreen>
             },
           );
 
-
-
       if (submoduleData == null) {
         if (!mounted) return;
         setState(() {
@@ -129,22 +132,35 @@ class _LessonViewerScreenState extends State<LessonViewerScreen>
         return;
       }
 
-
-
       final loadedSubmodule = Submodule.fromJson(submoduleData);
 
-
+      bool isVideoLesson = false;
+      String? parsedVideoUrl;
+      String? parsedVideoDesc;
+      List<String> parsedTheses = [];
 
       String? htmlContent;
       if (loadedSubmodule.content != null &&
           loadedSubmodule.content!.isNotEmpty) {
-        final contentUrl = loadedSubmodule.content!;
-        if (_isValidUrl(contentUrl)) {
-          debugPrint('Загружаем контент с URL: $contentUrl');
+        final contentStr = loadedSubmodule.content!;
+        if (contentStr.trim().startsWith('{')) {
+          try {
+            final json = jsonDecode(contentStr);
+            if (json['type'] == 'video') {
+              isVideoLesson = true;
+              parsedVideoUrl = json['video_url'];
+              parsedVideoDesc = json['description'];
+              parsedTheses = List<String>.from(json['theses'] ?? []);
+            }
+          } catch (e) {
+            debugPrint('Ошибка парсинга JSON контента подмодуля: $e');
+          }
+        }
 
+        if (!isVideoLesson && _isValidUrl(contentStr)) {
+          debugPrint('Загружаем контент с URL: $contentStr');
 
-
-          htmlContent = await TheoryService.loadMarkdownFromStorage(contentUrl)
+          htmlContent = await TheoryService.loadMarkdownFromStorage(contentStr)
               .timeout(
                 Duration(seconds: 30),
                 onTimeout: () {
@@ -153,8 +169,6 @@ class _LessonViewerScreenState extends State<LessonViewerScreen>
                 },
               );
 
-
-
           if (htmlContent != null && !_isValidHtml(htmlContent)) {
             debugPrint('Получен некорректный контент');
             htmlContent = '<p>Контент поврежден</p>';
@@ -162,19 +176,17 @@ class _LessonViewerScreenState extends State<LessonViewerScreen>
         }
       }
 
-
-
       if (!mounted) return;
-
-
 
       setState(() {
         submodule = loadedSubmodule;
         theoryHtml = htmlContent;
+        isVideo = isVideoLesson;
+        videoUrl = parsedVideoUrl;
+        videoDescription = parsedVideoDesc;
+        videoTheses = parsedTheses;
         isLoading = false;
       });
-
-
 
       debugPrint('Загрузка завершена');
     } catch (e) {
@@ -231,25 +243,94 @@ class _LessonViewerScreenState extends State<LessonViewerScreen>
       child: Row(
         children: [
           // ✅ Левый отступ 15%
-          Expanded(flex: 15, child: SizedBox.shrink()),
+          Expanded(flex: 15, child: const SizedBox.shrink()),
           
           // ✅ Основной контент 70%
           Expanded(
             flex: 70,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                if (theoryHtml != null && theoryHtml!.isNotEmpty)
-                  Container(
-                    padding: EdgeInsets.all(16),
-                    child: _buildContentWithImages(theoryHtml!),
-                  ),
-              ],
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 24.0, horizontal: 16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (isVideo && videoUrl != null) ...[
+                    // Premium Video Player
+                    PremiumVideoPlayer(videoUrl: videoUrl!),
+                    const SizedBox(height: 24),
+                    
+                    // Lesson Description Header
+                    Text(
+                      'Описание урока',
+                      style: AppStyles.h1.copyWith(fontSize: 20),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      videoDescription ?? '',
+                      style: AppStyles.body.copyWith(height: 1.5),
+                    ),
+                    const SizedBox(height: 32),
+                    
+                    // Theses Card Container
+                    if (videoTheses.isNotEmpty) ...[
+                      KodixComponents.cardContainer(
+                        padding: const EdgeInsets.all(24),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                const Icon(
+                                  Icons.lightbulb_outline_rounded,
+                                  color: AppColors.primaryPurple,
+                                  size: 24,
+                                ),
+                                const SizedBox(width: 12),
+                                Text(
+                                  'Тезисы урока',
+                                  style: AppStyles.h1.copyWith(
+                                    fontSize: 18,
+                                    color: AppColors.textDark,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 20),
+                            ...videoTheses.map((thesis) => Padding(
+                              padding: const EdgeInsets.only(bottom: 12.0),
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Icon(
+                                    Icons.check_circle_rounded,
+                                    color: AppColors.primaryPurple,
+                                    size: 20,
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Text(
+                                      thesis,
+                                      style: AppStyles.body.copyWith(
+                                        fontSize: 15,
+                                        height: 1.4,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            )),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ] else if (theoryHtml != null && theoryHtml!.isNotEmpty)
+                    _buildContentWithImages(theoryHtml!),
+                ],
+              ),
             ),
           ),
           
           // ✅ Правый отступ 15%
-          Expanded(flex: 15, child: SizedBox.shrink()),
+          Expanded(flex: 15, child: const SizedBox.shrink()),
         ],
       ),
     );
@@ -486,5 +567,289 @@ class _LessonViewerScreenState extends State<LessonViewerScreen>
   @override
   void dispose() {
     super.dispose();
+  }
+}
+
+class PremiumVideoPlayer extends StatefulWidget {
+  final String videoUrl;
+
+  const PremiumVideoPlayer({
+    super.key,
+    required this.videoUrl,
+  });
+
+  @override
+  State<PremiumVideoPlayer> createState() => _PremiumVideoPlayerState();
+}
+
+class _PremiumVideoPlayerState extends State<PremiumVideoPlayer> {
+  late VideoPlayerController _controller;
+  bool _initialized = false;
+  bool _showControls = true;
+  bool _hasError = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _initializePlayer();
+  }
+
+  Future<void> _initializePlayer() async {
+    try {
+      final uri = Uri.parse(widget.videoUrl);
+      _controller = VideoPlayerController.networkUrl(uri);
+      await _controller.initialize();
+      if (mounted) {
+        setState(() {
+          _initialized = true;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error initializing video: $e');
+      if (mounted) {
+        setState(() {
+          _hasError = true;
+        });
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _togglePlay() {
+    setState(() {
+      if (_controller.value.isPlaying) {
+        _controller.pause();
+      } else {
+        _controller.play();
+      }
+    });
+  }
+
+  void _toggleMute() {
+    setState(() {
+      _controller.setVolume(_controller.value.volume == 0 ? 1.0 : 0.0);
+    });
+  }
+
+  String _formatDuration(Duration duration) {
+    String twoDigits(int n) => n.toString().padLeft(2, '0');
+    final minutes = twoDigits(duration.inMinutes.remainder(60));
+    final seconds = twoDigits(duration.inSeconds.remainder(60));
+    return "$minutes:$seconds";
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_hasError) {
+      return AspectRatio(
+        aspectRatio: 16 / 9,
+        child: Container(
+          decoration: BoxDecoration(
+            color: Colors.grey[200],
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: Colors.grey[300]!),
+          ),
+          child: const Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.error_outline_rounded, color: Colors.redAccent, size: 48),
+                SizedBox(height: 12),
+                Text(
+                  'Не удалось загрузить видео',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
+    if (!_initialized) {
+      return AspectRatio(
+        aspectRatio: 16 / 9,
+        child: Container(
+          decoration: BoxDecoration(
+            color: Colors.black.withValues(alpha: 0.05),
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: const Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                CircularProgressIndicator(color: AppColors.primaryPurple),
+                SizedBox(height: 16),
+                Text(
+                  'Инициализация видео...',
+                  style: TextStyle(color: AppColors.textGrey),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
+    return AspectRatio(
+      aspectRatio: _controller.value.aspectRatio,
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
+          color: Colors.black,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.15),
+              blurRadius: 16,
+              offset: const Offset(0, 8),
+            ),
+          ],
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            GestureDetector(
+              onTap: () {
+                setState(() {
+                  _showControls = !_showControls;
+                });
+              },
+              child: VideoPlayer(_controller),
+            ),
+            
+            // Premium Gradient Overlay when controls are visible
+            if (_showControls)
+              Positioned.fill(
+                child: GestureDetector(
+                  onTap: () {
+                    setState(() {
+                      _showControls = false;
+                    });
+                  },
+                  child: Container(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          Colors.black.withValues(alpha: 0.4),
+                          Colors.transparent,
+                          Colors.transparent,
+                          Colors.black.withValues(alpha: 0.6),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+
+            // Play/Pause Big Button in Center
+            if (_showControls)
+              AnimatedOpacity(
+                opacity: _showControls ? 1.0 : 0.0,
+                duration: const Duration(milliseconds: 200),
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: Colors.black.withValues(alpha: 0.5),
+                    shape: BoxShape.circle,
+                  ),
+                  child: IconButton(
+                    iconSize: 56,
+                    icon: Icon(
+                      _controller.value.isPlaying
+                          ? Icons.pause_rounded
+                          : Icons.play_arrow_rounded,
+                      color: Colors.white,
+                    ),
+                    onPressed: _togglePlay,
+                  ),
+                ),
+              ),
+
+            // Bottom Controls Bar
+            if (_showControls)
+              Positioned(
+                bottom: 0,
+                left: 0,
+                right: 0,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // Video Progress Bar
+                      VideoProgressIndicator(
+                        _controller,
+                        allowScrubbing: true,
+                        colors: const VideoProgressColors(
+                          playedColor: AppColors.primaryPurple,
+                          bufferedColor: Colors.white30,
+                          backgroundColor: Colors.white24,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          // Play/Pause, Mute & Time
+                          Row(
+                            children: [
+                              IconButton(
+                                constraints: const BoxConstraints(),
+                                padding: EdgeInsets.zero,
+                                icon: Icon(
+                                  _controller.value.isPlaying
+                                      ? Icons.pause_rounded
+                                      : Icons.play_arrow_rounded,
+                                  color: Colors.white,
+                                  size: 24,
+                                ),
+                                onPressed: _togglePlay,
+                              ),
+                              const SizedBox(width: 16),
+                              IconButton(
+                                constraints: const BoxConstraints(),
+                                padding: EdgeInsets.zero,
+                                icon: Icon(
+                                  _controller.value.volume == 0
+                                      ? Icons.volume_off_rounded
+                                      : Icons.volume_up_rounded,
+                                  color: Colors.white,
+                                  size: 20,
+                                ),
+                                onPressed: _toggleMute,
+                              ),
+                              const SizedBox(width: 16),
+                              ValueListenableBuilder(
+                                valueListenable: _controller,
+                                builder: (context, VideoPlayerValue value, child) {
+                                  return Text(
+                                    '${_formatDuration(value.position)} / ${_formatDuration(value.duration)}',
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  );
+                                },
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
   }
 }

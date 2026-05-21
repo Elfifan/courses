@@ -517,11 +517,16 @@ class _CourseEditModulesTabState extends State<CourseEditModulesTab>
           key: formKey,
           child: TextFormField(
             controller: nameController,
+            maxLength: 40,
             decoration: KodixComponents.textFieldDecoration(
               hintText: 'Название модуля',
               prefixIcon: Icons.layers_outlined,
-            ),
-            validator: (v) => v?.isEmpty == true ? 'Введите название' : null,
+            ).copyWith(counterText: ''),
+            validator: (v) {
+              if (v == null || v.trim().isEmpty) return 'Введите название';
+              if (v.trim().length > 40) return 'Максимум 40 символов';
+              return null;
+            },
           ),
         ),
         actions: [
@@ -552,9 +557,23 @@ class _CourseEditModulesTabState extends State<CourseEditModulesTab>
   }
 
   void _showAddTheoryDialog(int moduleId) {
+    bool isVideoMode = false;
+
+    // File Mode variables (Keep original exactly as is)
     String? selectedFilePath;
     final nameController = TextEditingController();
     final leadTimeController = TextEditingController();
+
+    // Video Mode variables
+    String? selectedVideoPath;
+    final videoNameController = TextEditingController();
+    final videoLeadTimeController = TextEditingController();
+    final videoDescController = TextEditingController();
+    final List<TextEditingController> thesesControllers = [
+      TextEditingController(),
+      TextEditingController(),
+    ];
+
     final formKey = GlobalKey<FormState>();
     bool isUploading = false;
 
@@ -567,66 +586,258 @@ class _CourseEditModulesTabState extends State<CourseEditModulesTab>
           title: Text('Теория / Видео', style: AppStyles.h1),
           content: Container(
             width: MediaQuery.of(context).size.width * 0.85,
-            constraints: const BoxConstraints(maxWidth: 500),
+            height: MediaQuery.of(context).size.height * 0.75,
+            constraints: const BoxConstraints(maxWidth: 500, maxHeight: 600),
             child: Form(
               key: formKey,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  KodixComponents.secondaryButton(
-                    width: double.infinity,
-                    onPressed: () async {
-                      final result = await FilePicker.platform.pickFiles(
-                        type: FileType.custom,
-                        allowedExtensions: [
-                          'md',
-                          'markdown',
-                          'txt',
-                          'mp4',
-                          'mov',
-                          'avi',
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Premium custom segmented toggle
+                    Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: BoxDecoration(
+                        color: AppColors.bgLight,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: GestureDetector(
+                              onTap: () => setState(() => isVideoMode = false),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(vertical: 10),
+                                decoration: BoxDecoration(
+                                  color: !isVideoMode
+                                      ? AppColors.primaryPurple
+                                      : Colors.transparent,
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: Center(
+                                  child: Text(
+                                    'Файл',
+                                    style: TextStyle(
+                                      color: !isVideoMode
+                                          ? Colors.white
+                                          : AppColors.textDark,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 14,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                          Expanded(
+                            child: GestureDetector(
+                              onTap: () => setState(() => isVideoMode = true),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(vertical: 10),
+                                decoration: BoxDecoration(
+                                  color: isVideoMode
+                                      ? AppColors.primaryPurple
+                                      : Colors.transparent,
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: Center(
+                                  child: Text(
+                                    'Видео',
+                                    style: TextStyle(
+                                      color: isVideoMode
+                                          ? Colors.white
+                                          : AppColors.textDark,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 14,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
                         ],
-                      );
-                      if (result != null && context.mounted) {
-                        setState(
-                          () => selectedFilePath = result.files.single.path,
-                        );
-                      }
-                    },
-                    icon: Icons.upload_file_rounded,
-                    child: Expanded(
-                      child: Text(
-                        selectedFilePath == null
-                            ? 'Выбрать файл (MD или MP4)'
-                            : selectedFilePath!.split('/').last,
-                        overflow: TextOverflow.ellipsis,
-                        maxLines: 1,
-                        textAlign: TextAlign.center,
                       ),
                     ),
-                  ),
-                  const SizedBox(height: 16),
-                  TextFormField(
-                    controller: nameController,
-                    decoration: KodixComponents.textFieldDecoration(
-                      hintText: 'Название урока',
-                      prefixIcon: Icons.title_rounded,
-                    ),
-                    validator: (v) =>
-                        v?.isEmpty == true ? 'Введите название' : null,
-                  ),
-                  const SizedBox(height: 16),
-                  TextFormField(
-                    controller: leadTimeController,
-                    keyboardType: TextInputType.number,
-                    decoration: KodixComponents.textFieldDecoration(
-                      hintText: 'Время изучения (мин)',
-                      prefixIcon: Icons.timer_rounded,
-                    ),
-                    validator: (v) =>
-                        int.tryParse(v ?? '') == null ? 'Введите число' : null,
-                  ),
-                ],
+                    const SizedBox(height: 24),
+                    
+                    if (!isVideoMode) ...[
+                      // File Mode: Original code completely untouched!
+                      KodixComponents.secondaryButton(
+                        width: double.infinity,
+                        onPressed: () async {
+                          final result = await FilePicker.platform.pickFiles(
+                            type: FileType.custom,
+                            allowedExtensions: [
+                              'md',
+                              'markdown',
+                              'txt',
+                              'mp4',
+                              'mov',
+                              'avi',
+                            ],
+                          );
+                          if (result != null && context.mounted) {
+                            setState(
+                              () => selectedFilePath = result.files.single.path,
+                            );
+                          }
+                        },
+                        icon: Icons.upload_file_rounded,
+                        child: Expanded(
+                          child: Text(
+                            selectedFilePath == null
+                                ? 'Выбрать файл (MD или MP4)'
+                                : selectedFilePath!.split('/').last,
+                            overflow: TextOverflow.ellipsis,
+                            maxLines: 1,
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: nameController,
+                        decoration: KodixComponents.textFieldDecoration(
+                          hintText: 'Название урока',
+                          prefixIcon: Icons.title_rounded,
+                        ),
+                        validator: (v) =>
+                            v?.isEmpty == true ? 'Введите название' : null,
+                      ),
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: leadTimeController,
+                        keyboardType: TextInputType.number,
+                        decoration: KodixComponents.textFieldDecoration(
+                          hintText: 'Время изучения (мин)',
+                          prefixIcon: Icons.timer_rounded,
+                        ),
+                        validator: (v) =>
+                            int.tryParse(v ?? '') == null ? 'Введите число' : null,
+                      ),
+                    ] else ...[
+                      // Video Mode: New implementation
+                      _buildFieldLabel('Видео файл'),
+                      KodixComponents.secondaryButton(
+                        width: double.infinity,
+                        onPressed: () async {
+                          final result = await FilePicker.platform.pickFiles(
+                            type: FileType.custom,
+                            allowedExtensions: [
+                              'mp4',
+                              'mov',
+                              'avi',
+                              'mkv',
+                              'flv',
+                            ],
+                          );
+                          if (result != null && context.mounted) {
+                            setState(
+                              () => selectedVideoPath = result.files.single.path,
+                            );
+                          }
+                        },
+                        icon: Icons.video_library_rounded,
+                        child: Expanded(
+                          child: Text(
+                            selectedVideoPath == null
+                                ? 'Выбрать видео'
+                                : selectedVideoPath!.split('/').last,
+                            overflow: TextOverflow.ellipsis,
+                            maxLines: 1,
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      _buildFieldLabel('Название урока'),
+                      TextFormField(
+                        controller: videoNameController,
+                        decoration: KodixComponents.textFieldDecoration(
+                          hintText: 'Название видео-урока',
+                          prefixIcon: Icons.title_rounded,
+                        ),
+                        validator: (v) =>
+                            v?.isEmpty == true ? 'Введите название' : null,
+                      ),
+                      const SizedBox(height: 16),
+                      _buildFieldLabel('Время изучения (мин)'),
+                      TextFormField(
+                        controller: videoLeadTimeController,
+                        keyboardType: TextInputType.number,
+                        decoration: KodixComponents.textFieldDecoration(
+                          hintText: 'Время изучения (мин)',
+                          prefixIcon: Icons.timer_rounded,
+                        ),
+                        validator: (v) =>
+                            int.tryParse(v ?? '') == null ? 'Введите число' : null,
+                      ),
+                      const SizedBox(height: 16),
+                      _buildFieldLabel('Описание видео'),
+                      TextFormField(
+                        controller: videoDescController,
+                        maxLines: 3,
+                        decoration: KodixComponents.textFieldDecoration(
+                          hintText: 'Введите краткое описание урока',
+                          prefixIcon: Icons.description_rounded,
+                        ),
+                        validator: (v) =>
+                            v?.isEmpty == true ? 'Введите описание' : null,
+                      ),
+                      const SizedBox(height: 16),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          _buildFieldLabel('Тезисы урока (от 2 до 4)'),
+                          Row(
+                            children: [
+                              if (thesesControllers.length > 2)
+                                IconButton(
+                                  padding: EdgeInsets.zero,
+                                  constraints: const BoxConstraints(),
+                                  icon: const Icon(Icons.remove_circle_outline, color: Colors.redAccent),
+                                  onPressed: () {
+                                    setState(() {
+                                      final last = thesesControllers.removeLast();
+                                      last.dispose();
+                                    });
+                                  },
+                                ),
+                              if (thesesControllers.length < 4)
+                                IconButton(
+                                  padding: EdgeInsets.zero,
+                                  constraints: const BoxConstraints(),
+                                  icon: const Icon(Icons.add_circle_outline, color: AppColors.primaryPurple),
+                                  onPressed: () {
+                                    setState(() {
+                                      thesesControllers.add(TextEditingController());
+                                    });
+                                  },
+                                ),
+                            ],
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      ...thesesControllers.asMap().entries.map((entry) {
+                        final idx = entry.key;
+                        final ctrl = entry.value;
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 12),
+                          child: TextFormField(
+                            controller: ctrl,
+                            decoration: KodixComponents.textFieldDecoration(
+                              hintText: 'Тезис ${idx + 1}',
+                              prefixIcon: Icons.check_circle_outline_rounded,
+                            ),
+                            validator: (v) =>
+                                v?.isEmpty == true ? 'Введите тезис' : null,
+                          ),
+                        );
+                      }),
+                    ]
+                  ],
+                ),
               ),
             ),
           ),
@@ -641,35 +852,78 @@ class _CourseEditModulesTabState extends State<CourseEditModulesTab>
               onPressed: isUploading
                   ? null
                   : () async {
-                      if (formKey.currentState!.validate() &&
-                          selectedFilePath != null) {
-                        setState(() => isUploading = true);
-                        try {
-                          await _addSubmodule(
-                            moduleId,
-                            nameController.text,
-                            int.parse(leadTimeController.text),
-                            selectedFilePath!,
-                          );
-                          if (context.mounted) Navigator.pop(context);
-                        } catch (e) {
-                          if (context.mounted) {
-                            setState(() => isUploading = false);
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text(
-                                  'Ошибка загрузки: ${e.toString()}',
+                      if (!isVideoMode) {
+                        // Original file saving flow untouched
+                        if (formKey.currentState!.validate() &&
+                            selectedFilePath != null) {
+                          setState(() => isUploading = true);
+                          try {
+                            await _addSubmodule(
+                              moduleId,
+                              nameController.text,
+                              int.parse(leadTimeController.text),
+                              selectedFilePath!,
+                            );
+                            if (context.mounted) Navigator.pop(context);
+                          } catch (e) {
+                            if (context.mounted) {
+                              setState(() => isUploading = false);
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    'Ошибка загрузки: ${e.toString()}',
+                                  ),
+                                  backgroundColor: Colors.red,
                                 ),
-                                backgroundColor: Colors.red,
-                              ),
+                              );
+                            }
+                          }
+                        } else if (selectedFilePath == null) {
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Выберите файл')),
                             );
                           }
                         }
-                      } else if (selectedFilePath == null) {
-                        if (context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Выберите файл')),
-                          );
+                      } else {
+                        // Video saving flow
+                        if (formKey.currentState!.validate() &&
+                            selectedVideoPath != null) {
+                          setState(() => isUploading = true);
+                          try {
+                            final thesesList = thesesControllers
+                                .map((c) => c.text.trim())
+                                .where((t) => t.isNotEmpty)
+                                .toList();
+
+                            await _addSubmoduleVideo(
+                              moduleId: moduleId,
+                              name: videoNameController.text.trim(),
+                              leadTime: int.parse(videoLeadTimeController.text),
+                              videoPath: selectedVideoPath!,
+                              theses: thesesList,
+                              description: videoDescController.text.trim(),
+                            );
+                            if (context.mounted) Navigator.pop(context);
+                          } catch (e) {
+                            if (context.mounted) {
+                              setState(() => isUploading = false);
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    'Ошибка загрузки видео: ${e.toString()}',
+                                  ),
+                                  backgroundColor: Colors.red,
+                                ),
+                              );
+                            }
+                          }
+                        } else if (selectedVideoPath == null) {
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Выберите видео файл')),
+                            );
+                          }
                         }
                       }
                     },
@@ -1252,7 +1506,7 @@ class _CourseEditModulesTabState extends State<CourseEditModulesTab>
           })
           .select()
           .single()
-          .timeout(const Duration(seconds: 1));
+          .timeout(const Duration(seconds: 3));
 
       if (mounted) {
         setState(() {
@@ -1284,7 +1538,7 @@ class _CourseEditModulesTabState extends State<CourseEditModulesTab>
           .select('order_module')
           .eq('id', moduleId)
           .single()
-          .timeout(const Duration(seconds: 1));
+          .timeout(const Duration(seconds: 3));
 
       final orderModule = moduleData['order_module'] as int? ?? 1;
 
@@ -1326,7 +1580,7 @@ class _CourseEditModulesTabState extends State<CourseEditModulesTab>
           })
           .select()
           .single()
-          .timeout(const Duration(seconds: 1));
+          .timeout(const Duration(seconds: 3));
 
       if (mounted) {
         setState(() {
@@ -1343,6 +1597,90 @@ class _CourseEditModulesTabState extends State<CourseEditModulesTab>
           context,
         ).showSnackBar(SnackBar(content: Text('Ошибка: $e')));
       }
+    }
+  }
+
+  Future<void> _addSubmoduleVideo({
+    required int moduleId,
+    required String name,
+    required int leadTime,
+    required String videoPath,
+    required List<String> theses,
+    required String description,
+  }) async {
+    try {
+      final moduleData = await SupabaseService.client
+          .from('module')
+          .select('order_module')
+          .eq('id', moduleId)
+          .single()
+          .timeout(const Duration(seconds: 3));
+
+      final orderModule = moduleData['order_module'] as int? ?? 1;
+
+      final file = File(videoPath);
+      final fileExtension = file.path.split('.').last;
+      final fileBytes = await file.readAsBytes();
+
+      final safeFileName =
+          'submodule_video_${DateTime.now().millisecondsSinceEpoch}.$fileExtension';
+      final storagePath =
+          'c${widget.courseId}/module$orderModule/$safeFileName';
+
+      // Для загрузки файла тайм-аут не ставим, так как файлы могут быть большими
+      await SupabaseService.client.storage
+          .from('course-files')
+          .uploadBinary(storagePath, fileBytes);
+
+      final signedUrl = await SupabaseService.client.storage
+          .from('course-files')
+          .createSignedUrl(storagePath, 5256000);
+
+      final contentJson = jsonEncode({
+        'type': 'video',
+        'video_url': signedUrl,
+        'theses': theses,
+        'description': description,
+      });
+
+      final submodules = _submodules[moduleId] ?? [];
+      final nextOrder = submodules.isEmpty
+          ? 1
+          : (submodules
+                    .map((s) => s.orderSubmodule ?? 0)
+                    .reduce((a, b) => a > b ? a : b)) +
+                1;
+
+      final response = await SupabaseService.client
+          .from('submodule')
+          .insert({
+            'id_module': moduleId,
+            'name': name,
+            'lead_time': leadTime,
+            'content': contentJson,
+            'order_submodule': nextOrder,
+            'status': true,
+          })
+          .select()
+          .single()
+          .timeout(const Duration(seconds: 3));
+
+      if (mounted) {
+        setState(() {
+          if (_submodules[moduleId] == null) _submodules[moduleId] = [];
+          _submodules[moduleId]!.add(db_models.Submodule.fromJson(response));
+        });
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Видео-урок "$name" добавлен')));
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Ошибка: $e')));
+      }
+      rethrow;
     }
   }
 
@@ -1371,7 +1709,7 @@ class _CourseEditModulesTabState extends State<CourseEditModulesTab>
           })
           .select()
           .single()
-          .timeout(const Duration(seconds: 1));
+          .timeout(const Duration(seconds: 3));
 
       if (mounted) {
         setState(() {
@@ -1414,7 +1752,7 @@ class _CourseEditModulesTabState extends State<CourseEditModulesTab>
           .eq('id', taskId)
           .select()
           .single()
-          .timeout(const Duration(seconds: 1));
+          .timeout(const Duration(seconds: 3));
 
       if (mounted) {
         setState(() {
@@ -1460,7 +1798,7 @@ class _CourseEditModulesTabState extends State<CourseEditModulesTab>
           })
           .select()
           .single()
-          .timeout(const Duration(seconds: 1));
+          .timeout(const Duration(seconds: 3));
 
       await SupabaseService.client
           .from('submodule_test')
@@ -1469,7 +1807,7 @@ class _CourseEditModulesTabState extends State<CourseEditModulesTab>
             'id_test': res['id'],
             'order_test': (_tests[subId]?.length ?? 0) + 1,
           })
-          .timeout(const Duration(seconds: 1));
+          .timeout(const Duration(seconds: 3));
 
       if (mounted) {
         setState(() {
@@ -1508,7 +1846,7 @@ class _CourseEditModulesTabState extends State<CourseEditModulesTab>
           .eq('id', tid)
           .select()
           .single()
-          .timeout(const Duration(seconds: 1));
+          .timeout(const Duration(seconds: 3));
 
       if (mounted) {
         setState(() {
@@ -1539,7 +1877,7 @@ class _CourseEditModulesTabState extends State<CourseEditModulesTab>
           .from('module')
           .delete()
           .eq('id', id)
-          .timeout(const Duration(seconds: 1));
+          .timeout(const Duration(seconds: 3));
       if (mounted) {
         setState(() {
           _modules.removeWhere((m) => m.id == id);
@@ -1564,7 +1902,7 @@ class _CourseEditModulesTabState extends State<CourseEditModulesTab>
           .from('submodule')
           .delete()
           .eq('id', id)
-          .timeout(const Duration(seconds: 1));
+          .timeout(const Duration(seconds: 3));
       if (mounted) {
         setState(() {
           _submodules[mid]?.removeWhere((s) => s.id == id);
@@ -1588,12 +1926,12 @@ class _CourseEditModulesTabState extends State<CourseEditModulesTab>
           .from('submodule_test')
           .delete()
           .eq('id_test', tid)
-          .timeout(const Duration(seconds: 1));
+          .timeout(const Duration(seconds: 3));
       await SupabaseService.client
           .from('test')
           .delete()
           .eq('id', tid)
-          .timeout(const Duration(seconds: 1));
+          .timeout(const Duration(seconds: 3));
       if (mounted) {
         setState(() {
           _tests[sid]?.removeWhere((t) => t.id == tid);
@@ -1617,7 +1955,7 @@ class _CourseEditModulesTabState extends State<CourseEditModulesTab>
           .from('practical_task')
           .delete()
           .eq('id', tid)
-          .timeout(const Duration(seconds: 1));
+          .timeout(const Duration(seconds: 3));
       if (mounted) {
         setState(() {
           _practicalTasks[sid]?.removeWhere((t) => t['id'] == tid);
