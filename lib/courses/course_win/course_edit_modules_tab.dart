@@ -725,6 +725,7 @@ class _CourseEditModulesTabState extends State<CourseEditModulesTab>
               child: SingleChildScrollView(
                 child: Column(
                   children: [
+                    _buildFieldLabel('Название задачи'),
                     TextFormField(
                       controller: nameController,
                       decoration: KodixComponents.textFieldDecoration(
@@ -732,6 +733,7 @@ class _CourseEditModulesTabState extends State<CourseEditModulesTab>
                       ),
                     ),
                     const SizedBox(height: 16),
+                    _buildFieldLabel('Язык программирования'),
                     DropdownButtonFormField<String>(
                       initialValue: lang,
                       items:
@@ -756,6 +758,7 @@ class _CourseEditModulesTabState extends State<CourseEditModulesTab>
                       ),
                     ),
                     const SizedBox(height: 16),
+                    _buildFieldLabel('Описание'),
                     TextFormField(
                       controller: descController,
                       maxLines: 2,
@@ -764,6 +767,7 @@ class _CourseEditModulesTabState extends State<CourseEditModulesTab>
                       ),
                     ),
                     const SizedBox(height: 16),
+                    _buildFieldLabel('Условие (Markdown)'),
                     TextFormField(
                       controller: contentController,
                       maxLines: 4,
@@ -772,6 +776,7 @@ class _CourseEditModulesTabState extends State<CourseEditModulesTab>
                       ),
                     ),
                     const SizedBox(height: 16),
+                    _buildFieldLabel('Стартовый код'),
                     TextFormField(
                       controller: starterController,
                       maxLines: 4,
@@ -780,6 +785,7 @@ class _CourseEditModulesTabState extends State<CourseEditModulesTab>
                       ),
                     ),
                     const SizedBox(height: 16),
+                    _buildFieldLabel('Тестовые кейсы (JSON)'),
                     TextFormField(
                       controller: testsController,
                       maxLines: 4,
@@ -879,6 +885,7 @@ class _CourseEditModulesTabState extends State<CourseEditModulesTab>
               child: SingleChildScrollView(
                 child: Column(
                   children: [
+                    _buildFieldLabel('Название задачи'),
                     TextFormField(
                       controller: nameController,
                       decoration: KodixComponents.textFieldDecoration(
@@ -886,6 +893,7 @@ class _CourseEditModulesTabState extends State<CourseEditModulesTab>
                       ),
                     ),
                     const SizedBox(height: 16),
+                    _buildFieldLabel('Язык программирования'),
                     DropdownButtonFormField<String>(
                       initialValue: lang,
                       items:
@@ -910,6 +918,7 @@ class _CourseEditModulesTabState extends State<CourseEditModulesTab>
                       ),
                     ),
                     const SizedBox(height: 16),
+                    _buildFieldLabel('Описание'),
                     TextFormField(
                       controller: descController,
                       maxLines: 2,
@@ -918,6 +927,7 @@ class _CourseEditModulesTabState extends State<CourseEditModulesTab>
                       ),
                     ),
                     const SizedBox(height: 16),
+                    _buildFieldLabel('Условие (Markdown)'),
                     TextFormField(
                       controller: contentController,
                       maxLines: 4,
@@ -926,6 +936,7 @@ class _CourseEditModulesTabState extends State<CourseEditModulesTab>
                       ),
                     ),
                     const SizedBox(height: 16),
+                    _buildFieldLabel('Стартовый код'),
                     TextFormField(
                       controller: starterController,
                       maxLines: 4,
@@ -934,6 +945,7 @@ class _CourseEditModulesTabState extends State<CourseEditModulesTab>
                       ),
                     ),
                     const SizedBox(height: 16),
+                    _buildFieldLabel('Тестовые кейсы (JSON)'),
                     TextFormField(
                       controller: testsController,
                       maxLines: 4,
@@ -1030,6 +1042,7 @@ class _CourseEditModulesTabState extends State<CourseEditModulesTab>
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
+                    _buildFieldLabel('Вопрос'),
                     TextFormField(
                       controller: questionController,
                       maxLines: 2,
@@ -1038,6 +1051,7 @@ class _CourseEditModulesTabState extends State<CourseEditModulesTab>
                       ),
                     ),
                     const SizedBox(height: 16),
+                    _buildFieldLabel('Правильный ответ'),
                     TextFormField(
                       controller: rightAnswerController,
                       decoration: KodixComponents.textFieldDecoration(
@@ -1045,6 +1059,7 @@ class _CourseEditModulesTabState extends State<CourseEditModulesTab>
                       ),
                     ),
                     const SizedBox(height: 8),
+                    _buildFieldLabel('Неверный ответ 1'),
                     TextFormField(
                       controller: wrong1Controller,
                       decoration: KodixComponents.textFieldDecoration(
@@ -1052,6 +1067,7 @@ class _CourseEditModulesTabState extends State<CourseEditModulesTab>
                       ),
                     ),
                     const SizedBox(height: 8),
+                    _buildFieldLabel('Неверный ответ 2'),
                     TextFormField(
                       controller: wrong2Controller,
                       decoration: KodixComponents.textFieldDecoration(
@@ -1059,6 +1075,7 @@ class _CourseEditModulesTabState extends State<CourseEditModulesTab>
                       ),
                     ),
                     const SizedBox(height: 8),
+                    _buildFieldLabel('Неверный ответ 3'),
                     TextFormField(
                       controller: wrong3Controller,
                       decoration: KodixComponents.textFieldDecoration(
@@ -1135,6 +1152,7 @@ class _CourseEditModulesTabState extends State<CourseEditModulesTab>
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
+                    _buildFieldLabel('Вопрос'),
                     TextFormField(
                       controller: questionController,
                       maxLines: 2,
@@ -1143,6 +1161,7 @@ class _CourseEditModulesTabState extends State<CourseEditModulesTab>
                       ),
                     ),
                     const SizedBox(height: 16),
+                    _buildFieldLabel('Правильный ответ'),
                     TextFormField(
                       controller: rightAnswerController,
                       decoration: KodixComponents.textFieldDecoration(
@@ -1150,6 +1169,7 @@ class _CourseEditModulesTabState extends State<CourseEditModulesTab>
                       ),
                     ),
                     const SizedBox(height: 8),
+                    _buildFieldLabel('Неверный ответ 1'),
                     TextFormField(
                       controller: wrong1Controller,
                       decoration: KodixComponents.textFieldDecoration(
@@ -1157,6 +1177,7 @@ class _CourseEditModulesTabState extends State<CourseEditModulesTab>
                       ),
                     ),
                     const SizedBox(height: 8),
+                    _buildFieldLabel('Неверный ответ 2'),
                     TextFormField(
                       controller: wrong2Controller,
                       decoration: KodixComponents.textFieldDecoration(
@@ -1164,6 +1185,7 @@ class _CourseEditModulesTabState extends State<CourseEditModulesTab>
                       ),
                     ),
                     const SizedBox(height: 8),
+                    _buildFieldLabel('Неверный ответ 3'),
                     TextFormField(
                       controller: wrong3Controller,
                       decoration: KodixComponents.textFieldDecoration(
@@ -1611,5 +1633,14 @@ class _CourseEditModulesTabState extends State<CourseEditModulesTab>
         ).showSnackBar(SnackBar(content: Text('Ошибка: $e')));
       }
     }
+  }
+  Widget _buildFieldLabel(String label) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Align(
+        alignment: Alignment.centerLeft,
+        child: Text(label, style: AppStyles.label.copyWith(fontWeight: FontWeight.w700, color: AppColors.textDark)),
+      ),
+    );
   }
 }
