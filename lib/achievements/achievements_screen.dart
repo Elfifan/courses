@@ -151,12 +151,12 @@ class _AchievementsScreenState extends State<AchievementsScreen>
                         image: selectedFile != null
                             ? DecorationImage(
                                 image: FileImage(selectedFile!),
-                                fit: BoxFit.cover,
+                                fit: BoxFit.contain,
                               )
                             : currentImageUrl != null
                                 ? DecorationImage(
                                     image: NetworkImage(currentImageUrl),
-                                    fit: BoxFit.cover,
+                                    fit: BoxFit.contain,
                                     onError: (exception, stackTrace) {},
                                   )
                                 : null,
@@ -447,7 +447,7 @@ class _AchievementsScreenState extends State<AchievementsScreen>
               child: a.imageUrl != null && a.imageUrl!.isNotEmpty
                   ? Image.network(
                       a.imageUrl!,
-                      fit: BoxFit.cover,
+                      fit: BoxFit.contain,
                       loadingBuilder: (context, child, loadingProgress) {
                         if (loadingProgress == null) return child;
                         return Center(
@@ -460,10 +460,13 @@ class _AchievementsScreenState extends State<AchievementsScreen>
                           ),
                         );
                       },
-                      errorBuilder: (context, error, stackTrace) =>
-                          const Center(
-                            child: Icon(Icons.broken_image, color: AppColors.primaryPurple),
-                          ),
+                      errorBuilder: (context, error, stackTrace) {
+                        debugPrint('ERROR loading achievement image from URL: ${a.imageUrl}');
+                        debugPrint('Error details: $error');
+                        return const Center(
+                          child: Icon(Icons.broken_image, color: AppColors.primaryPurple),
+                        );
+                      },
                     )
                   : const Center(
                       child: Icon(Icons.workspace_premium_outlined, size: 48, color: AppColors.primaryPurple),

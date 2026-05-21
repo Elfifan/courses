@@ -55,7 +55,9 @@ class _StudentsScreenState extends State<StudentsScreen> {
   Future<void> _loadStudentsFromDatabase({bool isBackground = false}) async {
     if (!isBackground) setState(() => _isLoading = true);
     try {
-      final response = await supabase.from('users').select().order('id', ascending: true) as List<dynamic>;
+      final response =
+          await supabase.from('users').select().order('id', ascending: true)
+              as List<dynamic>;
       final users = response.map((e) {
         if (e is Map<String, dynamic>) return db_models.User.fromJson(e);
         return db_models.User.fromJson(Map<String, dynamic>.from(e));
@@ -68,7 +70,9 @@ class _StudentsScreenState extends State<StudentsScreen> {
     } catch (e) {
       if (mounted) {
         setState(() => _isLoading = false);
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Ошибка загрузки студентов: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Ошибка загрузки студентов: $e')),
+        );
       }
     }
   }
@@ -76,9 +80,9 @@ class _StudentsScreenState extends State<StudentsScreen> {
   @override
   Widget build(BuildContext context) {
     // Цвета из дизайн-системы
-    final borderColor = AppColors.bgLight; 
+    final borderColor = AppColors.bgLight;
     final q = _searchController.text.trim().toLowerCase();
-    
+
     List<db_models.User> filtered = _students.where((s) {
       final name = (s.name ?? '').toLowerCase();
       final email = (s.email ?? '').toLowerCase();
@@ -86,21 +90,28 @@ class _StudentsScreenState extends State<StudentsScreen> {
 
       bool matchesFilter = true;
       switch (widget.selectedFilter) {
-        case 'Активные': matchesFilter = s.status == true; break;
-        case 'Неактивные': matchesFilter = s.status == false; break;
+        case 'Активные':
+          matchesFilter = s.status == true;
+          break;
+        case 'Неактивные':
+          matchesFilter = s.status == false;
+          break;
         case 'Новые':
           if (s.dateRegistration == null) {
             matchesFilter = false;
           } else {
-            matchesFilter = DateTime.now().difference(s.dateRegistration!).inDays <= 7;
+            matchesFilter =
+                DateTime.now().difference(s.dateRegistration!).inDays <= 7;
           }
           break;
-        default: matchesFilter = true;
+        default:
+          matchesFilter = true;
       }
       return matchesSearch && matchesFilter;
     }).toList();
 
-    String formatDate(DateTime? d) => d == null ? '—' : DateFormat('dd.MM.yyyy HH:mm').format(d.toLocal());
+    String formatDate(DateTime? d) =>
+        d == null ? '—' : DateFormat('dd.MM.yyyy HH:mm').format(d.toLocal());
 
     return Column(
       children: [
@@ -124,14 +135,21 @@ class _StudentsScreenState extends State<StudentsScreen> {
               color: AppColors.white,
               borderRadius: AppStyles.cardRadius, // 24px
               boxShadow: [
-                BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 15, offset: const Offset(0, 8))
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.02),
+                  blurRadius: 15,
+                  offset: const Offset(0, 8),
+                ),
               ],
             ),
             child: Column(
               children: [
                 // Обновленные заголовки таблицы
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 18),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 18,
+                  ),
                   decoration: BoxDecoration(
                     color: AppColors.bgLight.withValues(alpha: 0.5),
                     borderRadius: const BorderRadius.only(
@@ -142,18 +160,71 @@ class _StudentsScreenState extends State<StudentsScreen> {
                   ),
                   child: Row(
                     children: [
-                      Expanded(flex: 1, child: Text('ID', style: AppStyles.label.copyWith(fontWeight: FontWeight.bold))),
-                      Expanded(flex: 1, child: Text('Аватар', style: AppStyles.label.copyWith(fontWeight: FontWeight.bold))),
-                      Expanded(flex: 3, child: Text('ФИО', style: AppStyles.label.copyWith(fontWeight: FontWeight.bold))),
-                      Expanded(flex: 3, child: Text('Email', style: AppStyles.label.copyWith(fontWeight: FontWeight.bold))),
-                      Expanded(flex: 3, child: Text('Последний вход', style: AppStyles.label.copyWith(fontWeight: FontWeight.bold))),
-                      Expanded(flex: 2, child: Text('Статус', style: AppStyles.label.copyWith(fontWeight: FontWeight.bold), textAlign: TextAlign.center)),
+                      Expanded(
+                        flex: 1,
+                        child: Text(
+                          'Номер',
+                          style: AppStyles.label.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                      Expanded(
+                        flex: 1,
+                        child: Text(
+                          'Аватар',
+                          style: AppStyles.label.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                      Expanded(
+                        flex: 3,
+                        child: Text(
+                          'ФИО',
+                          style: AppStyles.label.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                      Expanded(
+                        flex: 3,
+                        child: Text(
+                          'Email',
+                          style: AppStyles.label.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                      Expanded(
+                        flex: 3,
+                        child: Text(
+                          'Последний вход',
+                          style: AppStyles.label.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                      Expanded(
+                        flex: 2,
+                        child: Text(
+                          'Статус',
+                          style: AppStyles.label.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
                     ],
                   ),
                 ),
                 Expanded(
                   child: _isLoading
-                      ? const Center(child: CircularProgressIndicator(color: AppColors.primaryPurple))
+                      ? const Center(
+                          child: CircularProgressIndicator(
+                            color: AppColors.primaryPurple,
+                          ),
+                        )
                       : ListView.builder(
                           padding: EdgeInsets.zero,
                           itemCount: filtered.length,
@@ -161,44 +232,96 @@ class _StudentsScreenState extends State<StudentsScreen> {
                             final s = filtered[i];
                             final hovered = _hoveredIndex == i;
                             final displayName = s.name ?? s.email ?? '';
-                            final avatarLetter = displayName.isNotEmpty ? displayName[0].toUpperCase() : '?';
-                            
+                            final avatarLetter = displayName.isNotEmpty
+                                ? displayName[0].toUpperCase()
+                                : '?';
+
                             return MouseRegion(
                               onEnter: (_) => setState(() => _hoveredIndex = i),
-                              onExit: (_) => setState(() => _hoveredIndex = null),
+                              onExit: (_) =>
+                                  setState(() => _hoveredIndex = null),
                               child: GestureDetector(
                                 onTap: () {
                                   Navigator.of(context).push(
                                     MaterialPageRoute(
-                                      builder: (_) => StudentProfileScreen(
-                                        student: s,
-                                      ),
+                                      builder: (_) =>
+                                          StudentProfileScreen(student: s),
                                     ),
                                   );
                                 },
                                 child: Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 24,
+                                    vertical: 16,
+                                  ),
                                   decoration: BoxDecoration(
-                                    color: hovered ? AppColors.bgLight.withValues(alpha: 0.3) : Colors.transparent,
-                                    border: Border(bottom: BorderSide(color: borderColor)),
+                                    color: hovered
+                                        ? AppColors.bgLight.withValues(
+                                            alpha: 0.3,
+                                          )
+                                        : Colors.transparent,
+                                    border: Border(
+                                      bottom: BorderSide(color: borderColor),
+                                    ),
                                   ),
                                   child: Row(
                                     children: [
-                                      Expanded(flex: 1, child: Text('${s.id}', style: AppStyles.body.copyWith(fontSize: 13))),
+                                      Expanded(
+                                        flex: 1,
+                                        child: Text(
+                                          '${s.id}',
+                                          style: AppStyles.body.copyWith(
+                                            fontSize: 13,
+                                          ),
+                                        ),
+                                      ),
                                       Expanded(
                                         flex: 1,
                                         child: CircleAvatar(
                                           radius: 18,
-                                          backgroundColor: AppColors.primaryPurple.withValues(alpha: 0.1),
-                                          child: Text(avatarLetter, style: const TextStyle(color: AppColors.primaryPurple, fontWeight: FontWeight.bold, fontSize: 14)),
+                                          backgroundColor: AppColors
+                                              .primaryPurple
+                                              .withValues(alpha: 0.1),
+                                          child: Text(
+                                            avatarLetter,
+                                            style: const TextStyle(
+                                              color: AppColors.primaryPurple,
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 14,
+                                            ),
+                                          ),
                                         ),
                                       ),
-                                      Expanded(flex: 3, child: Text(displayName, style: AppStyles.body.copyWith(fontWeight: FontWeight.w600))),
-                                      Expanded(flex: 3, child: Text(s.email ?? '', style: AppStyles.label)),
-                                      Expanded(flex: 3, child: Text(formatDate(s.lastEntry), style: AppStyles.label)),
+                                      Expanded(
+                                        flex: 3,
+                                        child: Text(
+                                          displayName,
+                                          style: AppStyles.body.copyWith(
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                      ),
+                                      Expanded(
+                                        flex: 3,
+                                        child: Text(
+                                          s.email ?? '',
+                                          style: AppStyles.label,
+                                        ),
+                                      ),
+                                      Expanded(
+                                        flex: 3,
+                                        child: Text(
+                                          formatDate(s.lastEntry),
+                                          style: AppStyles.label,
+                                        ),
+                                      ),
                                       Expanded(
                                         flex: 2,
-                                        child: Center(child: _buildStatusBadge(s.status == true)),
+                                        child: Center(
+                                          child: _buildStatusBadge(
+                                            s.status == true,
+                                          ),
+                                        ),
                                       ),
                                     ],
                                   ),
@@ -227,11 +350,21 @@ class _StudentsScreenState extends State<StudentsScreen> {
       child: DropdownButtonHideUnderline(
         child: DropdownButton<String>(
           value: widget.selectedFilter,
-          icon: const Icon(Icons.filter_list_rounded, size: 18, color: AppColors.primaryPurple),
-          style: AppStyles.body.copyWith(fontSize: 13, fontWeight: FontWeight.w600),
-          items: ['Все пользователи', 'Активные', 'Неактивные', 'Новые']
-              .map((s) => DropdownMenuItem(value: s, child: Text(s)))
-              .toList(),
+          icon: const Icon(
+            Icons.filter_list_rounded,
+            size: 18,
+            color: AppColors.primaryPurple,
+          ),
+          style: AppStyles.body.copyWith(
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+          ),
+          items: [
+            'Все пользователи',
+            'Активные',
+            'Неактивные',
+            'Новые',
+          ].map((s) => DropdownMenuItem(value: s, child: Text(s))).toList(),
           onChanged: (v) {
             if (v != null) widget.onFilterChanged(v);
           },
@@ -250,7 +383,11 @@ class _StudentsScreenState extends State<StudentsScreen> {
       ),
       child: Text(
         isActive ? 'Активен' : 'Заблокирован',
-        style: AppStyles.label.copyWith(color: color, fontWeight: FontWeight.bold, fontSize: 11),
+        style: AppStyles.label.copyWith(
+          color: color,
+          fontWeight: FontWeight.bold,
+          fontSize: 11,
+        ),
       ),
     );
   }

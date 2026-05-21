@@ -214,26 +214,46 @@ class _AuthorsManagementScreenState extends State<AuthorsManagementScreen> {
                               const SizedBox(width: 24),
                               SizedBox(
                                 width: 180,
-                                child: KodixComponents.primaryButton(
-                                  height: 36,
-                                  onPressed: () => _toggleAuthorStatus(
-                                    author['id'],
-                                    isActive,
-                                  ),
-                                  backgroundColor: isActive
-                                      ? Colors.red.withValues(alpha: 0.1)
-                                      : AppColors.primaryPurple,
-                                  child: Text(
-                                    isActive ? 'Деактивировать' : 'Одобрить',
-                                    style: TextStyle(
-                                      color: isActive
-                                          ? Colors.red
-                                          : Colors.white,
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ),
+                                child: isActive
+                                    ? OutlinedButton.icon(
+                                        onPressed: () => _toggleAuthorStatus(
+                                          author['id'],
+                                          isActive,
+                                        ),
+                                        icon: const Icon(Icons.block_rounded, size: 16),
+                                        label: const Text(
+                                          'Заблокировать',
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                        style: OutlinedButton.styleFrom(
+                                          foregroundColor: const Color(0xFFEF4444),
+                                          side: const BorderSide(color: Color(0xFFEF4444)),
+                                          minimumSize: const Size(double.infinity, 36),
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(12),
+                                          ),
+                                          padding: const EdgeInsets.symmetric(horizontal: 8),
+                                        ),
+                                      )
+                                    : KodixComponents.primaryButton(
+                                        height: 36,
+                                        onPressed: () => _toggleAuthorStatus(
+                                          author['id'],
+                                          isActive,
+                                        ),
+                                        backgroundColor: AppColors.primaryPurple,
+                                        child: const Text(
+                                          'Одобрить',
+                                          style: TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ),
                               ),
                             ],
                           ),

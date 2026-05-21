@@ -22,10 +22,20 @@ class AchievementRepository {
   static String? getImageUrl(String? imagePath) {
     if (imagePath == null || imagePath.isEmpty) return null;
 
+    // Если это уже полный URL (публичный или подписанный), возвращаем его как есть
+    if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
+      return imagePath;
+    }
+
     try {
+      // Strip legacy 'achievements/' prefix to avoid double-nesting
+      String cleanPath = imagePath;
+      if (cleanPath.startsWith('achievements/')) {
+        cleanPath = cleanPath.substring('achievements/'.length);
+      }
       final url = SupabaseService.client.storage
-          .from('achievements')
-          .getPublicUrl(imagePath);
+          .from('achievements_image')
+          .getPublicUrl(cleanPath);
       return url;
     } catch (e) {
       debugPrint('Error getting image URL: $e');
@@ -112,13 +122,16 @@ class AchievementRepository {
     try {
       final fileExtension = imageFile.path.split('.').last;
       final fileName = '${const Uuid().v4()}.$fileExtension';
-      final filePath = 'achievements/$fileName';
 
       await SupabaseService.client.storage
-          .from('achievements')
-          .upload(filePath, imageFile);
+          .from('achievements_image')
+          .upload(fileName, imageFile);
 
-      return filePath;
+      final publicUrl = SupabaseService.client.storage
+          .from('achievements_image')
+          .getPublicUrl(fileName);
+
+      return publicUrl;
     } catch (e) {
       debugPrint('Error uploading image: $e');
       throw Exception('Ошибка загрузки изображения: $e');

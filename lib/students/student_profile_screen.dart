@@ -3,6 +3,7 @@ import '../core/theme/app_components.dart';
 import '../models/database_models.dart' as db_models;
 import 'package:intl/intl.dart';
 import '../services/supabase_service.dart';
+import '../repositories/achievement_repository.dart';
 
 class StudentProfileScreen extends StatefulWidget {
   final db_models.User student;
@@ -239,7 +240,7 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
                   const SizedBox(height: 16),
                   if (_errorMessage != null)
                     Text(
-                      'Повторная попытка загрузки... (${_errorMessage})',
+                      'Повторная попытка загрузки... ($_errorMessage)',
                       style: AppStyles.label.copyWith(color: Colors.red),
                     )
                   else if (_isLoadingData)
@@ -637,14 +638,17 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
             clipBehavior: Clip.hardEdge,
             child: imageUrl != null && imageUrl.isNotEmpty
                 ? Image.network(
-                    SupabaseService.client.storage
-                        .from('achievements')
-                        .getPublicUrl(imageUrl),
-                    fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => const Icon(
-                      Icons.stars_rounded,
-                      color: AppColors.primaryPurple,
-                    ),
+                    AchievementRepository.getImageUrl(imageUrl) ?? '',
+                    fit: BoxFit.contain,
+                    errorBuilder: (context, error, stackTrace) {
+                      debugPrint('ERROR loading student achievement image from path: $imageUrl');
+                      debugPrint('Resolved URL: ${AchievementRepository.getImageUrl(imageUrl)}');
+                      debugPrint('Error: $error');
+                      return const Icon(
+                        Icons.stars_rounded,
+                        color: AppColors.primaryPurple,
+                      );
+                    },
                   )
                 : const Icon(
                     Icons.stars_rounded,
