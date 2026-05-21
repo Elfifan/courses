@@ -93,16 +93,8 @@ class _StudentsScreenState extends State<StudentsScreen> {
         case 'Активные':
           matchesFilter = s.status == true;
           break;
-        case 'Неактивные':
+        case 'Заблокированные':
           matchesFilter = s.status == false;
-          break;
-        case 'Новые':
-          if (s.dateRegistration == null) {
-            matchesFilter = false;
-          } else {
-            matchesFilter =
-                DateTime.now().difference(s.dateRegistration!).inDays <= 7;
-          }
           break;
         default:
           matchesFilter = true;
@@ -340,35 +332,60 @@ class _StudentsScreenState extends State<StudentsScreen> {
   }
 
   Widget _buildFilterDropdown() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      decoration: BoxDecoration(
-        color: AppColors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.bgLight),
-      ),
-      child: DropdownButtonHideUnderline(
-        child: DropdownButton<String>(
-          value: widget.selectedFilter,
-          icon: const Icon(
-            Icons.filter_list_rounded,
-            size: 18,
-            color: AppColors.primaryPurple,
+    return SizedBox(
+      width: 240,
+      child: DropdownButtonFormField<String>(
+        key: ValueKey(widget.selectedFilter),
+        initialValue: widget.selectedFilter,
+        decoration: KodixComponents.textFieldDecoration(
+          hintText: 'Фильтр', 
+          prefixIcon: Icons.filter_list_rounded
+        ).copyWith(
+          fillColor: Colors.white,
+          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: AppStyles.mainRadius,
+            borderSide: const BorderSide(color: Color(0xFFE2E8F0), width: 1),
           ),
-          style: AppStyles.body.copyWith(
-            fontSize: 13,
-            fontWeight: FontWeight.w600,
+          enabledBorder: OutlineInputBorder(
+            borderRadius: AppStyles.mainRadius,
+            borderSide: const BorderSide(color: Color(0xFFE2E8F0), width: 1),
           ),
-          items: [
-            'Все пользователи',
-            'Активные',
-            'Неактивные',
-            'Новые',
-          ].map((s) => DropdownMenuItem(value: s, child: Text(s))).toList(),
-          onChanged: (v) {
-            if (v != null) widget.onFilterChanged(v);
-          },
         ),
+        dropdownColor: AppColors.white,
+        borderRadius: AppStyles.mainRadius,
+        icon: const Icon(Icons.keyboard_arrow_down_rounded, color: AppColors.primaryPurple, size: 24),
+        style: AppStyles.body.copyWith(fontWeight: FontWeight.w600),
+        isExpanded: true,
+        items: [
+          'Активные',
+          'Заблокированные',
+        ].map((s) {
+          final isBlocked = s == 'Заблокированные';
+          return DropdownMenuItem(
+            value: s,
+            child: Row(
+              children: [
+                Icon(
+                  isBlocked ? Icons.block_rounded : Icons.check_circle_outline_rounded,
+                  color: isBlocked ? const Color(0xFFEF4444) : const Color(0xFF10B981),
+                  size: 18,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    s, 
+                    style: AppStyles.body.copyWith(fontSize: 13, fontWeight: FontWeight.w600),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+          );
+        }).toList(),
+        onChanged: (v) {
+          if (v != null) widget.onFilterChanged(v);
+        },
       ),
     );
   }

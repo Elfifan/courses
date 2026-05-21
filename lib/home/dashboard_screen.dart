@@ -31,7 +31,7 @@ class DashboardScreen extends StatefulWidget {
 
 class _DashboardScreenState extends State<DashboardScreen> {
   int _selectedIndex = 0;
-  String _selectedStudentFilter = 'Все пользователи';
+  String _selectedStudentFilter = 'Активные';
 
   bool _isLoadingDashboard = true;
   int _totalCourses = 0;
@@ -335,11 +335,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 TopBar(
                   selectedIndex: _selectedIndex,
                   menuItems: _menuItems,
-                  onAddCourse: () {
-                    if (_menuItems[_selectedIndex] == 'Курсы') {
-                      CourseService.showAddCourseForm(context, authorId: widget.userId);
-                    }
-                  },
+                  onAddCourse: _isAuthor
+                      ? () {
+                          if (_menuItems[_selectedIndex] == 'Курсы') {
+                            CourseService.showAddCourseForm(context, authorId: widget.userId);
+                          }
+                        }
+                      : null,
                   onAddAchievement: () {
                     if (_menuItems[_selectedIndex] == 'Достижения') {
                       final state = _achievementsKey.currentState as dynamic;
